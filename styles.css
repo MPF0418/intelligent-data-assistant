@@ -1,0 +1,953 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f5f5f5;
+    color: #333;
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 40px;
+    padding: 30px 0;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+header h1 {
+    font-size: 2.5em;
+    margin-bottom: 10px;
+}
+
+header p {
+    font-size: 1.1em;
+    opacity: 0.9;
+}
+
+main {
+    background: white;
+    border-radius: 10px;
+    padding: 30px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+}
+
+.upload-section {
+    margin-bottom: 40px;
+}
+
+.drop-area {
+    border: 2px dashed #667eea;
+    border-radius: 10px;
+    padding: 40px;
+    text-align: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.drop-area:hover {
+    border-color: #764ba2;
+    background-color: rgba(102, 126, 234, 0.05);
+}
+
+.drop-content .icon {
+    font-size: 4em;
+    margin-bottom: 20px;
+}
+
+.drop-content h3 {
+    font-size: 1.5em;
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.drop-content p {
+    color: #666;
+    margin-bottom: 20px;
+}
+
+#file-input {
+    display: none;
+}
+
+.loading {
+    text-align: center;
+    padding: 40px;
+    margin: 20px 0;
+    background-color: #f8f9fa;
+    border-radius: 10px;
+}
+
+.spinner {
+    border: 4px solid rgba(102, 126, 234, 0.3);
+    border-radius: 50%;
+    border-top: 4px solid #667eea;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 20px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.hidden {
+    display: none;
+}
+
+section {
+    margin-bottom: 40px;
+    padding: 20px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+}
+
+section h2 {
+    color: #667eea;
+    margin-bottom: 20px;
+    font-size: 1.5em;
+}
+
+.preview-controls {
+    margin-bottom: 20px;
+    padding: 15px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.filter-section h3 {
+    margin-bottom: 10px;
+    color: #667eea;
+    font-size: 1.1em;
+}
+
+.filter-form {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.filter-form select,
+.filter-form input {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+
+.filter-form select {
+    min-width: 120px;
+}
+
+.filter-form input {
+    min-width: 150px;
+}
+
+.filter-form button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.9em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+#apply-filter {
+    background: #667eea;
+    color: white;
+}
+
+#apply-filter:hover {
+    background: #764ba2;
+    transform: translateY(-1px);
+}
+
+#clear-filter {
+    background: #666;
+    color: white;
+}
+
+#clear-filter:hover {
+    background: #333;
+    transform: translateY(-1px);
+}
+
+#data-table th {
+    background-color: #667eea;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    position: relative;
+}
+
+#data-table th:hover {
+    background-color: #764ba2;
+}
+
+#data-table th::after {
+    content: '';
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+}
+
+#data-table th.sort-asc::after {
+    border-bottom: 4px solid white;
+}
+
+#data-table th.sort-desc::after {
+    border-top: 4px solid white;
+}
+
+.stats-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.stat-card {
+    background: white;
+    padding: 12px 15px;
+    border-radius: 6px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    border-left: 3px solid #667eea;
+}
+
+.stat-card h3 {
+    color: #667eea;
+    margin-bottom: 8px;
+    font-size: 0.95em;
+    font-weight: 600;
+}
+
+.stat-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 0.85em;
+}
+
+.stat-item:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.stat-label {
+    font-weight: 400;
+    color: #888;
+}
+
+.stat-value {
+    font-weight: 500;
+    color: #333;
+}
+
+.charts-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 30px;
+}
+
+.chart-wrapper {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    min-height: 400px;
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 30px;
+}
+
+.chart-wrapper table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85em;
+}
+
+.chart-wrapper table th,
+.chart-wrapper table td {
+    padding: 6px 8px;
+    border: 1px solid #ddd;
+    text-align: center;
+}
+
+.chart-wrapper table th {
+    background: #f8f9fa;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.chart-wrapper table tr:nth-child(even) {
+    background: #f8f9fa;
+}
+
+.chart-wrapper table tr:hover {
+    background: rgba(102, 126, 234, 0.05);
+}
+
+.chart-wrapper .stats-container {
+    overflow-x: auto;
+    max-height: 200px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-top: 15px;
+}
+
+.chart-wrapper .stats-container table {
+    width: 100%;
+}
+
+.chart-wrapper .stats-container table th:first-child,
+.chart-wrapper .stats-container table td:first-child {
+    text-align: center;
+}
+
+.chart-wrapper .stats-container table th:nth-child(2),
+.chart-wrapper .stats-container table td:nth-child(2) {
+    text-align: left;
+    min-width: 150px;
+    word-break: break-word;
+}
+
+.chart-wrapper .stats-container table th:nth-child(3),
+.chart-wrapper .stats-container table td:nth-child(3),
+.chart-wrapper .stats-container table th:nth-child(4),
+.chart-wrapper .stats-container table td:nth-child(4) {
+    text-align: center;
+    min-width: 80px;
+}
+
+.chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.chart-title {
+    color: #667eea;
+    font-weight: 600;
+    font-size: 1em;
+}
+
+.chart-action {
+    display: flex;
+    gap: 10px;
+}
+
+.recommend-btn {
+    background: #667eea;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 0.8em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.recommend-btn:hover {
+    background: #764ba2;
+    transform: translateY(-1px);
+}
+
+.chart-wrapper canvas {
+    flex: 1;
+    width: 100% !important;
+    height: calc(100% - 40px) !important;
+}
+
+.ai-report {
+    background: white;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+#generate-report {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 5px;
+    font-size: 1em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 140px;
+    height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#generate-report:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+}
+
+#report-content {
+    line-height: 1.8;
+    white-space: pre-wrap;
+}
+
+.export-buttons {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+#export-pdf,
+#export-image {
+    background: #667eea;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 5px;
+    font-size: 1em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 140px;
+    height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#export-pdf:hover,
+#export-image:hover {
+    background: #764ba2;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+}
+
+/* 表格样式 */
+.preview-container {
+    overflow-x: auto;
+}
+
+#data-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+#data-table th, 
+#data-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+    white-space: nowrap;
+}
+
+#data-table tr:hover {
+    background-color: rgba(102, 126, 234, 0.05);
+}
+
+/* 自然语言查询区域样式 */
+.nlp-query-section {
+    margin-bottom: 20px;
+    padding: 20px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.nlp-query-section h3 {
+    margin-bottom: 15px;
+    color: #667eea;
+    font-size: 1.1em;
+}
+
+.nlp-query-form {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.input-wrapper {
+    position: relative;
+    flex: 1;
+    min-width: 300px;
+}
+
+.nlp-query-form input {
+    width: 100%;
+    padding: 12px 40px 12px 16px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 1em;
+    transition: border-color 0.3s ease;
+    box-sizing: border-box;
+}
+
+.nlp-query-form input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.clear-btn {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #999;
+    font-size: 1.5em;
+    cursor: pointer;
+    padding: 0;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+}
+
+.clear-btn:hover {
+    background: #f0f0f0;
+    color: #666;
+}
+
+#submit-query {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 6px;
+    font-size: 1em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+#submit-query:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+}
+
+.stop-btn {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 6px;
+    font-size: 1em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.stop-btn:hover {
+    background: #c82333;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+}
+
+.query-progress {
+    margin-bottom: 15px;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+    width: 0%;
+    transition: width 0.3s ease;
+}
+
+.progress-percentage {
+    text-align: center;
+    font-size: 0.85em;
+    color: #667eea;
+    margin-top: 5px;
+    font-weight: 600;
+}
+
+.progress-text {
+    color: #666;
+    font-size: 0.9em;
+    text-align: center;
+}
+
+#nlp-query-result {
+    margin-top: 15px;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 6px;
+    border-left: 4px solid #667eea;
+}
+
+.nlp-answer {
+    line-height: 1.6;
+}
+
+.nlp-answer .query-text {
+    font-style: italic;
+    color: #666;
+    margin-bottom: 10px;
+}
+
+.nlp-answer .result-text {
+    font-weight: 500;
+    color: #333;
+}
+
+/* 自然语言绘图区域样式 */
+.nlp-chart-section {
+    margin-bottom: 20px;
+    padding: 20px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.nlp-chart-section h3 {
+    margin-bottom: 15px;
+    color: #667eea;
+    font-size: 1.1em;
+}
+
+.nlp-chart-form {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.nlp-chart-form input {
+    width: 100%;
+    padding: 12px 40px 12px 16px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 1em;
+    transition: border-color 0.3s ease;
+    box-sizing: border-box;
+}
+
+.nlp-chart-form input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+#generate-chart {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 6px;
+    font-size: 1em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+#generate-chart:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+}
+
+#stop-chart {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 6px;
+    font-size: 1em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+#stop-chart:hover {
+    background: #c82333;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding: 10px;
+    }
+    
+    header h1 {
+        font-size: 2em;
+    }
+    
+    main {
+        padding: 20px;
+    }
+    
+    .drop-area {
+        padding: 30px;
+    }
+    
+    .charts-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .export-buttons {
+        flex-direction: column;
+    }
+    
+    .nlp-query-form {
+        flex-direction: column;
+    }
+    
+    .nlp-query-form input {
+        min-width: 100%;
+    }
+    
+    #submit-query {
+        width: 100%;
+    }
+}
+
+/* 统一的NLP交互区域样式 */
+.nlp-interaction-section {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.nlp-interaction-section h3 {
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.nlp-form {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+    align-items: stretch;
+}
+
+.nlp-form .input-wrapper {
+    flex: 1;
+    position: relative;
+}
+
+.nlp-form input {
+    width: 100%;
+    padding: 12px 40px 12px 15px;
+    border: 2px solid #e0e0e0;
+    border-radius: 6px;
+    font-size: 1em;
+    transition: border-color 0.3s;
+    box-sizing: border-box;
+}
+
+.nlp-form input:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.nlp-form .clear-btn {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #999;
+    font-size: 1.2em;
+    cursor: pointer;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.nlp-form .clear-btn:hover {
+    color: #666;
+}
+
+.nlp-form button {
+    padding: 12px 24px;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 1em;
+    cursor: pointer;
+    transition: background 0.3s;
+    white-space: nowrap;
+}
+
+.nlp-form button:hover {
+    background: #5568d3;
+}
+
+.nlp-form .stop-btn {
+    background: #dc3545;
+}
+
+.nlp-form .stop-btn:hover {
+    background: #c82333;
+}
+
+/* 处理日志区域样式 */
+#processing-log-section {
+    margin-top: 30px;
+}
+
+#processing-log-section h2 {
+    margin-bottom: 15px;
+    color: #333;
+}
+
+/* 筛选条件样式 */
+.filter-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.filter-row select,
+.filter-row input {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+
+.filter-row select {
+    min-width: 150px;
+}
+
+.filter-row input {
+    flex: 1;
+    min-width: 150px;
+}
+
+.filter-row button {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9em;
+}
+
+.filter-row button:hover {
+    background: #c82333;
+}
+
+/* 筛选操作按钮 */
+.filter-actions {
+    margin-top: 15px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.filter-actions button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: background 0.3s;
+}
+
+#add-filter {
+    background: #28a745;
+    color: white;
+}
+
+#add-filter:hover {
+    background: #218838;
+}
+
+#apply-filter {
+    background: #667eea;
+    color: white;
+}
+
+#apply-filter:hover {
+    background: #5568d3;
+}
+
+#clear-filter {
+    background: #6c757d;
+    color: white;
+}
+
+#clear-filter:hover {
+    background: #5a6268;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    .nlp-form {
+        flex-direction: column;
+    }
+    
+    .nlp-form button {
+        width: 100%;
+    }
+    
+    .filter-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .filter-row select,
+    .filter-row input {
+        width: 100%;
+        min-width: auto;
+    }
+}

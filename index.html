@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能数据洞察助手</title>
+    <link rel="stylesheet" href="styles.css?v=20260226f">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="config.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>智能数据洞察助手</h1>
+            <p>上传您的数据文件，获取智能分析报告</p>
+        </header>
+        
+        <main>
+            <!-- 文件上传区域 -->
+            <section class="upload-section">
+                <div id="drop-area" class="drop-area">
+                    <div class="drop-content">
+                        <div class="icon">📁</div>
+                        <h3>拖拽文件到此处或点击上传</h3>
+                        <p>支持 CSV 和 Excel (.xlsx) 文件</p>
+                        <input type="file" id="file-input" accept=".csv,.xlsx">
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 加载动画 -->
+            <div id="loading" class="loading hidden">
+                <div class="spinner"></div>
+                <p>处理中...</p>
+            </div>
+            
+            <!-- 数据预览区域 -->
+            <section id="data-preview" class="hidden">
+                <h2>数据预览</h2>
+                
+                <!-- 数据筛选区域 -->
+                <div class="preview-controls">
+                    <div class="filter-section">
+                        <h3>数据筛选</h3>
+                        <div id="filter-conditions">
+                            <!-- 筛选条件将动态添加到这里 -->
+                        </div>
+                        <div class="filter-actions" style="margin-top: 15px; display: flex; gap: 10px;">
+                            <button id="add-filter">添加筛选条件</button>
+                            <button id="apply-filter">应用筛选</button>
+                            <button id="clear-filter">清除筛选</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 数据表格 -->
+                <div class="preview-container">
+                    <table id="data-table">
+                        <thead></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                
+                <!-- 自然语言交互区域（移到表格下方） -->
+                <div class="nlp-interaction-section" style="margin-top: 30px; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    <h3>智能查询与可视化</h3>
+                    <p style="color: #666; margin-bottom: 15px; font-size: 0.9em;">输入您的问题或可视化需求，AI将自动判断并执行查询或生成图表</p>
+                    <div class="nlp-form">
+                        <div class="input-wrapper" style="flex: 1;">
+                            <input type="text" id="nlp-input" placeholder="例如：哪个省公司的险情确认时长最长？ 或 按省公司统计事件数量并绘制柱状图" style="width: 100%;">
+                            <button id="clear-nlp" class="clear-btn" title="清空">×</button>
+                        </div>
+                        <button id="submit-nlp">执行</button>
+                        <button id="stop-nlp" class="stop-btn hidden">停止</button>
+                    </div>
+                    <div id="nlp-progress" class="query-progress hidden">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="nlp-progress-fill"></div>
+                        </div>
+                        <div class="progress-percentage" id="nlp-progress-percent">0%</div>
+                        <div class="progress-text">正在分析您的需求...</div>
+                    </div>
+                    <div id="nlp-result"></div>
+                </div>
+            </section>
+            
+            <!-- 数据可视化区域 -->
+            <section id="data-visualization" class="hidden">
+                <h2>数据可视化</h2>
+                <div class="charts-container"></div>
+            </section>
+            
+            <!-- AI 数据分析报告区域 -->
+            <section id="ai-analysis" class="hidden">
+                <h2>AI 数据分析报告</h2>
+                <div class="ai-report">
+                    <div class="report-actions" style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
+                        <button id="generate-report">生成分析报告</button>
+                        <button id="export-pdf" style="background: #17a2b8;">导出为 PDF</button>
+                        <button id="export-image" style="background: #6c757d;">导出为图片</button>
+                    </div>
+                    <div id="report-content"></div>
+                </div>
+            </section>
+            
+            <!-- 处理日志区域 -->
+            <section id="processing-log-section" class="hidden">
+                <h2>处理日志</h2>
+                <div id="processing-log" style="background: #1e1e1e; color: #d4d4d4; padding: 20px; border-radius: 8px; font-family: 'Consolas', 'Monaco', monospace; font-size: 0.85em; line-height: 1.6; max-height: 500px; overflow-y: auto;">
+                </div>
+            </section>
+        </main>
+    </div>
+    
+    <script src="script.js?v=20260226f"></script>
+</body>
+</html>
