@@ -368,6 +368,31 @@ class QueryConfigGenerator {
                         })
                     },
                     {
+                        // 按照X绘制Y的柱状图（明确指定分组列和数值列）
+                        // 如"按照省份绘制销售额的柱状图" → X轴=省份, Y轴=销售额
+                        regex: /按[照]?(.+?)(绘制|画|生成|做)(.+?)的柱状图/,
+                        extract: (match, columns) => {
+                            const xDesc = match[1].trim();
+                            const yDesc = match[3].trim();
+                            console.log(`[CHART_BAR] 匹配"按照X绘制Y的柱状图": X=${xDesc}, Y=${yDesc}`);
+                            
+                            const xAxisColumn = this.findColumn(xDesc, columns);
+                            const yAxisColumn = this.findColumn(yDesc, columns);
+                            
+                            console.log(`[CHART_BAR] 匹配结果: X=${xAxisColumn}, Y=${yAxisColumn}`);
+                            
+                            // 如果成功匹配到Y轴列，使用sum聚合；否则使用count
+                            const aggregateFunction = yAxisColumn ? 'sum' : 'count';
+                            
+                            return {
+                                chartType: 'bar',
+                                xAxisColumn: xAxisColumn,
+                                yAxisColumn: yAxisColumn,
+                                aggregateFunction: aggregateFunction
+                            };
+                        }
+                    },
+                    {
                         // 按照X绘制柱状图（只指定分组列，默认计数）
                         regex: /按[照]?(.+?)(绘制|画|生成|做).*柱状图/,
                         extract: (match, columns) => ({
@@ -453,6 +478,31 @@ class QueryConfigGenerator {
                             yAxisColumn: this.findColumn(match[2], columns),
                             aggregateFunction: 'sum'
                         })
+                    },
+                    {
+                        // 按照X绘制Y的折线图（明确指定分组列和数值列）
+                        // 如"按照月份绘制销售额的折线图" → X轴=月份, Y轴=销售额
+                        regex: /按[照]?(.+?)(绘制|画|生成|做)(.+?)的折线图/,
+                        extract: (match, columns) => {
+                            const xDesc = match[1].trim();
+                            const yDesc = match[3].trim();
+                            console.log(`[CHART_LINE] 匹配"按照X绘制Y的折线图": X=${xDesc}, Y=${yDesc}`);
+                            
+                            const xAxisColumn = this.findColumn(xDesc, columns);
+                            const yAxisColumn = this.findColumn(yDesc, columns);
+                            
+                            console.log(`[CHART_LINE] 匹配结果: X=${xAxisColumn}, Y=${yAxisColumn}`);
+                            
+                            // 如果成功匹配到Y轴列，使用sum聚合；否则使用count
+                            const aggregateFunction = yAxisColumn ? 'sum' : 'count';
+                            
+                            return {
+                                chartType: 'line',
+                                xAxisColumn: xAxisColumn,
+                                yAxisColumn: yAxisColumn,
+                                aggregateFunction: aggregateFunction
+                            };
+                        }
                     },
                     {
                         // 按照X绘制折线图（只指定分组列，默认计数）
@@ -567,6 +617,31 @@ class QueryConfigGenerator {
                                 labelColumn: labelCol,
                                 valueColumn: valueCol,
                                 aggregateFunction: 'sum'
+                            };
+                        }
+                    },
+                    {
+                        // 按照X绘制Y的饼图（明确指定标签列和数值列）
+                        // 如"按照省份绘制销售额的饼图" → 标签=省份, 数值=销售额
+                        regex: /按[照]?(.+?)(绘制|画|生成|做)(.+?)的饼图/,
+                        extract: (match, columns) => {
+                            const labelDesc = match[1].trim();
+                            const valueDesc = match[3].trim();
+                            console.log(`[CHART_PIE] 匹配"按照X绘制Y的饼图": 标签=${labelDesc}, 数值=${valueDesc}`);
+                            
+                            const labelCol = this.findColumn(labelDesc, columns);
+                            const valueCol = this.findColumn(valueDesc, columns);
+                            
+                            console.log(`[CHART_PIE] 匹配结果: 标签列=${labelCol}, 数值列=${valueCol}`);
+                            
+                            // 如果成功匹配到数值列，使用sum聚合；否则使用count
+                            const aggregateFunction = valueCol ? 'sum' : 'count';
+                            
+                            return {
+                                chartType: 'pie',
+                                labelColumn: labelCol,
+                                valueColumn: valueCol,
+                                aggregateFunction: aggregateFunction
                             };
                         }
                     },
