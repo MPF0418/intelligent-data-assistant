@@ -8,10 +8,140 @@ let currentFilter = null;
 let currentPage = 1; // 当前页码
 const pageSize = 10; // 每页显示行数
 let currentQueryController = null; // 当前查询的AbortController
+let skillManager = null; // Skill管理器
+let dbManager = null; // 数据库管理器
+let intentRecognizer = null; // 意图识别器
+let useLocalIntentRecognition = true; // 是否使用本地意图识别
+let useDatabaseMode = false; // 是否使用数据库模式（大数据量时启用）
+
+// API基础URL配置 - 支持从URL参数动态配置（用于公网部署）
+// 用法：https://前端地址?apiUrl=https://后端API地址
+const API_BASE_URL = new URLSearchParams(window.location.search).get('apiUrl') || 'http://localhost:5001';
+
+// 文件上下文信息（用于辅助理解用户意图）
+let fileContext = {
+    fileName: '',           // 文件名（如："24年3季度事件.xlsx"）
+    sheetName: '',          // Sheet名称（如："事件明细"）
+    fileKeywords: []        // 从文件名提取的关键词（如：["事件", "24年", "3季度"]）
+};
 
 // 处理日志相关
 let processingLogs = [];
 let currentOperationStartTime = null;
+
+// ========== V4.0 内联数据画像模块（简化版）==========
+class SimpleDataProfiler {
+    constructor() {
+        this.currentProfile = null; // 使用不同的属性名，避免覆盖方法
+    }
+
+    profile(data, headers) {
+        if (!data || data.length === 0 || !headers || headers.length === 0) {
+            return null;
+        }
+
+        const shape = { rows: data.length, cols: headers.length };
+        const columns = {};
+        let numericCols = [], textCols = [], dateCols = [], categoricalCols = [];
+
+        headers.forEach(col => {
+            const values = data.map(row => row[col]).filter(v => v !== null && v !== undefined && v !== '');
+            const uniqueCount = [...new Set(values)].length;
+            
+            let type = 'text';
+            if (values.every(v => !isNaN(parseFloat(v)))) {
+                type = 'numeric';
+                numericCols.push(col);
+            } else if (col.includes('日期') || col.includes('时间') || (values[0] && /^\d{4}[-/]/.test(values[0]))) {
+                type = 'datetime';
+                dateCols.push(col);
+            } else if (uniqueCount <= 10 && uniqueCount < values.length * 0.5) {
+                type = 'categorical';
+                categoricalCols.push(col);
+            } else {
+                textCols.push(col);
+            }
+
+            columns[col] = {
+                name: col,
+                type: type,
+                uniqueCount: uniqueCount,
+                nullCount: data.length - values.length
+            };
+        });
+
+        const totalCells = data.length * headers.length;
+        const emptyCells = headers.reduce((sum, col) => sum + columns[col].nullCount, 0);
+        const completeness = ((1 - emptyCells / totalCells) * 100).toFixed(2);
+
+        return {
+            shape,
+            columns,
+            schema: { numericCols, textCols, dateCols, categoricalCols },
+            quality: {
+                completeness: parseFloat(completeness),
+                grade: completeness > 95 ? 'A' : completeness > 85 ? 'B' : 'C'
+            },
+            summary: `数据集共${shape.rows}行×${shape.cols}列，数值型${numericCols.length}个，质量评级${completeness > 95 ? 'A' : completeness > 85 ? 'B' : 'C'}`
+        };
+    }
+}
+
+// 立即创建全局实例
+window.dataProfiler = new SimpleDataProfiler();
+console.log('[V4.0] ✅ 内联数据画像模块已创建（文件头部）');
+
+// 显示通知
+function showNotification(message, type = 'info') {
+    // 创建通知元素
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.textContent = message;
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 12px 20px;
+        border-radius: 8px;
+        color: white;
+        font-weight: 500;
+        z-index: 10000;
+        animation: slideIn 0.3s ease;
+        max-width: 400px;
+        word-wrap: break-word;
+        background: ${type === 'success' ? '#4caf50' : type === 'warning' ? '#ff9800' : type === 'error' ? '#f44336' : '#2196f3'};
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    `;
+    
+    // 添加动画样式
+    if (!document.getElementById('notification-styles')) {
+        const style = document.createElement('style');
+        style.id = 'notification-styles';
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    document.body.appendChild(notification);
+    
+    // 3秒后自动移除
+    setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    }, 3000);
+}
 
 // 添加处理日志
 function addProcessingLog(type, message, details = null) {
@@ -27,11 +157,8 @@ function addProcessingLog(type, message, details = null) {
     // 更新日志显示
     updateProcessingLogDisplay();
     
-    // 显示处理日志区域
-    const logSection = document.getElementById('processing-log-section');
-    if (logSection) {
-        logSection.classList.remove('hidden');
-    }
+    // 更新日志徽章
+    updateLogBadge();
 }
 
 // 更新处理日志显示
@@ -111,6 +238,77 @@ function endOperationTiming() {
     currentOperationStartTime = null;
 }
 
+// 初始化技能管理器
+async function initSkillManager() {
+    try {
+        // 动态导入技能管理器
+        const { default: SkillManager } = await import('./skills/skillManager.js');
+        skillManager = SkillManager;
+        
+        // 加载技能
+        const loadedSkills = await skillManager.loadSkills();
+        addProcessingLog('success', `技能加载完成，共加载 ${loadedSkills.length} 个技能`, loadedSkills.join(', '));
+        
+        // 初始化技能UI
+        initSkillUI();
+    } catch (error) {
+        console.error('初始化技能管理器失败:', error);
+        addProcessingLog('error', '技能管理器初始化失败', error.message);
+    }
+}
+
+// 初始化意图识别器
+async function initIntentRecognizer() {
+    try {
+        // 动态导入意图识别器
+        const { default: recognizer } = await import('./js/intentRecognizer.js');
+        intentRecognizer = recognizer;
+        
+        // 设置状态变化回调，让UI自动更新
+        intentRecognizer.onStatusChange = (status) => {
+            updateSystemStatus();
+            addProcessingLog('info', '本地模型状态更新', status.modelAvailable ? '可用' : '不可用');
+        };
+        
+        // 等待模型可用性检测完成
+        await intentRecognizer.checkLocalModelAvailability();
+        
+        addProcessingLog('success', '意图识别器初始化完成', '支持规则匹配和本地模型API');
+    } catch (error) {
+        console.error('初始化意图识别器失败:', error);
+        addProcessingLog('warning', '意图识别器初始化失败，将使用LLM API', error.message);
+        useLocalIntentRecognition = false;
+    }
+}
+
+// 初始化数据库管理器
+async function initDatabaseManager() {
+    try {
+        // 动态导入数据库管理器
+        const { default: manager } = await import('./js/dbManager.js');
+        dbManager = manager;
+        
+        // 初始化SQL.js数据库
+        const initSuccess = await dbManager.init();
+        if (initSuccess) {
+            addProcessingLog('success', '数据库管理器初始化完成', '支持SQL查询和大数据量处理');
+        } else {
+            addProcessingLog('warning', '数据库管理器初始化失败', '将使用内存模式');
+            dbManager = null;
+        }
+    } catch (error) {
+        console.error('初始化数据库管理器失败:', error);
+        addProcessingLog('warning', '数据库管理器初始化失败，将使用内存模式', error.message);
+        dbManager = null;
+    }
+}
+
+// 初始化技能UI
+function initSkillUI() {
+    // 这里可以添加技能管理的UI元素
+    // 例如技能列表、执行按钮等
+}
+
 // 初始化事件监听器
 function initEventListeners() {
     const dropArea = document.getElementById('drop-area');
@@ -118,6 +316,7 @@ function initEventListeners() {
     const generateReportBtn = document.getElementById('generate-report');
     const exportPdfBtn = document.getElementById('export-pdf');
     const exportImageBtn = document.getElementById('export-image');
+    const exportAllChartsBtn = document.getElementById('export-all-charts');
     
     // 拖拽事件
     dropArea.addEventListener('dragover', handleDragOver);
@@ -138,6 +337,9 @@ function initEventListeners() {
     }
     if (exportImageBtn) {
         exportImageBtn.addEventListener('click', exportImage);
+    }
+    if (exportAllChartsBtn) {
+        exportAllChartsBtn.addEventListener('click', exportAllCharts);
     }
     
     // 排序功能
@@ -197,6 +399,274 @@ function initEventListeners() {
     }
     if (clearFilterBtn) {
         clearFilterBtn.addEventListener('click', clearAllFilters);
+    }
+    
+    // 新增：日志弹窗相关
+    const toggleLogBtn = document.getElementById('toggle-log-btn');
+    const toggleLogBtnFooter = document.getElementById('toggle-log-btn-footer');
+    const closeLogModal = document.getElementById('close-log-modal');
+    const copyLogBtn = document.getElementById('copy-log');
+    const clearLogBtn = document.getElementById('clear-log');
+    const logModal = document.getElementById('log-modal');
+    const logModalOverlay = logModal?.querySelector('.modal-overlay');
+    
+    if (toggleLogBtn) {
+        toggleLogBtn.addEventListener('click', toggleLogModal);
+    }
+    if (toggleLogBtnFooter) {
+        toggleLogBtnFooter.addEventListener('click', toggleLogModal);
+    }
+    if (closeLogModal) {
+        closeLogModal.addEventListener('click', hideLogModal);
+    }
+    if (logModalOverlay) {
+        logModalOverlay.addEventListener('click', hideLogModal);
+    }
+    if (copyLogBtn) {
+        copyLogBtn.addEventListener('click', copyLogsToClipboard);
+    }
+    if (clearLogBtn) {
+        clearLogBtn.addEventListener('click', () => {
+            clearProcessingLogs();
+            updateLogBadge();
+        });
+    }
+    
+    // 新增：设置弹窗相关
+    const settingsBtn = document.getElementById('settings-btn');
+    const closeSettingsModal = document.getElementById('close-settings-modal');
+    const settingsModal = document.getElementById('settings-modal');
+    const settingsOverlay = settingsModal?.querySelector('.modal-overlay');
+    const useLocalIntentCheckbox = document.getElementById('use-local-intent');
+    const useDatabaseModeCheckbox = document.getElementById('use-database-mode');
+    
+    if (settingsBtn) {
+        settingsBtn.addEventListener('click', showSettingsModal);
+    }
+    if (closeSettingsModal) {
+        closeSettingsModal.addEventListener('click', hideSettingsModal);
+    }
+    if (settingsOverlay) {
+        settingsOverlay.addEventListener('click', hideSettingsModal);
+    }
+    if (useLocalIntentCheckbox) {
+        useLocalIntentCheckbox.checked = useLocalIntentRecognition;
+        useLocalIntentCheckbox.addEventListener('change', (e) => {
+            useLocalIntentRecognition = e.target.checked;
+            if (intentRecognizer) {
+                intentRecognizer.setUseLocalModel(e.target.checked);
+            }
+            addProcessingLog('info', `本地意图识别已${e.target.checked ? '启用' : '禁用'}`);
+        });
+    }
+    if (useDatabaseModeCheckbox) {
+        useDatabaseModeCheckbox.addEventListener('change', (e) => {
+            addProcessingLog('info', `数据库模式设置已更新，下次加载数据时生效`);
+        });
+    }
+    
+    // 大模型兜底设置
+    const useLLMFallbackCheckbox = document.getElementById('use-llm-fallback');
+    const confidenceThresholdSlider = document.getElementById('confidence-threshold');
+    const thresholdValueSpan = document.getElementById('threshold-value');
+    
+    if (useLLMFallbackCheckbox) {
+        useLLMFallbackCheckbox.addEventListener('change', (e) => {
+            if (intentRecognizer) {
+                intentRecognizer.setUseLLMFallback(e.target.checked);
+            }
+            addProcessingLog('info', `大模型兜底已${e.target.checked ? '启用' : '禁用'}`);
+        });
+    }
+    
+    if (confidenceThresholdSlider && thresholdValueSpan) {
+        confidenceThresholdSlider.addEventListener('input', (e) => {
+            const value = parseFloat(e.target.value);
+            thresholdValueSpan.textContent = value.toFixed(1);
+            if (intentRecognizer) {
+                intentRecognizer.setLLMConfidenceThreshold(value);
+            }
+        });
+    }
+    
+    // V3.3新增：API测试按钮
+    const testApiBtn = document.getElementById('test-api-btn');
+    const apiUrlInput = document.getElementById('api-url-input');
+    const apiTestResult = document.getElementById('api-test-result');
+    
+    if (apiUrlInput) {
+        // 初始化时从config加载API地址
+        apiUrlInput.value = config.ai.apiUrl;
+        
+        // 监听输入变化，保存到localStorage
+        apiUrlInput.addEventListener('change', (e) => {
+            const newUrl = e.target.value.trim();
+            if (newUrl) {
+                localStorage.setItem('apiUrl', newUrl);
+                config.ai.apiUrl = newUrl;
+                addProcessingLog('info', `API地址已更新: ${newUrl}`);
+            }
+        });
+    }
+    
+    if (testApiBtn && apiTestResult) {
+        testApiBtn.addEventListener('click', async () => {
+            apiTestResult.innerHTML = '<span style="color: #666;">🔄 测试中...</span>';
+            try {
+                const result = await testAPIConnection();
+                apiTestResult.innerHTML = `<span style="color: #4caf50;">✅ ${result}</span>`;
+            } catch (error) {
+                apiTestResult.innerHTML = `<span style="color: #f44336;">❌ ${error.message}</span>`;
+            }
+        });
+    }
+    
+    // 更新系统状态显示
+    updateSystemStatus();
+    
+    // 新增：示例按钮
+    const exampleBtns = document.querySelectorAll('.example-btn');
+    exampleBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const query = btn.getAttribute('data-query');
+            if (query && nlpInput) {
+                nlpInput.value = query;
+                nlpInput.focus();
+            }
+        });
+    });
+    
+    // 新增：筛选区域折叠
+    const toggleFilterBtn = document.getElementById('toggle-filter');
+    const filterBody = document.getElementById('filter-body');
+    if (toggleFilterBtn && filterBody) {
+        toggleFilterBtn.addEventListener('click', () => {
+            filterBody.classList.toggle('collapsed');
+            toggleFilterBtn.style.transform = filterBody.classList.contains('collapsed') ? 'rotate(-90deg)' : '';
+        });
+    }
+    
+    // V3.0 功能按钮事件绑定
+    const errorReportBtn = document.getElementById('error-report-btn');
+    const autoFixBtn = document.getElementById('auto-fix-btn');
+    
+    if (errorReportBtn) {
+        errorReportBtn.addEventListener('click', () => {
+            if (window.feedbackUI && window.feedbackUI.showErrorReport) {
+                window.feedbackUI.showErrorReport();
+            } else {
+                alert('错误报告功能尚未加载');
+            }
+        });
+    }
+    
+    if (autoFixBtn) {
+        autoFixBtn.addEventListener('click', async () => {
+            if (window.autoFixer && window.autoFixer.fixAll) {
+                const confirmFix = confirm('确定要一键修复所有已知问题吗？这可能需要几分钟时间。');
+                if (!confirmFix) return;
+                
+                try {
+                    showNotification('开始自动修复...', 'info');
+                    const results = await window.autoFixer.fixAll();
+                    showNotification(`修复完成！成功修复 ${results.filter(r => r.success).length} 个问题`, 'success');
+                } catch (error) {
+                    showNotification('修复失败：' + error.message, 'error');
+                }
+            } else {
+                alert('自动修复功能尚未加载');
+            }
+        });
+    }
+}
+
+// 更新系统状态显示
+function updateSystemStatus() {
+    const localModelStatus = document.getElementById('local-model-status');
+    const llmApiStatus = document.getElementById('llm-api-status');
+    
+    // 检查本地模型状态
+    if (localModelStatus && intentRecognizer) {
+        const status = intentRecognizer.getModelStatus();
+        localModelStatus.textContent = status.modelAvailable ? '✅ 可用' : '❌ 不可用';
+        localModelStatus.style.color = status.modelAvailable ? '#28a745' : '#dc3545';
+    }
+    
+    // 检查大模型API状态
+    if (llmApiStatus) {
+        if (typeof config !== 'undefined' && config.ai && config.ai.apiKey) {
+            llmApiStatus.textContent = '✅ 已配置';
+            llmApiStatus.style.color = '#28a745';
+        } else {
+            llmApiStatus.textContent = '❌ 未配置';
+            llmApiStatus.style.color = '#dc3545';
+        }
+    }
+}
+
+// 显示日志弹窗
+function toggleLogModal() {
+    const logModal = document.getElementById('log-modal');
+    if (logModal) {
+        logModal.classList.toggle('hidden');
+    }
+}
+
+// 隐藏日志弹窗
+function hideLogModal() {
+    const logModal = document.getElementById('log-modal');
+    if (logModal) {
+        logModal.classList.add('hidden');
+    }
+}
+
+// 显示设置弹窗
+function showSettingsModal() {
+    const settingsModal = document.getElementById('settings-modal');
+    if (settingsModal) {
+        settingsModal.classList.remove('hidden');
+    }
+}
+
+// 隐藏设置弹窗
+function hideSettingsModal() {
+    const settingsModal = document.getElementById('settings-modal');
+    if (settingsModal) {
+        settingsModal.classList.add('hidden');
+    }
+}
+
+// 复制日志到剪贴板
+async function copyLogsToClipboard() {
+    const logText = processingLogs.map(log => {
+        return `[${log.timestamp}] [${log.type.toUpperCase()}] ${log.message}${log.details ? ' - ' + log.details : ''}`;
+    }).join('\n');
+    
+    try {
+        await navigator.clipboard.writeText(logText);
+        const copyBtn = document.getElementById('copy-log');
+        if (copyBtn) {
+            const originalText = copyBtn.textContent;
+            copyBtn.textContent = '已复制!';
+            setTimeout(() => {
+                copyBtn.textContent = originalText;
+            }, 2000);
+        }
+    } catch (err) {
+        console.error('复制失败:', err);
+    }
+}
+
+// 更新日志徽章
+function updateLogBadge() {
+    const badge = document.getElementById('log-badge');
+    if (badge) {
+        if (processingLogs.length > 0) {
+            badge.style.display = 'block';
+            badge.textContent = processingLogs.length > 99 ? '99+' : processingLogs.length;
+        } else {
+            badge.style.display = 'none';
+        }
     }
 }
 
@@ -405,7 +875,7 @@ async function handleUnifiedNLP() {
     // 记录开始时间
     const totalStartTime = Date.now();
     addProcessingLog('info', '开始处理用户请求', `输入内容: "${userInput}"`);
-    startOperationTiming('AI意图识别');
+    startOperationTiming('意图识别');
     
     // 显示进度
     showNLPProgress('正在分析您的需求...');
@@ -413,68 +883,275 @@ async function handleUnifiedNLP() {
     nlpResult.innerHTML = '';
     
     // 准备数据信息
+    // V4.0修复：增加sampleData大小到10行，确保能覆盖更多筛选值
     const dataInfo = {
         columns: headers,
         rowCount: data.length,
-        sampleData: data.slice(0, 3)
+        sampleData: data.slice(0, 10)
     };
-    
-    setNLPProgress(20, '正在调用AI进行意图识别...');
-    
-    // 构建意图识别prompt
-    const intentPrompt = `你是一位智能助手，请分析用户的输入，判断用户想要执行查询操作还是绘图操作。
-
-用户输入："${userInput}"
-
-数据表结构：
-- 表头（列名）：${dataInfo.columns.join(', ')}
-- 数据行数：${dataInfo.rowCount}
-
-请返回JSON格式的判断结果：
-{
-  "intent": "query" 或 "chart",  // query表示查询，chart表示绘图
-  "confidence": 0.95,  // 置信度0-1
-  "reason": "判断理由"
-}
-
-规则：
-- 如果用户询问数据内容、统计信息、查找特定记录等，返回 "query"
-- 如果用户要求生成图表、可视化、画图等，返回 "chart"
-- 如果无法确定，默认返回 "query"
-
-请只返回JSON，不要其他内容。`;
     
     try {
         // 创建AbortController
         currentQueryController = new AbortController();
         
-        // 调用AI进行意图识别
-        setNLPProgress(30, 'AI正在分析意图...');
-        const intentResponse = await callLLMAPI(intentPrompt, currentQueryController.signal, 30000);
-        
-        // 解析意图
         let intentResult;
-        try {
-            const jsonMatch = intentResponse.match(/\{[\s\S]*\}/);
-            if (jsonMatch) {
-                intentResult = JSON.parse(jsonMatch[0]);
-            } else {
-                intentResult = { intent: 'query', confidence: 0.5, reason: '无法解析，默认使用查询' };
+        let processingMode = 'unknown';
+        let classification = null;  // V4.0修复：在块外定义，以便后续使用
+        
+        // V3.0 新架构：智能路由 - 根据需求特征选择处理模式
+        // 1. 需求分类模块分析用户输入
+        // 2. 精准模式（本地模型）：用户提供了准确的列名和清晰的指令
+        // 3. 智能模式（大模型）：用户表达模糊、列名不明确、有复杂需求
+        
+        if (window.requirementClassifier) {
+            // 使用需求分类模块进行智能路由
+            setNLPProgress(15, '正在分析需求特征...');
+            addProcessingLog('info', '使用需求分类模块进行智能路由');
+            
+            // V3.0更新：classify方法现在是异步的（调用BERT API）
+            classification = await window.requirementClassifier.classify(
+                userInput, 
+                dataInfo.columns, 
+                dataInfo.sampleData
+            );
+            
+            addProcessingLog('info', `需求分类结果: ${classification.mode}`, 
+                `理由: ${classification.reason}, 置信度: ${classification.confidence.toFixed(2)}`);
+            
+            processingMode = classification.mode;
+            
+            // V3.0新增：处理拒识情况
+            if (classification.mode === 'rejected') {
+                setNLPProgress(100, '已识别为无效输入');
+                addProcessingLog('warning', '输入被拒识', classification.reason);
+                
+                // 显示友好的拒识提示
+                const nlpResult = document.getElementById('nlp-result');
+                if (nlpResult) {
+                    nlpResult.innerHTML = `
+                        <div class="rejection-notice">
+                            <div class="rejection-icon">🤔</div>
+                            <div class="rejection-title">抱歉，我无法理解您的需求</div>
+                            <div class="rejection-reason">${classification.reason}</div>
+                            <div class="rejection-suggestion">
+                                <strong>建议：</strong>${classification.suggestion}
+                            </div>
+                            <div class="rejection-examples">
+                                <strong>您可以尝试：</strong>
+                                <ul>
+                                    <li>"统计各省份的平均值"</li>
+                                    <li>"绘制销售额柱状图"</li>
+                                    <li>"查找最大的险情确认时长"</li>
+                                    <li>"按地区分组统计数量"</li>
+                                </ul>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                endOperationTiming();
+                return;
             }
-        } catch (e) {
-            intentResult = { intent: 'query', confidence: 0.5, reason: '解析失败，默认使用查询' };
+            
+            if (classification.mode === 'precise') {
+                // 精准模式：使用本地模型
+                setNLPProgress(20, '需求明确，使用本地模型处理...');
+                addProcessingLog('info', '进入精准模式（本地模型）', 
+                    `匹配列: ${classification.matchedColumns.map(m => m.column).join(', ')}`);
+                
+                if (useLocalIntentRecognition && intentRecognizer) {
+                    intentResult = await intentRecognizer.recognize(userInput);
+                    
+                    endOperationTiming();
+                    
+                    if (intentResult.isRejected) {
+                        // 本地模型拒识，降级到大模型
+                        addProcessingLog('warning', '本地模型拒识，降级到大模型', intentResult.rejectionReason);
+                        processingMode = 'intelligent';
+                    } else {
+                        addProcessingLog('success', '本地意图识别完成', 
+                            `意图: ${intentResult.intent}, 置信度: ${intentResult.confidence.toFixed(2)}, 方法: ${intentResult.method}`);
+                        
+                        const isChart = intentRecognizer.isChartIntent(intentResult.intent);
+                        intentResult = {
+                            intent: isChart ? 'chart' : 'query',
+                            confidence: intentResult.confidence,
+                            reason: intentResult.description,
+                            detailedIntent: intentResult.intent,
+                            mode: 'precise'
+                        };
+                    }
+                } else {
+                    processingMode = 'intelligent';
+                }
+            }
+            
+            if (processingMode === 'intelligent') {
+                // 智能模式：使用大模型（V3.0优化：只调用一次大模型）
+                setNLPProgress(20, '需求较复杂，使用大模型处理...');
+                addProcessingLog('info', '进入智能模式（大模型）', 
+                    classification.reason);
+                
+                // V3.0：检查是否需要先执行Skills
+                if (classification.requiredSkills && classification.requiredSkills.length > 0) {
+                    const nonChartSkills = classification.requiredSkills.filter(s => s.name !== 'chartGenerator');
+                    if (nonChartSkills.length > 0) {
+                        addProcessingLog('info', '需要调用Skills', 
+                            nonChartSkills.map(s => `${s.name}(${s.reason})`).join(', '));
+                        // 这里可以集成Skills调用逻辑
+                    }
+                }
+                
+                // 构建大模型需要的上下文
+                const columnInfo = window.requirementClassifier.getContextForLLM(
+                    dataInfo.columns,
+                    dataInfo.sampleData,
+                    classification.matchedColumns
+                );
+                
+                // V3.0优化：只调用一次大模型，直接生成配置（包含意图判断）
+                let llmPrompt;
+                if (window.llmPrompts) {
+                    // 根据需求特征智能选择提示词类型
+                    const hasChartKeyword = /图|表|可视化|绘制|画/.test(userInput);
+                    const hasQueryKeyword = /查找|查询|筛选|统计/.test(userInput);
+                    
+                    if (hasChartKeyword || !hasQueryKeyword) {
+                        // 优先使用图表配置提示词（包含意图判断逻辑）
+                        // V3.1：传递文件上下文信息
+                        llmPrompt = window.llmPrompts.generateChartConfigPrompt(userInput, columnInfo, dataInfo, fileContext);
+                        addProcessingLog('info', '使用图表配置提示词（含意图判断和文件上下文）');
+                    } else {
+                        llmPrompt = window.llmPrompts.generateQueryConfigPrompt(userInput, columnInfo, dataInfo);
+                        addProcessingLog('info', '使用查询配置提示词');
+                    }
+                } else {
+                    // 兜底：使用简单提示词
+                    llmPrompt = `分析用户需求并生成配置。用户输入: "${userInput}"，列名: ${dataInfo.columns.join(', ')}`;
+                }
+                
+                // V4.0优化：增加超时时间到120秒，配合重试机制
+                const llmResponse = await callLLMAPI(llmPrompt, currentQueryController.signal, 120000);
+                
+                // 解析大模型返回的配置
+                try {
+                    // 尝试匹配 JSON 数组或单个对象
+                    const arrayMatch = llmResponse.match(/\[[\s\S]*\]/);
+                    const objectMatch = llmResponse.match(/\{[\s\S]*\}/);
+                    
+                    let config;
+                    let isMultiChart = false;
+                    
+                    if (arrayMatch) {
+                        // 尝试解析数组（多图表场景）
+                        try {
+                            config = JSON.parse(arrayMatch[0]);
+                            if (Array.isArray(config) && config.length > 0) {
+                                isMultiChart = true;
+                                console.log('[大模型] 检测到多图表配置，共', config.length, '个图表');
+                            }
+                        } catch (e) {
+                            // 数组解析失败，尝试对象
+                            if (objectMatch) {
+                                config = JSON.parse(objectMatch[0]);
+                            }
+                        }
+                    } else if (objectMatch) {
+                        config = JSON.parse(objectMatch[0]);
+                    }
+                    
+                    if (!config) {
+                        throw new Error('无法解析大模型响应');
+                    }
+                    
+                    // 判断是图表配置还是查询配置
+                    // count_distinct 和 count_rows 明确是查询类型，不应生成图表
+                    const firstConfig = isMultiChart ? config[0] : config;
+                    const isCountDistinct = firstConfig.queryType === 'count_distinct' || firstConfig.queryType === 'count_unique';
+                    const isCountRows = firstConfig.queryType === 'count_rows';
+                    const isQuery = isCountDistinct || isCountRows;
+                    const isChart = !isQuery && (firstConfig.chartType || (firstConfig.xAxisColumn && firstConfig.yAxisColumn));
+                    
+                    intentResult = {
+                        intent: isChart ? 'chart' : 'query',
+                        confidence: 0.9,
+                        reason: isCountRows ? '大模型识别为数据行数统计' : (isCountDistinct ? '大模型识别为去重计数查询' : (isMultiChart ? '大模型识别为多图表需求' : '大模型智能识别')),
+                        detailedIntent: isChart ? (isMultiChart ? 'CHART_MULTI' : 'CHART_BAR') : (isCountRows ? 'QUERY_COUNT_ROWS' : (isCountDistinct ? 'QUERY_COUNT_DISTINCT' : 'QUERY_FILTER')),
+                        llmConfig: config,
+                        isMultiChart: isMultiChart,
+                        mode: 'intelligent',
+                        requiredSkills: classification.requiredSkills
+                    };
+                    
+                    const typeDesc = isCountRows ? '数据行数统计' : (isCountDistinct ? '去重计数' : (isMultiChart ? `多图表(${config.length}个)` : (isChart ? '图表' : '查询')));
+                    addProcessingLog('success', '大模型配置生成完成', 
+                        `类型: ${typeDesc}, 配置: ${JSON.stringify(config).substring(0, 150)}...`);
+                } catch (parseError) {
+                    addProcessingLog('error', '解析大模型响应失败', parseError.message);
+                    throw parseError;
+                }
+                
+                endOperationTiming();
+            }
+        } else {
+            // 兜底：使用原有逻辑
+            addProcessingLog('warning', '需求分类模块未加载，使用默认逻辑');
+            
+            if (useLocalIntentRecognition && intentRecognizer) {
+                setNLPProgress(20, '正在使用本地模型识别意图...');
+                intentResult = await intentRecognizer.recognize(userInput);
+                
+                endOperationTiming();
+                
+                if (intentResult.isRejected) {
+                    addProcessingLog('warning', '意图识别失败', intentResult.rejectionReason);
+                    showNotification(intentResult.rejectionReason, 'warning');
+                    resetNLPProgress();
+                    return;
+                }
+                
+                const isChart = intentRecognizer.isChartIntent(intentResult.intent);
+                intentResult = {
+                    intent: isChart ? 'chart' : 'query',
+                    confidence: intentResult.confidence,
+                    reason: intentResult.description,
+                    detailedIntent: intentResult.intent
+                };
+            }
         }
         
-        endOperationTiming();
-        addProcessingLog('success', 'AI意图识别完成', `意图: ${intentResult.intent}, 置信度: ${intentResult.confidence}, 理由: ${intentResult.reason}`);
-        
         // 根据意图执行相应操作
-        if (intentResult.intent === 'chart') {
-            setNLPProgress(40, '识别为绘图需求，正在生成图表配置...');
-            await handleNLPChart(userInput, dataInfo, totalStartTime);
+        // V3.0优化：如果大模型已经生成了配置，直接使用，不再重复调用
+        if (intentResult.mode === 'intelligent' && intentResult.llmConfig) {
+            // 智能模式且已有大模型配置，直接使用
+            if (intentResult.intent === 'chart') {
+                setNLPProgress(40, '使用大模型生成的图表配置...');
+                
+                // V3.1：支持多图表配置
+                const chartConfigs = intentResult.isMultiChart ? intentResult.llmConfig : [intentResult.llmConfig];
+                addProcessingLog('info', `直接使用大模型生成的图表配置（${chartConfigs.length}个图表）`, 
+                    JSON.stringify(chartConfigs).substring(0, 150));
+                
+                // 直接使用大模型配置生成图表
+                await handleNLPChartWithConfig(userInput, dataInfo, totalStartTime, chartConfigs);
+            } else {
+                setNLPProgress(40, '使用大模型生成的查询配置...');
+                addProcessingLog('info', '直接使用大模型生成的查询配置');
+                
+                // 执行大模型生成的查询
+                await executeLLMQuery(userInput, dataInfo, totalStartTime, intentResult.llmConfig);
+            }
         } else {
-            setNLPProgress(40, '识别为查询需求，正在生成查询配置...');
-            await handleNLPQuery(userInput, dataInfo, totalStartTime);
+            // 精准模式或没有大模型配置，使用原有流程
+            // V4.0优化：传递实体提取结果，支持高置信度筛选查询
+            const entityExtractionResult = classification.entityExtraction;
+            if (intentResult.intent === 'chart') {
+                setNLPProgress(40, '识别为绘图需求，正在生成图表配置...');
+                await handleNLPChart(userInput, dataInfo, totalStartTime, intentResult.detailedIntent, entityExtractionResult);
+            } else {
+                setNLPProgress(40, '识别为查询需求，正在生成查询配置...');
+                await handleNLPQuery(userInput, dataInfo, totalStartTime, intentResult.detailedIntent, entityExtractionResult);
+            }
         }
         
     } catch (error) {
@@ -492,35 +1169,105 @@ async function handleUnifiedNLP() {
 }
 
 // 处理NLP查询
-async function handleNLPQuery(userInput, dataInfo, totalStartTime) {
+async function handleNLPQuery(userInput, dataInfo, totalStartTime, detailedIntent = null, entityExtractionResult = null) {
     startOperationTiming('生成查询配置');
     
-    const queryPrompt = `你是一位数据分析专家，请根据用户的自然语言查询，生成结构化的数据查询逻辑。
-
-用户查询："${userInput}"
-
-数据表结构：
-- 表头（列名）：${dataInfo.columns.join(', ')}
-- 数据行数：${dataInfo.rowCount}
-
-示例数据（前3行）：
-${dataInfo.sampleData.map((row, index) => `行${index + 1}: ${Object.entries(row).map(([k, v]) => `${k}=${v}`).join(', ')}`).join('\n')}
-
-请生成JSON数组格式的查询逻辑，数组中包含所有需要执行的查询任务。
-
-每个查询任务包含以下字段：
-- queryType: 查询类型（filter-筛选, aggregate-聚合, sort-排序, find-查找, group-分组统计）
-- filterCondition: 筛选条件（如 {"年龄": ">30"}）
-- targetColumn: 目标列
-- groupByColumn: 分组列
-- aggregateFunction: 聚合函数（avg, sum, count, max, min）
-- description: 查询描述
-- resultFormat: 结果格式说明
-
-请只返回JSON数组，不要其他内容。`;
+    // 首先尝试本地生成配置（意图库匹配）
+    setNLPProgress(45, '正在尝试本地生成查询配置...');
+    const localConfig = await tryGenerateChartConfigLocally(userInput, dataInfo, detailedIntent, entityExtractionResult);
     
-    setNLPProgress(50, '正在生成查询配置...');
-    const response = await callLLMAPI(queryPrompt, currentQueryController.signal, 60000);
+    // 如果本地生成成功且是图表配置，转到图表处理流程
+    if (localConfig && localConfig.length > 0 && localConfig[0].chartType) {
+        addProcessingLog('success', '本地生成图表配置成功', `配置: ${JSON.stringify(localConfig[0]).substring(0, 100)}...`);
+        endOperationTiming();
+        
+        // 使用图表处理流程
+        await handleNLPChartWithConfig(userInput, dataInfo, totalStartTime, localConfig);
+        return;
+    }
+    
+    // V4.0修复：优先检查 filter_aggregate，因为它也有 aggregateFunction 属性
+    // 如果本地生成成功且是筛选聚合查询（如"广东省的销售额"）
+    if (localConfig && localConfig.length > 0 && localConfig[0].queryType === 'filter_aggregate') {
+        addProcessingLog('success', '本地生成筛选聚合配置成功', `配置: ${JSON.stringify(localConfig[0]).substring(0, 100)}...`);
+        endOperationTiming();
+        
+        // 执行本地查询（filter_aggregate在executeLocalQuery中处理）
+        await executeLocalQuery(userInput, dataInfo, totalStartTime, localConfig[0]);
+        return;
+    }
+    
+    // 如果本地生成成功且是聚合查询配置（优先检查，因为聚合查询也有queryType）
+    if (localConfig && localConfig.length > 0 && localConfig[0].aggregateFunction) {
+        addProcessingLog('success', '本地生成聚合查询配置成功', `配置: ${JSON.stringify(localConfig[0]).substring(0, 100)}...`);
+        endOperationTiming();
+        
+        // 执行聚合查询
+        await executeAggregateQuery(userInput, dataInfo, totalStartTime, localConfig[0]);
+        return;
+    }
+    
+    // 如果本地生成成功且是查询配置（如查找最大值/最小值）
+    if (localConfig && localConfig.length > 0 && localConfig[0].queryType) {
+        addProcessingLog('success', '本地生成查询配置成功', `配置: ${JSON.stringify(localConfig[0]).substring(0, 100)}...`);
+        endOperationTiming();
+        
+        // 执行本地查询
+        await executeLocalQuery(userInput, dataInfo, totalStartTime, localConfig[0]);
+        return;
+    }
+    
+    // 如果本地匹配成功但配置生成失败，记录日志
+    if (localConfig === null) {
+        addProcessingLog('warning', '本地正则匹配失败，尝试BERT语义匹配...', '');
+        
+        // V3.0新增：调用BERT语义匹配配置生成API
+        try {
+            const bertConfig = await callBERTConfigAPI(userInput, detailedIntent, dataInfo.columns);
+            if (bertConfig) {
+                addProcessingLog('success', 'BERT语义匹配配置生成成功', `配置: ${JSON.stringify(bertConfig).substring(0, 100)}...`);
+                endOperationTiming();
+                
+                // 根据配置类型执行相应操作
+                if (bertConfig.chartType) {
+                    await handleNLPChartWithConfig(userInput, dataInfo, totalStartTime, [bertConfig]);
+                } else if (bertConfig.queryType) {
+                    await executeLocalQuery(userInput, dataInfo, totalStartTime, bertConfig);
+                } else if (bertConfig.aggregateFunction) {
+                    // 处理聚合查询配置（如平均值、总和、计数）
+                    await executeAggregateQuery(userInput, dataInfo, totalStartTime, bertConfig);
+                }
+                return;
+            }
+        } catch (bertError) {
+            addProcessingLog('warning', 'BERT语义匹配失败', bertError.message);
+        }
+        
+        addProcessingLog('warning', '将尝试使用大模型API', '');
+    }
+    
+    // V3.0优化：使用优化的大模型提示词
+    setNLPProgress(50, '正在调用AI生成查询配置...');
+    addProcessingLog('info', '使用优化的大模型提示词生成配置');
+    
+    let queryPrompt;
+    if (window.llmPrompts && window.requirementClassifier) {
+        // 构建大模型需要的上下文
+        const columnInfo = window.requirementClassifier.getContextForLLM(
+            dataInfo.columns,
+            dataInfo.sampleData,
+            []  // 本地模式没有matchedColumns
+        );
+        
+        // 使用优化的查询配置提示词
+        queryPrompt = window.llmPrompts.generateQueryConfigPrompt(userInput, columnInfo, dataInfo);
+    } else {
+        // 兜底：使用简单提示词
+        queryPrompt = `分析用户需求并生成查询配置。用户输入: "${userInput}"，列名: ${dataInfo.columns.join(', ')}`;
+    }
+    
+    // V3.0优化：减少超时时间到30秒（简单查询不需要60秒）
+    const response = await callLLMAPI(queryPrompt, currentQueryController.signal, 30000);
     endOperationTiming();
     
     // 解析查询配置
@@ -573,58 +1320,1757 @@ ${dataInfo.sampleData.map((row, index) => `行${index + 1}: ${Object.entries(row
     }, 500);
 }
 
-// 处理NLP绘图
-async function handleNLPChart(userInput, dataInfo, totalStartTime) {
-    startOperationTiming('生成图表配置');
+// 执行去重计数查询（统计某列有多少个不同的值）
+function executeCountDistinct(column) {
+    if (!column || !headers.includes(column)) {
+        // 尝试模糊匹配列名
+        const matchedCol = headers.find(h => 
+            h.includes(column) || column.includes(h) || 
+            h.toLowerCase().includes(column.toLowerCase())
+        );
+        if (matchedCol) {
+            column = matchedCol;
+        } else {
+            throw new Error(`列"${column}"不存在`);
+        }
+    }
     
-    const chartPrompt = `你是一位数据可视化专家，请根据用户的绘图需求，生成图表配置。
-
-用户绘图需求："${userInput}"
-
-数据表结构：
-- 表头（列名）：${dataInfo.columns.join(', ')}
-- 数据行数：${dataInfo.rowCount}
-
-示例数据（前3行）：
-${dataInfo.sampleData.map((row, index) => `行${index + 1}: ${Object.entries(row).map(([k, v]) => `${k}=${v}`).join(', ')}`).join('\n')}
-
-请生成JSON数组格式的图表配置，数组中包含所有需要绘制的图表。
-
-每个图表配置包含以下字段：
-- chartType: 图表类型（bar-柱状图, line-折线图, pie-饼图, doughnut-环形图）
-- xAxisColumn: X轴列名（分组列）
-- yAxisColumn: Y轴列名（数值列）
-- labelColumn: 标签列名（用于饼图）
-- valueColumn: 数值列名（用于饼图）
-- title: 图表标题
-- description: 图表描述
-- aggregateFunction: 聚合函数（avg, sum, count, max, min）
-- sortOrder: 排序方式（asc, desc）
-- dataTransform: 数据预处理配置（可选）
-
-请只返回JSON数组，不要其他内容。`;
+    // 使用 Set 进行去重计数
+    const uniqueValues = new Set();
+    for (const row of data) {
+        const value = row[column];
+        if (value !== null && value !== undefined && value !== '') {
+            uniqueValues.add(value);
+        }
+    }
     
-    setNLPProgress(50, '正在生成图表配置...');
-    const response = await callLLMAPI(chartPrompt, currentQueryController.signal, 60000);
+    return uniqueValues.size;
+}
+
+// 执行聚合查询（平均值、总和、计数等）
+async function executeAggregateQuery(userInput, dataInfo, totalStartTime, config) {
+    startOperationTiming('执行聚合查询');
+    setNLPProgress(70, '正在执行聚合查询...');
+    
+    const { aggregateFunction, valueColumn, groupColumn, queryType } = config;
+    
+    // 判断是否是找极值的复合查询（如"哪个产品的销售额最高"）
+    const isFindExtremeQuery = queryType === 'group_aggregate_find';
+    
+    // 找到实际的数值列
+    let actualValueCol = valueColumn;
+    if (valueColumn && !headers.includes(valueColumn)) {
+        actualValueCol = headers.find(h => h.includes(valueColumn) || valueColumn.includes(h));
+    }
+    
+    // 找到实际的分组列
+    let actualGroupCol = groupColumn;
+    if (groupColumn && !headers.includes(groupColumn)) {
+        actualGroupCol = headers.find(h => h.includes(groupColumn) || groupColumn.includes(h));
+    }
+    
+    // 辅助函数：解析数值（处理千分位逗号、货币符号等）
+    const parseNumericValue = (value) => {
+        if (value === null || value === undefined || value === '') return NaN;
+        let str = value.toString();
+        str = str.replace(/,/g, '').replace(/[￥$€£\s]/g, '');
+        return parseFloat(str);
+    };
+    
+    let results = [];
+    
+    if (actualGroupCol) {
+        // ========== 处理分组聚合查询 ==========
+        // 按分组列分组
+        const groups = {};
+        for (const row of data) {
+            const groupKey = row[actualGroupCol];
+            if (!groupKey) continue;
+            
+            if (!groups[groupKey]) {
+                groups[groupKey] = {
+                    count: 0,
+                    sum: 0
+                };
+            }
+            
+            if (actualValueCol) {
+                const val = parseNumericValue(row[actualValueCol]);
+                if (!isNaN(val)) {
+                    groups[groupKey].sum += val;
+                    groups[groupKey].count++;
+                }
+            } else {
+                // 如果没有数值列，只计数
+                groups[groupKey].count++;
+            }
+        }
+        
+        // 计算聚合结果
+        for (const [group, stats] of Object.entries(groups)) {
+            let resultValue;
+            if (aggregateFunction === 'avg') {
+                resultValue = stats.count > 0 ? stats.sum / stats.count : 0;
+            } else if (aggregateFunction === 'sum') {
+                resultValue = stats.sum;
+            } else if (aggregateFunction === 'count') {
+                resultValue = stats.count;
+            }
+            
+            results.push({
+                group: group,
+                value: resultValue
+            });
+        }
+        
+        // 对结果排序（如果需要找到最高/最低）
+        const userInputLower = userInput.toLowerCase();
+        if (userInputLower.includes('最高') || userInputLower.includes('最大')) {
+            results.sort((a, b) => b.value - a.value);
+        } else if (userInputLower.includes('最低') || userInputLower.includes('最小')) {
+            results.sort((a, b) => a.value - b.value);
+        }
+        
+    } else {
+        // ========== 处理整体聚合查询 ==========
+        let sum = 0;
+        let count = 0;
+        
+        if (actualValueCol) {
+            for (const row of data) {
+                const val = parseNumericValue(row[actualValueCol]);
+                if (!isNaN(val)) {
+                    sum += val;
+                    count++;
+                }
+            }
+        } else {
+            count = data.length;
+        }
+        
+        let resultValue;
+        if (aggregateFunction === 'avg') {
+            resultValue = count > 0 ? sum / count : 0;
+        } else if (aggregateFunction === 'sum') {
+            resultValue = sum;
+        } else if (aggregateFunction === 'count') {
+            resultValue = count;
+        }
+        
+        results = [{ group: '整体', value: resultValue }];
+    }
+    
     endOperationTiming();
     
-    // 解析图表配置
+    // 显示结果
+    setNLPProgress(90, '正在生成结果...');
+    
+    const nlpResult = document.getElementById('nlp-result');
+    if (nlpResult) {
+        const resultType = aggregateFunction === 'avg' ? '平均值' : aggregateFunction === 'sum' ? '总和' : '数量';
+        const groupDesc = actualGroupCol || '整体';
+        
+        // 如果是找极值查询（如"哪个产品的销售额最高"），只显示第一名
+        if (isFindExtremeQuery && results.length > 0) {
+            const topResult = results[0];
+            const orderText = userInput.toLowerCase().includes('高') || userInput.toLowerCase().includes('大') || userInput.toLowerCase().includes('多') ? '最高' : '最低';
+            
+            let html = `
+                <div class="query-results">
+                    <div class="result-header">
+                        <h4>查询结果：${config.title}</h4>
+                        <p>${config.description}</p>
+                    </div>
+                    <div class="result-content" style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-top: 15px;">
+                        <div style="font-size: 18px; margin-bottom: 15px;">
+                            <strong>${actualGroupCol}的${valueColumn}${orderText}的是：</strong>
+                            <span style="color: #667eea; font-size: 24px; font-weight: bold;">${topResult.group}</span>
+                            <span style="margin-left: 20px; color: #666;">${valueColumn}合计：<strong>${topResult.value.toFixed(2)}</strong></span>
+                        </div>
+                        <div style="margin-top: 20px;">
+                            <h5 style="margin-bottom: 10px;">各${actualGroupCol}${valueColumn}排名（前5名）：</h5>
+                            <div style="overflow-x: auto; max-width: 100%;">
+                                <table class="result-table" style="width: auto; min-width: 300px; border-collapse: collapse; white-space: nowrap;">
+                                    <thead>
+                                        <tr style="background: #667eea; color: white;">
+                                            <th style="padding: 10px; text-align: left;">排名</th>
+                                            <th style="padding: 10px; text-align: left;">${actualGroupCol}</th>
+                                            <th style="padding: 10px; text-align: left;">${valueColumn}${resultType}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${results.slice(0, 5).map((r, i) => `
+                                            <tr style="background: ${i === 0 ? '#e8f4f8' : (i % 2 === 0 ? 'white' : '#f8f9fa')};">
+                                                <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: ${i === 0 ? 'bold' : 'normal'};">${i + 1}</td>
+                                                <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: ${i === 0 ? 'bold' : 'normal'};">${r.group}</td>
+                                                <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: ${i === 0 ? 'bold' : 'normal'};">${r.value.toFixed(2)}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            nlpResult.innerHTML = html;
+            nlpResult.classList.remove('hidden');
+        } else {
+            // 普通聚合查询，显示所有结果
+            let html = `
+                <div class="query-results">
+                    <div class="result-header">
+                        <h4>查询结果：${config.title}</h4>
+                        <p>${config.description}</p>
+                    </div>
+                    <div class="result-content" style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-top: 15px;">
+                        <div style="font-size: 16px; margin-bottom: 15px; color: #666;">
+                            共 ${results.length} 个${actualGroupCol ? '分组' : '结果'}
+                        </div>
+                        <div style="overflow-x: auto; max-width: 100%;">
+                            <table class="result-table" style="width: 100%; border-collapse: collapse; white-space: nowrap;">
+                                <thead>
+                                    <tr style="background: #667eea; color: white;">
+                                        <th style="padding: 10px; text-align: left; white-space: nowrap;">${actualGroupCol || '项目'}</th>
+                                        <th style="padding: 10px; text-align: left; white-space: nowrap;">${valueColumn || '统计值'}${resultType}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+            `;
+            
+            results.forEach((item, index) => {
+                html += `
+                    <tr style="background: ${index % 2 === 0 ? 'white' : '#f8f9fa'};">
+                        <td style="padding: 10px; border-bottom: 1px solid #eee; white-space: nowrap;">${item.group}</td>
+                        <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold; white-space: nowrap;">${item.value.toFixed(2)}</td>
+                    </tr>
+                `;
+            });
+            
+            html += `
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            nlpResult.innerHTML = html;
+            nlpResult.classList.remove('hidden');
+        }
+    }
+    
+    // ========== V4.0新增：处理带筛选条件的聚合查询（如"广东省的销售额"）==========
+    else if (queryType === 'filter_aggregate') {
+        const { filterColumn, filterValue, filterValues, valueColumn, aggregateFunction = 'sum' } = config;
+        
+        // 找到实际的筛选列
+        let actualFilterCol = filterColumn;
+        if (filterColumn && !headers.includes(filterColumn)) {
+            actualFilterCol = headers.find(h => h.includes(filterColumn) || filterColumn.includes(h));
+        }
+        
+        // 找到实际的数值列
+        let actualValueCol = valueColumn;
+        if (valueColumn && !headers.includes(valueColumn)) {
+            actualValueCol = headers.find(h => h.includes(valueColumn) || valueColumn.includes(h));
+        }
+        
+        if (!actualFilterCol) {
+            throw new Error(`筛选列"${filterColumn}"不存在`);
+        }
+        if (!actualValueCol) {
+            throw new Error(`数值列"${valueColumn}"不存在`);
+        }
+        
+        // 处理单个筛选值或多个筛选值
+        const filterValueList = filterValues || (filterValue ? [filterValue] : []);
+        
+        // 执行筛选并聚合
+        let result = 0;
+        let count = 0;
+        const filteredRows = [];
+        
+        for (const row of data) {
+            const cellValue = row[actualFilterCol];
+            if (cellValue !== undefined && cellValue !== null) {
+                const cellStr = cellValue.toString().toLowerCase();
+                // 检查是否匹配任一筛选值
+                const isMatch = filterValueList.some(fv => {
+                    const filterStr = fv.toString().toLowerCase();
+                    return cellStr.includes(filterStr) || filterStr.includes(cellStr);
+                });
+                
+                if (isMatch) {
+                    count++;
+                    const numValue = parseFloat(String(row[actualValueCol] || 0).replace(/,/g, ''));
+                    if (!isNaN(numValue)) {
+                        result += numValue;
+                    }
+                    filteredRows.push(row);
+                }
+            }
+        }
+        
+        // 根据聚合函数计算最终结果
+        let finalResult = result;
+        if (aggregateFunction === 'avg' && count > 0) {
+            finalResult = result / count;
+        }
+        
+        endOperationTiming();
+        
+        // 显示结果
+        setNLPProgress(90, '正在生成结果...');
+        
+        const nlpResult = document.getElementById('nlp-result');
+        if (nlpResult) {
+            const filterDesc = filterValueList.map(fv => `"${fv}"`).join(' 或 ');
+            const aggDesc = aggregateFunction === 'sum' ? '总和' : aggregateFunction === 'avg' ? '平均值' : '统计';
+            
+            const html = `
+                <div class="query-results">
+                    <div class="result-header">
+                        <h4>查询结果：${config.title}</h4>
+                        <p>${config.description}</p>
+                    </div>
+                    <div class="result-content" style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-top: 15px;">
+                        <div style="font-size: 18px; margin-bottom: 15px;">
+                            <strong>${actualFilterCol}为${filterDesc}时，${actualValueCol}${aggDesc}：</strong>
+                            <span style="color: #667eea; font-size: 24px; font-weight: bold;">${finalResult.toFixed(2)}</span>
+                        </div>
+                        <div style="color: #666; font-size: 14px;">
+                            基于 ${data.length} 条记录筛选，匹配 ${count} 条
+                        </div>
+                        ${filteredRows.length > 0 ? `
+                        <div style="margin-top: 15px;">
+                            <h5 style="margin-bottom: 10px;">匹配记录（前10条）：</h5>
+                            <table class="result-table" style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
+                                <thead>
+                                    <tr style="background: #667eea; color: white;">
+                                        ${headers.map(h => `<th style="padding: 8px; text-align: left;">${h}</th>`).join('')}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${filteredRows.slice(0, 10).map((r, i) => `
+                                        <tr style="background: ${i % 2 === 0 ? 'white' : '#f8f9fa'};">
+                                            ${headers.map(h => `<td style="padding: 8px; border-bottom: 1px solid #eee;">${r[h] || ''}</td>`).join('')}
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+            nlpResult.innerHTML = html;
+            nlpResult.classList.remove('hidden');
+        }
+    }
+    
+    // 记录总耗时
+    const totalDuration = Date.now() - totalStartTime;
+    addProcessingLog('performance', '聚合查询处理完成', `总耗时: ${totalDuration}ms (${(totalDuration/1000).toFixed(2)}秒)`);
+    
+    setNLPProgress(100, '完成');
+    setTimeout(() => {
+        hideNLPProgress();
+    }, 500);
+}
+
+// 执行本地查询（查找最大值/最小值等）
+async function executeLocalQuery(userInput, dataInfo, totalStartTime, config) {
+    startOperationTiming('执行本地查询');
+    setNLPProgress(70, '正在执行查询...');
+    
+    // ========== V4.0新增：使用实体抽取增强配置 ==========
+    let enhancedConfig = { ...config };
+    if (window.entityExtractor) {
+        try {
+            const entities = window.entityExtractor.extract(userInput, headers);
+            enhancedConfig = window.entityExtractor.enhanceConfig(entities, config);
+            console.log('[V4.0] 实体抽取结果:', entities);
+            console.log('[V4.0] 增强配置:', enhancedConfig);
+        } catch (error) {
+            console.warn('[V4.0] 实体抽取失败:', error);
+        }
+    }
+    
+    // ========== V4.0新增：使用Agent调度器执行查询 ==========
+    // V4.0修复：filter_aggregate查询不走Agent调度器，直接使用传统方式处理
+    if (window.agentRouter && enhancedConfig.queryType && enhancedConfig.queryType !== 'filter_aggregate') {
+        try {
+            // 生成执行计划
+            const planResult = await window.agentRouter.route('planning', {
+                action: 'plan',
+                userInput,
+                dataProfile: window.currentDataProfile,
+                config: enhancedConfig
+            });
+            
+            console.log('[V4.0] 执行计划:', planResult);
+            
+            // 对于复杂查询，展示执行计划
+            if (planResult.success && planResult.plan?.complexity !== 'simple' && window.executionPlanUI) {
+                // 可以选择展示执行计划让用户确认
+                // 这里暂时自动执行，后续可以添加用户确认机制
+                addProcessingLog('info', '执行计划', planResult.summary);
+            }
+            
+            // 使用分析Agent执行查询
+            const analysisResult = await window.agentRouter.route('analysis', {
+                config: enhancedConfig,
+                data,
+                headers
+            });
+            
+            if (analysisResult.success) {
+                console.log('[V4.0] 分析结果:', analysisResult);
+                
+                // 使用解释Agent生成解释
+                const explanationResult = await window.agentRouter.route('explanation', {
+                    action: 'summarize',
+                    analysisResult,
+                    dataProfile: window.currentDataProfile,
+                    userInput
+                });
+                
+                console.log('[V4.0] 解释结果:', explanationResult);
+                
+                // 显示结果
+                displayAgentQueryResult(userInput, enhancedConfig, analysisResult, explanationResult, totalStartTime);
+                return;
+            }
+        } catch (error) {
+            console.warn('[V4.0] Agent执行失败，降级使用传统方式:', error);
+            // 继续使用传统方式执行
+        }
+    }
+    
+    // 传统执行方式（兜底）
+    const { queryType, valueColumn, aggregateFunction, groupColumn, order, limit } = enhancedConfig;
+    
+    // ========== V4.0新增：处理带筛选条件的聚合查询（如"广东省的销售额"）==========
+    if (queryType === 'filter_aggregate') {
+        const { filterColumn, filterValue, filterValues, valueColumn: vc, aggregateFunction: af = 'sum' } = enhancedConfig;
+        const headers = dataInfo.columns;
+        
+        // 找到实际的筛选列
+        let actualFilterCol = filterColumn;
+        if (filterColumn && !headers.includes(filterColumn)) {
+            actualFilterCol = headers.find(h => h.includes(filterColumn) || filterColumn.includes(h));
+        }
+        
+        // 找到实际的数值列
+        let actualValueCol = vc;
+        if (vc && !headers.includes(vc)) {
+            actualValueCol = headers.find(h => h.includes(vc) || vc.includes(h));
+        }
+        
+        if (!actualFilterCol || !actualValueCol) {
+            throw new Error(`筛选列或数值列不存在: ${filterColumn}, ${vc}`);
+        }
+        
+        // 处理单个筛选值或多个筛选值
+        const filterValueList = filterValues || (filterValue ? [filterValue] : []);
+        
+        // 执行筛选并聚合
+        let result = 0;
+        let count = 0;
+        const filteredRows = [];
+        
+        for (const row of data) {
+            const cellValue = row[actualFilterCol];
+            if (cellValue !== undefined && cellValue !== null) {
+                const cellStr = cellValue.toString().toLowerCase();
+                const isMatch = filterValueList.some(fv => {
+                    const filterStr = fv.toString().toLowerCase();
+                    return cellStr.includes(filterStr) || filterStr.includes(cellStr);
+                });
+                
+                if (isMatch) {
+                    count++;
+                    const numValue = parseFloat(String(row[actualValueCol] || 0).replace(/,/g, ''));
+                    if (!isNaN(numValue)) {
+                        result += numValue;
+                    }
+                    filteredRows.push(row);
+                }
+            }
+        }
+        
+        // 根据聚合函数计算最终结果
+        let finalResult = result;
+        if (af === 'avg' && count > 0) {
+            finalResult = result / count;
+        }
+        
+        endOperationTiming();
+        
+        // 显示结果
+        const nlpResult = document.getElementById('nlp-result');
+        const totalTime = Date.now() - totalStartTime;
+        const filterDesc = filterValueList.map(fv => `"${fv}"`).join(' 或 ');
+        const aggDesc = af === 'sum' ? '总和' : af === 'avg' ? '平均值' : '统计';
+        
+        nlpResult.innerHTML = `
+            <div class="query-result-card">
+                <div class="result-header">
+                    <span class="result-icon">📊</span>
+                    <span class="result-title">${enhancedConfig.title || '查询结果'}</span>
+                </div>
+                <div class="result-body">
+                    <div style="padding: 20px; text-align: center;">
+                        <div style="font-size: 18px; margin-bottom: 15px; color: white;">
+                            <strong>${actualFilterCol}为${filterDesc}时，${actualValueCol}${aggDesc}：</strong>
+                        </div>
+                        <div style="color: white; font-size: 32px; font-weight: bold; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">${finalResult.toFixed(2)}</div>
+                        <div style="color: rgba(255,255,255,0.9); font-size: 14px; margin-top: 10px;">
+                            基于 ${data.length} 条记录筛选，匹配 ${count} 条
+                        </div>
+                    </div>
+                </div>
+                <div class="result-footer">
+                    <span class="result-time">查询耗时: ${totalTime}ms</span>
+                </div>
+            </div>
+        `;
+        
+        nlpResult.classList.remove('hidden');
+        
+        addProcessingLog('success', '筛选聚合查询完成', `${actualFilterCol}=${filterDesc}, ${actualValueCol}${aggDesc}=${finalResult.toFixed(2)}`);
+        
+        setNLPProgress(100, '完成');
+        setTimeout(() => {
+            hideNLPProgress();
+        }, 500);
+        return;
+    }
+    
+    // ========== V3.3新增：处理分组计数后找极值的复合查询 ==========
+    if (queryType === 'group_count_find') {
+        // 找到实际的分组列
+        let actualGroupCol = groupColumn;
+        if (groupColumn && !headers.includes(groupColumn)) {
+            actualGroupCol = headers.find(h => h.includes(groupColumn) || groupColumn.includes(h));
+        }
+        
+        if (!actualGroupCol) {
+            throw new Error(`分组列"${groupColumn}"不存在`);
+        }
+        
+        // 按分组列统计数量
+        const groupCounts = {};
+        for (const row of data) {
+            const groupKey = row[actualGroupCol];
+            if (groupKey) {
+                groupCounts[groupKey] = (groupCounts[groupKey] || 0) + 1;
+            }
+        }
+        
+        // 转换为数组并排序
+        const results = Object.entries(groupCounts).map(([group, count]) => ({
+            group,
+            count
+        }));
+        
+        // 根据order排序
+        results.sort((a, b) => order === 'desc' ? b.count - a.count : a.count - b.count);
+        
+        // 取第一条（数量最多/最少的）
+        const topResult = results[0];
+        
+        endOperationTiming();
+        
+        // 显示结果
+        setNLPProgress(90, '正在生成结果...');
+        
+        const nlpResult = document.getElementById('nlp-result');
+        if (nlpResult) {
+            const orderText = order === 'desc' ? '最多' : '最少';
+            const html = `
+                <div class="query-results">
+                    <div class="result-header">
+                        <h4>查询结果：${config.title}</h4>
+                        <p>${config.description}</p>
+                    </div>
+                    <div class="result-content" style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-top: 15px;">
+                        <div style="font-size: 18px; margin-bottom: 15px;">
+                            <strong>${actualGroupCol}数量${orderText}的是：</strong>
+                            <span style="color: #667eea; font-size: 24px; font-weight: bold;">${topResult.group}</span>
+                            <span style="margin-left: 20px; color: #666;">数量：<strong>${topResult.count}</strong> 条</span>
+                        </div>
+                        <div style="margin-top: 20px;">
+                            <h5 style="margin-bottom: 10px;">各${actualGroupCol}数量排名：</h5>
+                            <div style="overflow-x: auto; max-width: 100%;">
+                                <table class="result-table" style="width: auto; min-width: 300px; border-collapse: collapse; white-space: nowrap;">
+                                    <thead>
+                                        <tr style="background: #667eea; color: white;">
+                                            <th style="padding: 10px; text-align: left;">排名</th>
+                                            <th style="padding: 10px; text-align: left;">${actualGroupCol}</th>
+                                            <th style="padding: 10px; text-align: left;">数量</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${results.slice(0, 10).map((r, i) => `
+                                            <tr style="background: ${i === 0 ? '#e8f4f8' : (i % 2 === 0 ? 'white' : '#f8f9fa')};">
+                                                <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: ${i === 0 ? 'bold' : 'normal'};">${i + 1}</td>
+                                                <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: ${i === 0 ? 'bold' : 'normal'};">${r.group}</td>
+                                                <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: ${i === 0 ? 'bold' : 'normal'};">${r.count}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                            ${results.length > 10 ? `<p style="margin-top: 10px; color: #666;">仅显示前10名，共${results.length}个${actualGroupCol}</p>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+            nlpResult.innerHTML = html;
+            nlpResult.classList.remove('hidden');
+        }
+        
+        // 记录总耗时
+        const totalDuration = Date.now() - totalStartTime;
+        addProcessingLog('performance', '查询处理完成', `总耗时: ${totalDuration}ms (${(totalDuration/1000).toFixed(2)}秒)`);
+        
+        setNLPProgress(100, '完成');
+        setTimeout(() => {
+            hideNLPProgress();
+        }, 500);
+        
+        return;
+    }
+    
+    // ========== V3.3新增：处理分组聚合后找极值的复合查询（如：哪个地区的数量最多，按"数量"列求和）==========
+    if (queryType === 'group_aggregate_find') {
+        // 找到实际的分组列和数值列
+        let actualGroupCol = groupColumn;
+        let actualValueCol = valueColumn;
+        
+        if (groupColumn && !headers.includes(groupColumn)) {
+            actualGroupCol = headers.find(h => h.includes(groupColumn) || groupColumn.includes(h));
+        }
+        if (valueColumn && !headers.includes(valueColumn)) {
+            actualValueCol = headers.find(h => h.includes(valueColumn) || valueColumn.includes(h));
+        }
+        
+        if (!actualGroupCol) {
+            throw new Error(`分组列"${groupColumn}"不存在`);
+        }
+        if (!actualValueCol) {
+            throw new Error(`数值列"${valueColumn}"不存在`);
+        }
+        
+        // 辅助函数：解析数值
+        const parseNumericValue = (value) => {
+            if (value === null || value === undefined || value === '') return 0;
+            let str = value.toString();
+            str = str.replace(/,/g, '').replace(/[￥$€£\s]/g, '');
+            const num = parseFloat(str);
+            return isNaN(num) ? 0 : num;
+        };
+        
+        // 按分组列聚合数值列
+        const groupAggregates = {};
+        for (const row of data) {
+            const groupKey = row[actualGroupCol];
+            if (groupKey) {
+                const val = parseNumericValue(row[actualValueCol]);
+                if (!groupAggregates[groupKey]) {
+                    groupAggregates[groupKey] = { sum: 0, count: 0 };
+                }
+                groupAggregates[groupKey].sum += val;
+                groupAggregates[groupKey].count += 1;
+            }
+        }
+        
+        // 转换为数组并排序
+        const results = Object.entries(groupAggregates).map(([group, agg]) => ({
+            group,
+            sum: agg.sum,
+            count: agg.count,
+            avg: agg.sum / agg.count
+        }));
+        
+        // 根据order排序（按sum排序）
+        results.sort((a, b) => order === 'desc' ? b.sum - a.sum : a.sum - b.sum);
+        
+        // 取第一条（sum最多/最少的）
+        const topResult = results[0];
+        
+        endOperationTiming();
+        
+        // 显示结果
+        setNLPProgress(90, '正在生成结果...');
+        
+        const nlpResult = document.getElementById('nlp-result');
+        if (nlpResult) {
+            const orderText = order === 'desc' ? '最多' : '最少';
+            const html = `
+                <div class="query-results">
+                    <div class="result-header">
+                        <h4>查询结果：${config.title}</h4>
+                        <p>${config.description}</p>
+                    </div>
+                    <div class="result-content" style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-top: 15px;">
+                        <div style="font-size: 18px; margin-bottom: 15px;">
+                            <strong>${actualGroupCol}的${actualValueCol}${orderText}的是：</strong>
+                            <span style="color: #667eea; font-size: 24px; font-weight: bold;">${topResult.group}</span>
+                            <span style="margin-left: 20px; color: #666;">${actualValueCol}合计：<strong>${topResult.sum.toFixed(2)}</strong></span>
+                            <span style="margin-left: 10px; color: #888;">(共${topResult.count}条记录)</span>
+                        </div>
+                        <div style="margin-top: 20px;">
+                            <h5 style="margin-bottom: 10px;">各${actualGroupCol}的${actualValueCol}排名：</h5>
+                            <div style="overflow-x: auto; max-width: 100%;">
+                                <table class="result-table" style="width: auto; min-width: 400px; border-collapse: collapse; white-space: nowrap;">
+                                    <thead>
+                                        <tr style="background: #667eea; color: white;">
+                                            <th style="padding: 10px; text-align: left;">排名</th>
+                                            <th style="padding: 10px; text-align: left;">${actualGroupCol}</th>
+                                            <th style="padding: 10px; text-align: left;">${actualValueCol}合计</th>
+                                            <th style="padding: 10px; text-align: left;">记录数</th>
+                                            <th style="padding: 10px; text-align: left;">平均值</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${results.slice(0, 10).map((r, i) => `
+                                            <tr style="background: ${i === 0 ? '#e8f4f8' : (i % 2 === 0 ? 'white' : '#f8f9fa')};">
+                                                <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: ${i === 0 ? 'bold' : 'normal'};">${i + 1}</td>
+                                                <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: ${i === 0 ? 'bold' : 'normal'};">${r.group}</td>
+                                                <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: ${i === 0 ? 'bold' : 'normal'};">${r.sum.toFixed(2)}</td>
+                                                <td style="padding: 10px; border-bottom: 1px solid #eee;">${r.count}</td>
+                                                <td style="padding: 10px; border-bottom: 1px solid #eee;">${r.avg.toFixed(2)}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                            ${results.length > 10 ? `<p style="margin-top: 10px; color: #666;">仅显示前10名，共${results.length}个${actualGroupCol}</p>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+            nlpResult.innerHTML = html;
+            nlpResult.classList.remove('hidden');
+        }
+        
+        // 记录总耗时
+        const totalDuration = Date.now() - totalStartTime;
+        addProcessingLog('performance', '查询处理完成', `总耗时: ${totalDuration}ms (${(totalDuration/1000).toFixed(2)}秒)`);
+        
+        setNLPProgress(100, '完成');
+        setTimeout(() => {
+            hideNLPProgress();
+        }, 500);
+        
+        return;
+    }
+    
+    // 找到实际的数值列
+    let actualValueCol = valueColumn;
+    if (valueColumn && !headers.includes(valueColumn)) {
+        actualValueCol = headers.find(h => h.includes(valueColumn) || valueColumn.includes(h));
+    }
+    
+    // ========== 处理查找类查询（最大/最小值）==========
+    if (queryType === 'find_max' || queryType === 'find_min') {
+        if (!actualValueCol) {
+            throw new Error(`数值列"${valueColumn}"不存在`);
+        }
+        
+        // 查找最大/最小值
+        let targetRow = null;
+        let targetValue = null;
+        
+        // 辅助函数：解析数值（处理千分位逗号、货币符号等）
+        const parseNumericValue = (value) => {
+            if (value === null || value === undefined || value === '') return NaN;
+            // 转换为字符串并清理
+            let str = value.toString();
+            // 移除千分位逗号、货币符号、空格
+            str = str.replace(/,/g, '').replace(/[￥$€£\s]/g, '');
+            // 解析数值
+            return parseFloat(str);
+        };
+        
+        if (queryType === 'find_max') {
+            // 查找最大值
+            targetValue = -Infinity;
+            for (const row of data) {
+                const val = parseNumericValue(row[actualValueCol]);
+                if (!isNaN(val) && val > targetValue) {
+                    targetValue = val;
+                    targetRow = row;
+                }
+            }
+        } else if (queryType === 'find_min') {
+            // 查找最小值
+            targetValue = Infinity;
+            for (const row of data) {
+                const val = parseNumericValue(row[actualValueCol]);
+                if (!isNaN(val) && val < targetValue) {
+                    targetValue = val;
+                    targetRow = row;
+                }
+            }
+        }
+        
+        if (!targetRow) {
+            throw new Error('未找到符合条件的记录');
+        }
+        
+        endOperationTiming();
+        
+        // 显示结果
+        setNLPProgress(90, '正在生成结果...');
+        
+        const nlpResult = document.getElementById('nlp-result');
+        if (nlpResult) {
+            const resultType = queryType === 'find_max' ? '最大值' : '最小值';
+            const html = `
+                <div class="query-results">
+                    <div class="result-header">
+                        <h4>查询结果：${config.title}</h4>
+                        <p>${config.description}</p>
+                    </div>
+                    <div class="result-content" style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-top: 15px;">
+                        <div style="font-size: 18px; margin-bottom: 15px;">
+                            <strong>${actualValueCol}${resultType}：</strong>
+                            <span style="color: #667eea; font-size: 24px; font-weight: bold;">${targetValue}</span>
+                        </div>
+                        <div style="overflow-x: auto; max-width: 100%;">
+                            <table class="result-table" style="width: auto; min-width: 100%; border-collapse: collapse; white-space: nowrap;">
+                                <thead>
+                                    <tr style="background: #667eea; color: white;">
+                                        ${headers.map(h => `<th style="padding: 10px; text-align: left; white-space: nowrap;">${h}</th>`).join('')}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr style="background: white;">
+                                        ${headers.map(h => `<td style="padding: 10px; border-bottom: 1px solid #eee; white-space: nowrap;">${targetRow[h] || ''}</td>`).join('')}
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+            nlpResult.innerHTML = html;
+            nlpResult.classList.remove('hidden');
+        }
+    }
+    
+    // ========== 处理查找前几名/后几名 ==========
+    else if (queryType === 'find_top') {
+        if (!actualValueCol) {
+            throw new Error(`数值列"${valueColumn}"不存在`);
+        }
+        
+        const { limit = 5, order = 'desc' } = config;
+        
+        // 辅助函数：解析数值（处理千分位逗号、货币符号等）
+        const parseNumericValue = (value) => {
+            if (value === null || value === undefined || value === '') return NaN;
+            let str = value.toString();
+            str = str.replace(/,/g, '').replace(/[￥$€£\s]/g, '');
+            return parseFloat(str);
+        };
+        
+        // 收集所有有效记录
+        const validRows = [];
+        for (const row of data) {
+            const val = parseNumericValue(row[actualValueCol]);
+            if (!isNaN(val)) {
+                validRows.push({ row, value: val });
+            }
+        }
+        
+        // 排序
+        validRows.sort((a, b) => order === 'desc' ? b.value - a.value : a.value - b.value);
+        
+        // 取前N名
+        const topRows = validRows.slice(0, limit);
+        
+        if (topRows.length === 0) {
+            throw new Error('未找到符合条件的记录');
+        }
+        
+        endOperationTiming();
+        
+        // 显示结果
+        setNLPProgress(90, '正在生成结果...');
+        
+        const nlpResult = document.getElementById('nlp-result');
+        if (nlpResult) {
+            const orderText = order === 'desc' ? '前' : '后';
+            const html = `
+                <div class="query-results">
+                    <div class="result-header">
+                        <h4>查询结果：${config.title}</h4>
+                        <p>${config.description}</p>
+                    </div>
+                    <div class="result-content" style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-top: 15px;">
+                        <div style="font-size: 16px; margin-bottom: 15px; color: #666;">
+                            共找到 ${topRows.length} 条记录
+                        </div>
+                        <table class="result-table" style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="background: #667eea; color: white;">
+                                    <th style="padding: 10px; text-align: left;">排名</th>
+                                    <th style="padding: 10px; text-align: left;">${actualValueCol}</th>
+                                    ${headers.filter(h => h !== actualValueCol).map(h => `<th style="padding: 10px; text-align: left;">${h}</th>`).join('')}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${topRows.map((item, i) => `
+                                    <tr style="background: ${i % 2 === 0 ? 'white' : '#f8f9fa'};">
+                                        <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold; color: #667eea;">${i + 1}</td>
+                                        <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">${item.value}</td>
+                                        ${headers.filter(h => h !== actualValueCol).map(h => `<td style="padding: 10px; border-bottom: 1px solid #eee;">${item.row[h] || ''}</td>`).join('')}
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+            nlpResult.innerHTML = html;
+            nlpResult.classList.remove('hidden');
+        }
+    }
+    
+    // ========== 处理查找特定排名 ==========
+    else if (queryType === 'find_rank') {
+        if (!actualValueCol) {
+            throw new Error(`数值列"${valueColumn}"不存在`);
+        }
+        
+        const { rank = 1 } = config;
+        
+        // 辅助函数：解析数值（处理千分位逗号、货币符号等）
+        const parseNumericValue = (value) => {
+            if (value === null || value === undefined || value === '') return NaN;
+            let str = value.toString();
+            str = str.replace(/,/g, '').replace(/[￥$€£\s]/g, '');
+            return parseFloat(str);
+        };
+        
+        // 收集所有有效记录
+        const validRows = [];
+        for (const row of data) {
+            const val = parseNumericValue(row[actualValueCol]);
+            if (!isNaN(val)) {
+                validRows.push({ row, value: val });
+            }
+        }
+        
+        // 按降序排序
+        validRows.sort((a, b) => b.value - a.value);
+        
+        // 获取指定排名的记录
+        const targetIndex = rank - 1;
+        const targetItem = validRows[targetIndex];
+        
+        if (!targetItem) {
+            throw new Error(`未找到排名第${rank}的记录`);
+        }
+        
+        endOperationTiming();
+        
+        // 显示结果
+        setNLPProgress(90, '正在生成结果...');
+        
+        const nlpResult = document.getElementById('nlp-result');
+        if (nlpResult) {
+            const html = `
+                <div class="query-results">
+                    <div class="result-header">
+                        <h4>查询结果：${config.title}</h4>
+                        <p>${config.description}</p>
+                    </div>
+                    <div class="result-content" style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-top: 15px;">
+                        <div style="font-size: 18px; margin-bottom: 15px;">
+                            <strong>${actualValueCol}排名第${rank}：</strong>
+                            <span style="color: #667eea; font-size: 24px; font-weight: bold;">${targetItem.value}</span>
+                        </div>
+                        <table class="result-table" style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="background: #667eea; color: white;">
+                                    ${headers.map(h => `<th style="padding: 10px; text-align: left;">${h}</th>`).join('')}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr style="background: white;">
+                                    ${headers.map(h => `<td style="padding: 10px; border-bottom: 1px solid #eee;">${targetItem.row[h] || ''}</td>`).join('')}
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+            nlpResult.innerHTML = html;
+            nlpResult.classList.remove('hidden');
+        }
+    }
+    
+    // ========== 处理整体聚合查询（平均值/总和/计数）==========
+    else if (queryType === 'aggregate_overall') {
+        if (!actualValueCol && aggregateFunction !== 'count') {
+            throw new Error(`数值列"${valueColumn}"不存在`);
+        }
+        
+        // 辅助函数：解析数值（处理千分位逗号、货币符号等）
+        const parseNumericValue = (value) => {
+            if (value === null || value === undefined || value === '') return NaN;
+            let str = value.toString();
+            str = str.replace(/,/g, '').replace(/[￥$€£\s]/g, '');
+            return parseFloat(str);
+        };
+        
+        let result = 0;
+        let count = 0;
+        
+        if (aggregateFunction === 'avg' || aggregateFunction === 'sum') {
+            let sum = 0;
+            for (const row of data) {
+                const val = parseNumericValue(row[actualValueCol]);
+                if (!isNaN(val)) {
+                    sum += val;
+                    count++;
+                }
+            }
+            result = aggregateFunction === 'avg' ? (count > 0 ? sum / count : 0) : sum;
+        } else if (aggregateFunction === 'count') {
+            result = data.length;
+        }
+        
+        endOperationTiming();
+        
+        // 显示结果
+        setNLPProgress(90, '正在生成结果...');
+        
+        const nlpResult = document.getElementById('nlp-result');
+        if (nlpResult) {
+            const resultType = aggregateFunction === 'avg' ? '平均值' : aggregateFunction === 'sum' ? '总和' : '总数';
+            const html = `
+                <div class="query-results">
+                    <div class="result-header">
+                        <h4>查询结果：${config.title}</h4>
+                        <p>${config.description}</p>
+                    </div>
+                    <div class="result-content" style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-top: 15px;">
+                        <div style="font-size: 18px; margin-bottom: 15px;">
+                            <strong>${actualValueCol || '数据'}${resultType}：</strong>
+                            <span style="color: #667eea; font-size: 24px; font-weight: bold;">${result.toFixed(2)}</span>
+                        </div>
+                        <div style="color: #666; font-size: 14px;">
+                            基于 ${data.length} 条记录统计
+                        </div>
+                    </div>
+                </div>
+            `;
+            nlpResult.innerHTML = html;
+            nlpResult.classList.remove('hidden');
+        }
+    }
+    
+    // ========== 处理分组聚合查询 ===========
+    else if (queryType === 'aggregate_groupby') {
+        const { groupColumn } = config;
+        
+        // 找到实际的分组列
+        let actualGroupCol = groupColumn;
+        if (!headers.includes(groupColumn)) {
+            actualGroupCol = headers.find(h => h.includes(groupColumn) || groupColumn.includes(h));
+        }
+        
+        if (!actualGroupCol) {
+            throw new Error(`分组列"${groupColumn}"不存在`);
+        }
+        if (!actualValueCol && aggregateFunction !== 'count') {
+            throw new Error(`数值列"${valueColumn}"不存在`);
+        }
+        
+        // 辅助函数：解析数值（处理千分位逗号、货币符号等）
+        const parseNumericValue = (value) => {
+            if (value === null || value === undefined || value === '') return NaN;
+            let str = value.toString();
+            str = str.replace(/,/g, '').replace(/[￥$€£\s]/g, '');
+            return parseFloat(str);
+        };
+        
+        // 执行分组聚合
+        const groups = {};
+        for (const row of data) {
+            const groupKey = row[actualGroupCol];
+            if (!groupKey) continue;
+            
+            if (!groups[groupKey]) {
+                groups[groupKey] = { sum: 0, count: 0 };
+            }
+            
+            if (aggregateFunction !== 'count') {
+                const val = parseNumericValue(row[actualValueCol]);
+                if (!isNaN(val)) {
+                    groups[groupKey].sum += val;
+                    groups[groupKey].count++;
+                }
+            } else {
+                groups[groupKey].count++;
+            }
+        }
+        
+        // 计算最终结果
+        const results = Object.entries(groups).map(([key, vals]) => ({
+            group: key,
+            value: aggregateFunction === 'avg' ? (vals.count > 0 ? vals.sum / vals.count : 0) :
+                   aggregateFunction === 'sum' ? vals.sum : vals.count
+        })).sort((a, b) => b.value - a.value);
+        
+        endOperationTiming();
+        
+        // 显示结果
+        setNLPProgress(90, '正在生成结果...');
+        
+        const nlpResult = document.getElementById('nlp-result');
+        if (nlpResult) {
+            const resultType = aggregateFunction === 'avg' ? '平均值' : aggregateFunction === 'sum' ? '总和' : '数量';
+            const html = `
+                <div class="query-results">
+                    <div class="result-header">
+                        <h4>查询结果：${config.title}</h4>
+                        <p>${config.description}</p>
+                    </div>
+                    <div class="result-content" style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-top: 15px;">
+                        <table class="result-table" style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="background: #667eea; color: white;">
+                                    <th style="padding: 10px; text-align: left;">${actualGroupCol}</th>
+                                    <th style="padding: 10px; text-align: left;">${actualValueCol || '计数'}${resultType}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${results.map((r, i) => `
+                                    <tr style="background: ${i % 2 === 0 ? 'white' : '#f8f9fa'};">
+                                        <td style="padding: 10px; border-bottom: 1px solid #eee;">${r.group}</td>
+                                        <td style="padding: 10px; border-bottom: 1px solid #eee;">${r.value.toFixed(2)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+            nlpResult.innerHTML = html;
+            nlpResult.classList.remove('hidden');
+        }
+    }
+    
+    // ========== 处理带筛选条件的聚合查询 ===========
+    else if (queryType === 'aggregate_filter') {
+        const { filterColumn, filterValue } = config;
+        
+        // 找到实际的筛选列
+        let actualFilterCol = filterColumn;
+        if (!headers.includes(filterColumn)) {
+            actualFilterCol = headers.find(h => h.includes(filterColumn) || filterColumn.includes(h));
+        }
+        
+        if (!actualFilterCol) {
+            throw new Error(`筛选列"${filterColumn}"不存在`);
+        }
+        
+        // 执行筛选并统计
+        let count = 0;
+        const filteredRows = [];
+        
+        for (const row of data) {
+            const cellValue = row[actualFilterCol];
+            if (cellValue !== undefined && cellValue !== null) {
+                const cellStr = cellValue.toString().toLowerCase();
+                const filterStr = filterValue.toString().toLowerCase();
+                // 支持包含匹配（如"山东区域"匹配"山东"）
+                if (cellStr.includes(filterStr) || filterStr.includes(cellStr)) {
+                    count++;
+                    filteredRows.push(row);
+                }
+            }
+        }
+        
+        endOperationTiming();
+        
+        // 显示结果
+        setNLPProgress(90, '正在生成结果...');
+        
+        const nlpResult = document.getElementById('nlp-result');
+        if (nlpResult) {
+            const html = `
+                <div class="query-results">
+                    <div class="result-header">
+                        <h4>查询结果：${config.title}</h4>
+                        <p>${config.description}</p>
+                    </div>
+                    <div class="result-content" style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-top: 15px;">
+                        <div style="font-size: 18px; margin-bottom: 15px;">
+                            <strong>${actualFilterCol}包含"${filterValue}"的记录数：</strong>
+                            <span style="color: #667eea; font-size: 24px; font-weight: bold;">${count}</span>
+                        </div>
+                        <div style="color: #666; font-size: 14px;">
+                            基于 ${data.length} 条记录筛选，匹配 ${count} 条
+                        </div>
+                        ${filteredRows.length > 0 ? `
+                        <div style="margin-top: 15px;">
+                            <h5 style="margin-bottom: 10px;">匹配记录（前10条）：</h5>
+                            <table class="result-table" style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
+                                <thead>
+                                    <tr style="background: #667eea; color: white;">
+                                        ${headers.map(h => `<th style="padding: 8px; text-align: left;">${h}</th>`).join('')}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${filteredRows.slice(0, 10).map((r, i) => `
+                                        <tr style="background: ${i % 2 === 0 ? 'white' : '#f8f9fa'};">
+                                            ${headers.map(h => `<td style="padding: 8px; border-bottom: 1px solid #eee;">${r[h] || ''}</td>`).join('')}
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+            nlpResult.innerHTML = html;
+            nlpResult.classList.remove('hidden');
+        }
+    }
+    
+    // ========== 处理人员筛选查询（如"谁是广东人"）==========
+    else if (queryType === 'filter_people') {
+        const { filterColumn, filterValue } = config;
+        
+        // 找到实际的筛选列
+        let actualFilterCol = filterColumn;
+        if (!headers.includes(filterColumn)) {
+            actualFilterCol = headers.find(h => h.includes(filterColumn) || filterColumn.includes(h));
+        }
+        
+        if (!actualFilterCol) {
+            throw new Error(`筛选列"${filterColumn}"不存在`);
+        }
+        
+        // 执行筛选
+        const filteredRows = [];
+        for (const row of data) {
+            const cellValue = row[actualFilterCol];
+            if (cellValue !== undefined && cellValue !== null) {
+                const cellStr = cellValue.toString().toLowerCase();
+                const filterStr = filterValue.toString().toLowerCase();
+                // 支持包含匹配（如"广州市"匹配"广东"）
+                if (cellStr.includes(filterStr) || filterStr.includes(cellStr)) {
+                    filteredRows.push(row);
+                }
+            }
+        }
+        
+        endOperationTiming();
+        
+        // 显示结果
+        setNLPProgress(90, '正在生成结果...');
+        
+        const nlpResult = document.getElementById('nlp-result');
+        if (nlpResult) {
+            const html = `
+                <div class="query-results">
+                    <div class="result-header">
+                        <h4>查询结果：${config.title}</h4>
+                        <p>${config.description}</p>
+                    </div>
+                    <div class="result-content" style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-top: 15px;">
+                        <div style="font-size: 18px; margin-bottom: 15px;">
+                            <strong>找到 ${filteredRows.length} 位${filterValue}人</strong>
+                        </div>
+                        ${filteredRows.length > 0 ? `
+                        <div style="margin-top: 15px;">
+                            <table class="result-table" style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr style="background: #667eea; color: white;">
+                                        ${headers.map(h => `<th style="padding: 10px; text-align: left;">${h}</th>`).join('')}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${filteredRows.map((r, i) => `
+                                        <tr style="background: ${i % 2 === 0 ? 'white' : '#f8f9fa'};">
+                                            ${headers.map(h => `<td style="padding: 10px; border-bottom: 1px solid #eee;">${r[h] || ''}</td>`).join('')}
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                        ` : '<div style="color: #666;">未找到匹配的记录</div>'}
+                    </div>
+                </div>
+            `;
+            nlpResult.innerHTML = html;
+            nlpResult.classList.remove('hidden');
+        }
+    }
+    
+    // 记录总耗时
+    const totalDuration = Date.now() - totalStartTime;
+    addProcessingLog('performance', '查询处理完成', `总耗时: ${totalDuration}ms (${(totalDuration/1000).toFixed(2)}秒)`);
+    
+    setNLPProgress(100, '完成');
+    setTimeout(() => {
+        hideNLPProgress();
+    }, 500);
+}
+
+// V3.0新增：执行大模型生成的查询配置
+async function executeLLMQuery(userInput, dataInfo, totalStartTime, config) {
+    startOperationTiming('执行大模型查询');
+    setNLPProgress(70, '正在执行大模型生成的查询...');
+    
+    addProcessingLog('info', '执行大模型查询配置', JSON.stringify(config).substring(0, 200));
+    
+    try {
+        const queryType = config.queryType;
+        
+        // 新增：处理 count_distinct 查询（去重计数）
+        if (queryType === 'count_distinct' || queryType === 'count_unique') {
+            const column = config.column || config.targetColumn;
+            const distinctCount = executeCountDistinct(column);
+            
+            console.log('[executeLLMQuery] count_distinct 结果:', distinctCount);
+            
+            // 显示结果
+            const nlpResult = document.getElementById('nlp-result');
+            const totalTime = Date.now() - totalStartTime;
+            
+            console.log('[executeLLMQuery] nlpResult 元素:', nlpResult);
+            
+            nlpResult.innerHTML = `
+                <div class="query-result-card">
+                    <div class="result-header">
+                        <span class="result-icon">📊</span>
+                        <span class="result-title">${config.title || `${column}数量统计`}</span>
+                    </div>
+                    <div class="result-body">
+                        <div class="count-result">
+                            <div class="count-number">${distinctCount}</div>
+                            <div class="count-label">${config.description || `表中${column}的数量（去重后）`}</div>
+                        </div>
+                    </div>
+                    <div class="result-footer">
+                        <span class="result-time">查询耗时: ${totalTime}ms</span>
+                    </div>
+                </div>
+            `;
+            
+            nlpResult.classList.remove('hidden');
+            
+            console.log('[executeLLMQuery] 已设置 innerHTML 并移除 hidden 类');
+            
+            endOperationTiming();
+            addProcessingLog('success', '去重计数查询完成', `${column}共有 ${distinctCount} 个不同值`);
+            
+            // 隐藏进度条
+            setNLPProgress(100, '完成');
+            setTimeout(() => {
+                hideNLPProgress();
+            }, 500);
+            return;
+        }
+        
+        // 新增：处理 count_rows 查询（统计数据行数）
+        if (queryType === 'count_rows') {
+            const rowCount = data.length;
+            
+            console.log('[executeLLMQuery] count_rows 结果:', rowCount);
+            
+            // 显示结果
+            const nlpResult = document.getElementById('nlp-result');
+            const totalTime = Date.now() - totalStartTime;
+            
+            nlpResult.innerHTML = `
+                <div class="query-result-card">
+                    <div class="result-header">
+                        <span class="result-icon">📊</span>
+                        <span class="result-title">${config.title || '数据行数统计'}</span>
+                    </div>
+                    <div class="result-body">
+                        <div class="count-result">
+                            <div class="count-number">${rowCount}</div>
+                            <div class="count-label">${config.description || `表中共有 ${rowCount} 条数据`}</div>
+                        </div>
+                    </div>
+                    <div class="result-footer">
+                        <span class="result-time">查询耗时: ${totalTime}ms</span>
+                    </div>
+                </div>
+            `;
+            
+            nlpResult.classList.remove('hidden');
+            
+            endOperationTiming();
+            addProcessingLog('success', '数据行数统计完成', `表中共有 ${rowCount} 条数据`);
+            
+            // 隐藏进度条
+            setNLPProgress(100, '完成');
+            setTimeout(() => {
+                hideNLPProgress();
+            }, 500);
+            return;
+        }
+        
+        // V4.0修复：优先检查 filter_aggregate，因为它也有 aggregateFunction 属性
+        // 必须在 aggregate_overall 之前检查！
+        if (queryType === 'filter_aggregate') {
+            // V4.0新增：带筛选条件的聚合查询（如"广东省的销售额"）
+            // 筛选并聚合，直接使用本地数据计算
+            const { filterColumn, filterValue, filterValues, valueColumn, aggregateFunction = 'sum' } = config;
+            
+            // 获取完整数据
+            const allData = dataInfo.data || data;
+            const headers = dataInfo.columns;
+            
+            // 找到实际的筛选列
+            let actualFilterCol = filterColumn;
+            if (filterColumn && !headers.includes(filterColumn)) {
+                actualFilterCol = headers.find(h => h.includes(filterColumn) || filterColumn.includes(h));
+            }
+            
+            // 找到实际的数值列
+            let actualValueCol = valueColumn;
+            if (valueColumn && !headers.includes(valueColumn)) {
+                actualValueCol = headers.find(h => h.includes(valueColumn) || valueColumn.includes(h));
+            }
+            
+            if (!actualFilterCol || !actualValueCol) {
+                throw new Error(`筛选列或数值列不存在: ${filterColumn}, ${valueColumn}`);
+            }
+            
+            // 处理单个筛选值或多个筛选值
+            const filterValueList = filterValues || (filterValue ? [filterValue] : []);
+            
+            // 执行筛选并聚合
+            let result = 0;
+            let count = 0;
+            const filteredRows = [];
+            
+            for (const row of allData) {
+                const cellValue = row[actualFilterCol];
+                if (cellValue !== undefined && cellValue !== null) {
+                    const cellStr = cellValue.toString().toLowerCase();
+                    const isMatch = filterValueList.some(fv => {
+                        const filterStr = fv.toString().toLowerCase();
+                        return cellStr.includes(filterStr) || filterStr.includes(cellStr);
+                    });
+                    
+                    if (isMatch) {
+                        count++;
+                        const numValue = parseFloat(String(row[actualValueCol] || 0).replace(/,/g, ''));
+                        if (!isNaN(numValue)) {
+                            result += numValue;
+                        }
+                        filteredRows.push(row);
+                    }
+                }
+            }
+            
+            // 根据聚合函数计算最终结果
+            let finalResult = result;
+            if (aggregateFunction === 'avg' && count > 0) {
+                finalResult = result / count;
+            }
+            
+            // 显示结果
+            const nlpResult = document.getElementById('nlp-result');
+            const totalTime = Date.now() - totalStartTime;
+            const filterDesc = filterValueList.map(fv => `"${fv}"`).join(' 或 ');
+            const aggDesc = aggregateFunction === 'sum' ? '总和' : aggregateFunction === 'avg' ? '平均值' : '统计';
+            
+            nlpResult.innerHTML = `
+                <div class="query-result-card">
+                    <div class="result-header">
+                        <span class="result-icon">📊</span>
+                        <span class="result-title">${config.title || '查询结果'}</span>
+                    </div>
+                    <div class="result-body">
+                        <div style="padding: 20px; text-align: center;">
+                            <div style="font-size: 18px; margin-bottom: 15px; color: white;">
+                                <strong>${actualFilterCol}为${filterDesc}时，${actualValueCol}${aggDesc}：</strong>
+                            </div>
+                            <div style="color: white; font-size: 32px; font-weight: bold; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">${finalResult.toFixed(2)}</div>
+                            <div style="color: rgba(255,255,255,0.9); font-size: 14px; margin-top: 10px;">
+                                基于 ${allData.length} 条记录筛选，匹配 ${count} 条
+                            </div>
+                        </div>
+                    </div>
+                    <div class="result-footer">
+                        <span class="result-time">查询耗时: ${totalTime}ms</span>
+                    </div>
+                </div>
+            `;
+            
+            nlpResult.classList.remove('hidden');
+            
+            endOperationTiming();
+            addProcessingLog('success', '筛选聚合查询完成', `${actualFilterCol}=${filterDesc}, ${actualValueCol}${aggDesc}=${finalResult.toFixed(2)}`);
+            
+            setNLPProgress(100, '完成');
+            setTimeout(() => {
+                hideNLPProgress();
+            }, 500);
+            return;
+        } else if (queryType === 'aggregate_groupby' || config.groupByColumn || config.groupColumn) {
+            // 分组聚合查询（如：按省公司统计平均值）
+            await executeLocalQuery(userInput, dataInfo, totalStartTime, {
+                queryType: 'aggregate_groupby',
+                groupColumn: config.groupByColumn || config.groupColumn,
+                valueColumn: config.valueColumn || config.targetColumn,
+                aggregateFunction: config.aggregateFunction || 'avg',
+                title: config.title || '分组统计',
+                description: config.description || '分组聚合统计'
+            });
+        } else if (queryType === 'aggregate_overall' || (config.aggregateFunction && !config.filterColumn)) {
+            // 整体聚合查询（如：计算所有数据的平均值）
+            // V4.0修复：添加 !config.filterColumn 条件，避免与 filter_aggregate 冲突
+            await executeLocalQuery(userInput, dataInfo, totalStartTime, {
+                queryType: 'aggregate_overall',
+                valueColumn: config.valueColumn || config.targetColumn,
+                aggregateFunction: config.aggregateFunction,
+                title: config.title || '统计结果',
+                description: config.description || '聚合统计'
+            });
+        } else if (queryType === 'filter' || config.filters) {
+            // 筛选查询
+            if (config.filters && config.filters.length > 0) {
+                const filter = config.filters[0];
+                await executeLocalQuery(userInput, dataInfo, totalStartTime, {
+                    queryType: 'aggregate_filter',
+                    filterColumn: filter.column,
+                    filterValue: filter.value,
+                    title: config.title || '筛选结果',
+                    description: config.description || '数据筛选'
+                });
+            }
+        } else {
+            // 默认使用本地查询处理
+            await executeLocalQuery(userInput, dataInfo, totalStartTime, config);
+        }
+        
+        endOperationTiming();
+        addProcessingLog('success', '大模型查询执行完成');
+        
+    } catch (error) {
+        addProcessingLog('error', '执行大模型查询失败', error.message);
+        throw error;
+    }
+}
+
+// 尝试本地生成图表配置（无需调用大模型）
+async function tryGenerateChartConfigLocally(userInput, dataInfo, detailedIntent = null, entityExtractionResult = null) {
+    const lowerInput = userInput.toLowerCase();
+    const columns = dataInfo.columns;
+    
+    console.log('尝试本地生成图表配置:', { userInput: lowerInput, columns, detailedIntent, entityExtractionResult });
+    
+    // ========== 第零层：使用QueryConfigGenerator（基于意图类型）==========
+    // 如果有详细的意图类型，优先使用queryConfigGenerator生成配置
+    if (detailedIntent) {
+        try {
+            // 添加时间戳参数防止缓存
+            const cacheBuster = `?v=${Date.now()}`;
+            const { default: queryConfigGenerator } = await import(`./js/queryConfigGenerator.js${cacheBuster}`);
+            // V4.0优化：传递实体提取结果，支持高置信度筛选查询
+            const config = queryConfigGenerator.generateConfig(detailedIntent, userInput, columns, entityExtractionResult);
+            
+            if (config) {
+                console.log('QueryConfigGenerator生成配置成功:', config);
+                addProcessingLog('success', '查询配置生成成功', 
+                    `意图: ${detailedIntent}, 配置类型: ${config.chartType || config.queryType}, 耗时: <10ms`);
+                
+                // 根据配置类型返回不同格式
+                // 注意：优先检查aggregateFunction，因为复合查询同时有queryType和aggregateFunction
+                if (config.chartType) {
+                    // 图表配置
+                    return [{
+                        chartType: config.chartType,
+                        xAxisColumn: config.xAxisColumn,
+                        yAxisColumn: config.yAxisColumn,
+                        labelColumn: config.labelColumn,
+                        valueColumn: config.valueColumn,
+                        title: config.title,
+                        description: config.description,
+                        aggregateFunction: config.aggregateFunction || 'sum',
+                        sortOrder: 'desc'
+                    }];
+                } else if (config.aggregateFunction) {
+                    // 聚合查询配置（优先于普通查询，因为复合查询也有queryType）
+                    return [config];
+                } else if (config.queryType) {
+                    // 查询配置 - 直接返回配置对象
+                    return [config];
+                }
+            } else {
+                console.log('QueryConfigGenerator无法生成配置，尝试其他匹配方式');
+            }
+        } catch (error) {
+            console.warn('QueryConfigGenerator加载失败:', error);
+        }
+    }
+    
+    // ========== 第一层：使用智能意图匹配器（基于语义相似度）==========
+    try {
+        const { default: smartIntentMatcher } = await import('./js/smartIntentMatcher.js');
+        const matchResult = smartIntentMatcher.match(userInput, columns);
+        
+        if (matchResult.matched) {
+            console.log('智能意图匹配成功:', matchResult);
+            addProcessingLog('success', '智能意图匹配成功', 
+                `匹配模板: ${matchResult.template.name}, 耗时: ${matchResult.responseTime.toFixed(0)}ms`);
+            
+            return matchResult.config;
+        } else {
+            console.log('智能意图匹配失败');
+        }
+    } catch (error) {
+        console.warn('智能意图匹配器加载失败:', error);
+    }
+    
+    // ========== 第二层：使用旧的意图库匹配（兼容性）==========
+    try {
+        const { default: intentLibrary } = await import('./js/intentLibrary.js');
+        const matchResult = intentLibrary.matchIntent(userInput, columns);
+        
+        if (matchResult.matched) {
+            console.log('意图库匹配成功:', matchResult);
+            addProcessingLog('success', '意图库匹配成功', 
+                `匹配模板: ${matchResult.template.name}, 相似度: ${(matchResult.score * 100).toFixed(1)}%, 耗时: ${matchResult.responseTime.toFixed(0)}ms`);
+            
+            const config = intentLibrary.generateChartConfig(matchResult, userInput);
+            if (config) {
+                return config;
+            }
+        } else {
+            console.log('意图库未匹配，相似度:', matchResult.score);
+        }
+    } catch (error) {
+        console.warn('意图库加载失败:', error);
+    }
+    
+    // ========== 第三层：使用正则规则匹配 ==========
+    // 规则1: 按XX的YY平均值绘制柱状图
+    // 匹配模式: 按{分组列}的{数值列}平均值...绘制柱状图
+    // 支持中间有括号内容的情况："按省公司的险情确认时长平均值（需要将单位从秒转换为分钟，保留2位小数）绘制柱状图"
+    const avgBarPattern = /按(.+?)的(.+?)平均值[\s\S]*?绘制柱状图|按(.+?)统计(.+?)平均值[\s\S]*?柱状图/;
+    const avgMatch = lowerInput.match(avgBarPattern);
+    console.log('规则1匹配结果:', avgMatch);
+    
+    if (avgMatch) {
+        const groupCol = (avgMatch[1] || avgMatch[3]).trim();
+        const valueCol = (avgMatch[2] || avgMatch[4]).trim();
+        
+        console.log('提取的列名:', { groupCol, valueCol });
+        
+        // 查找匹配的列名（模糊匹配）
+        const actualGroupCol = columns.find(c => {
+            const lowerC = c.toLowerCase();
+            const lowerGroup = groupCol.toLowerCase();
+            return lowerC.includes(lowerGroup) || lowerGroup.includes(lowerC);
+        });
+        const actualValueCol = columns.find(c => {
+            const lowerC = c.toLowerCase();
+            const lowerValue = valueCol.toLowerCase();
+            return lowerC.includes(lowerValue) || lowerValue.includes(lowerC);
+        });
+        
+        console.log('匹配的列名:', { actualGroupCol, actualValueCol });
+        
+        if (actualGroupCol && actualValueCol) {
+            // 检查是否需要单位转换
+            let dataTransform = null;
+            if (lowerInput.includes('秒') && lowerInput.includes('分钟')) {
+                dataTransform = {
+                    formula: 'value / 60',
+                    decimalPlaces: 2,
+                    unitConversion: { from: 'second', to: 'minute' }
+                };
+            }
+            
+            return [{
+                chartType: 'bar',
+                xAxisColumn: actualGroupCol,
+                yAxisColumn: actualValueCol,
+                title: `各省公司${actualValueCol}平均值`,
+                description: `按照${actualGroupCol}统计的${actualValueCol}平均值`,
+                aggregateFunction: 'avg',
+                sortOrder: 'desc',
+                dataTransform: dataTransform
+            }];
+        }
+    }
+    
+    // 规则2: 按XX统计YY绘制柱状图（默认sum）
+    const sumBarPattern = /按(.+?)统计(.+?).*绘制柱状图|按(.+?)分组统计(.+?).*柱状图/;
+    const sumMatch = lowerInput.match(sumBarPattern);
+    if (sumMatch) {
+        const groupCol = sumMatch[1] || sumMatch[3];
+        const valueCol = sumMatch[2] || sumMatch[4];
+        
+        const actualGroupCol = columns.find(c => c.includes(groupCol) || groupCol.includes(c));
+        const actualValueCol = columns.find(c => c.includes(valueCol) || valueCol.includes(c));
+        
+        if (actualGroupCol && actualValueCol) {
+            return [{
+                chartType: 'bar',
+                xAxisColumn: actualGroupCol,
+                yAxisColumn: actualValueCol,
+                title: `按${actualGroupCol}统计${actualValueCol}`,
+                description: `按照${actualGroupCol}分组统计${actualValueCol}`,
+                aggregateFunction: 'sum',
+                sortOrder: 'desc',
+                dataTransform: null
+            }];
+        }
+    }
+    
+    // 规则3: XX的占比/分布饼图
+    const piePattern = /(.+?)的占比|(.+?)的分布|按(.+?)统计.*饼图/;
+    const pieMatch = lowerInput.match(piePattern);
+    if (pieMatch && (lowerInput.includes('饼图') || lowerInput.includes('占比'))) {
+        const col = pieMatch[1] || pieMatch[2] || pieMatch[3];
+        const actualCol = columns.find(c => c.includes(col) || col.includes(c));
+        
+        if (actualCol) {
+            return [{
+                chartType: 'pie',
+                labelColumn: actualCol,
+                valueColumn: null,  // 计数
+                title: `${actualCol}分布`,
+                description: `${actualCol}的占比分布`,
+                aggregateFunction: 'count',
+                sortOrder: 'desc',
+                dataTransform: null
+            }];
+        }
+    }
+    
+    // 无法本地处理，返回null
+    return null;
+}
+
+// 处理NLP绘图（使用已生成的配置）
+async function handleNLPChartWithConfig(userInput, dataInfo, totalStartTime, chartConfigs) {
     startOperationTiming('解析并生成图表');
     setNLPProgress(60, '正在解析图表配置...');
     
-    let chartConfigs = [];
-    try {
-        const jsonArrayMatch = response.match(/\[[\s\S]*\]/);
-        if (jsonArrayMatch) {
-            chartConfigs = JSON.parse(jsonArrayMatch[0]);
-        } else {
-            const jsonMatch = response.match(/\{[\s\S]*\]/);
-            if (jsonMatch) {
-                chartConfigs = [JSON.parse(jsonMatch[0])];
-            }
-        }
-    } catch (e) {
-        throw new Error('无法解析图表配置');
+    if (!chartConfigs || chartConfigs.length === 0) {
+        throw new Error('无法生成图表配置');
     }
     
     addProcessingLog('info', `成功解析 ${chartConfigs.length} 个图表配置`);
@@ -640,7 +3086,7 @@ ${dataInfo.sampleData.map((row, index) => `行${index + 1}: ${Object.entries(row
         const config = chartConfigs[i];
         addProcessingLog('command', `生成图表 ${i + 1}/${chartConfigs.length}`, `${config.title}`);
         const startTime = Date.now();
-        createChartFromConfig(config, chartsContainer, response);
+        createChartFromConfig(config, chartsContainer, null);
         const duration = Date.now() - startTime;
         addProcessingLog('performance', `图表 ${i + 1} 生成完成`, `耗时: ${duration}ms`);
         setNLPProgress(70 + Math.round(((i + 1) / chartConfigs.length) * 20), `正在生成图表 ${i + 1}/${chartConfigs.length}...`);
@@ -660,6 +3106,73 @@ ${dataInfo.sampleData.map((row, index) => `行${index + 1}: ${Object.entries(row
     setTimeout(() => {
         hideNLPProgress();
     }, 500);
+}
+
+// 处理NLP绘图
+async function handleNLPChart(userInput, dataInfo, totalStartTime, detailedIntent = null, entityExtractionResult = null) {
+    startOperationTiming('生成图表配置');
+    
+    // 首先尝试本地生成配置
+    setNLPProgress(45, '正在尝试本地生成图表配置...');
+    const localConfig = await tryGenerateChartConfigLocally(userInput, dataInfo, detailedIntent, entityExtractionResult);
+    
+    let chartConfigs;
+    let aiResponse = null;
+    
+    if (localConfig) {
+        // 本地生成成功
+        chartConfigs = localConfig;
+        addProcessingLog('success', '本地生成图表配置成功', `配置: ${JSON.stringify(localConfig[0]).substring(0, 100)}...`);
+        endOperationTiming();
+        
+        // 使用配置生成图表
+        await handleNLPChartWithConfig(userInput, dataInfo, totalStartTime, chartConfigs);
+        return;
+    }
+    
+    // 本地生成失败，调用大模型API
+    addProcessingLog('info', '本地无法生成配置，调用大模型API...');
+    
+    // V3.0优化：使用优化的大模型提示词
+    let chartPrompt;
+    if (window.llmPrompts && window.requirementClassifier) {
+        // 构建大模型需要的上下文
+        const columnInfo = window.requirementClassifier.getContextForLLM(
+            dataInfo.columns,
+            dataInfo.sampleData,
+            []  // 本地模式没有matchedColumns
+        );
+        
+        // 使用优化的图表配置提示词
+        chartPrompt = window.llmPrompts.generateChartConfigPrompt(userInput, columnInfo, dataInfo);
+        addProcessingLog('info', '使用优化的图表配置提示词');
+    } else {
+        // 兜底：使用简单提示词
+        chartPrompt = `分析用户需求并生成图表配置。用户输入: "${userInput}"，列名: ${dataInfo.columns.join(', ')}`;
+    }
+    
+    setNLPProgress(50, '正在调用AI生成图表配置...');
+    // V3.0优化：减少超时时间到30秒（简单查询不需要60秒）
+    aiResponse = await callLLMAPI(chartPrompt, currentQueryController.signal, 30000);
+    endOperationTiming();
+    
+    // 解析图表配置
+    try {
+        const jsonArrayMatch = aiResponse.match(/\[[\s\S]*\]/);
+        if (jsonArrayMatch) {
+            chartConfigs = JSON.parse(jsonArrayMatch[0]);
+        } else {
+            const jsonMatch = aiResponse.match(/\{[\s\S]*\]/);
+            if (jsonMatch) {
+                chartConfigs = [JSON.parse(jsonMatch[0])];
+            }
+        }
+    } catch (e) {
+        throw new Error('无法解析图表配置');
+    }
+    
+    // 使用配置生成图表
+    await handleNLPChartWithConfig(userInput, dataInfo, totalStartTime, chartConfigs);
 }
 
 // 显示NLP查询结果
@@ -697,6 +3210,7 @@ function displayNLPQueryResults(userInput, results, queryLogics, aiResponse) {
     
     html += `</div>`;
     nlpResult.innerHTML = html;
+    nlpResult.classList.remove('hidden');
 }
 
 // 显示NLP绘图结果
@@ -898,6 +3412,9 @@ function processFile(file) {
     const loading = document.getElementById('loading');
     loading.classList.remove('hidden');
     
+    // 重置智能查询与可视化区域
+    resetNLPAreas();
+    
     setTimeout(() => {
         if (file.name.endsWith('.csv')) {
             parseCSV(file);
@@ -907,60 +3424,258 @@ function processFile(file) {
     }, 500);
 }
 
-// 解析CSV文件
-function parseCSV(file) {
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const text = e.target.result;
-        
-        // 使用 PapaParse 解析 CSV
-        Papa.parse(text, {
-            header: true,           // 第一行作为表头
-            skipEmptyLines: true,   // 跳过空行
-            trimHeaders: true,      // 去除表头空白
-            dynamicTyping: false,   // 保持所有值为字符串类型
-            complete: function(results) {
-                if (results.errors && results.errors.length > 0) {
-                    console.error('CSV 解析错误:', results.errors);
-                }
-                
-                if (!results.data || results.data.length === 0) {
-                    alert('CSV文件为空或解析失败');
-                    document.getElementById('loading').classList.add('hidden');
-                    return;
-                }
-                
-                headers = results.meta.fields;
-                originalData = results.data; // 存储原始数据
-                data = [...originalData]; // 初始化显示数据
-                
-                // 更新筛选列选项
-                updateFilterColumns();
-                
-                processData();
-            },
-            error: function(error) {
-                console.error('CSV 解析失败:', error);
-                alert('CSV文件解析失败: ' + error.message);
-                document.getElementById('loading').classList.add('hidden');
+// 更新文件上下文（文件名、Sheet名称、关键词）
+function updateFileContext(fileName, sheetName) {
+    fileContext.fileName = fileName;
+    fileContext.sheetName = sheetName;
+    fileContext.fileKeywords = extractFileKeywords(fileName, sheetName);
+    
+    console.log('[文件上下文] 已更新:', fileContext);
+    
+    // 在UI上显示文件上下文信息
+    const techInfo = document.getElementById('tech-info');
+    if (techInfo) {
+        const contextText = fileContext.fileKeywords.length > 0 
+            ? `${fileName} (${fileContext.fileKeywords.join(', ')})`
+            : fileName;
+        techInfo.textContent = contextText;
+        techInfo.title = `文件: ${fileName}\nSheet: ${sheetName || '无'}\n关键词: ${fileContext.fileKeywords.join(', ')}`;
+    }
+}
+
+// 从文件名和Sheet名称中提取关键词
+function extractFileKeywords(fileName, sheetName) {
+    const keywords = [];
+    
+    // 移除文件扩展名
+    const baseName = fileName.replace(/\.(xlsx|csv|xls)$/i, '');
+    
+    // 提取中文关键词（2-4个字的业务词汇）
+    const businessKeywords = baseName.match(/[\u4e00-\u9fa5]{2,4}/g) || [];
+    
+    // 业务词汇白名单（常见的业务实体）
+    const businessEntityWhitelist = [
+        '事件', '订单', '用户', '客户', '商品', '产品', '销售', '采购',
+        '库存', '人员', '员工', '部门', '项目', '任务', '合同', '发票',
+        '账单', '流水', '交易', '记录', '明细', '统计', '报表', '数据',
+        '险情', '故障', '报警', '预警', '工单', '派单', '调度', '指挥',
+        '应急', '值班', '巡查', '检查', '审批', '申请', '投诉', '反馈'
+    ];
+    
+    // 过滤出有意义的业务关键词
+    businessKeywords.forEach(kw => {
+        if (businessEntityWhitelist.includes(kw) || kw.length >= 2) {
+            if (!keywords.includes(kw)) {
+                keywords.push(kw);
+            }
+        }
+    });
+    
+    // 提取时间关键词（如：24年、3季度、2024年等）
+    const timeKeywords = baseName.match(/\d{2,4}年|\d{1,2}季度|\d{1,2}月|上半年|下半年/g) || [];
+    timeKeywords.forEach(kw => {
+        if (!keywords.includes(kw)) {
+            keywords.push(kw);
+        }
+    });
+    
+    // 从Sheet名称提取关键词
+    if (sheetName) {
+        const sheetKeywords = sheetName.match(/[\u4e00-\u9fa5]{2,4}/g) || [];
+        sheetKeywords.forEach(kw => {
+            if (businessEntityWhitelist.includes(kw) && !keywords.includes(kw)) {
+                keywords.push(kw);
             }
         });
+    }
+    
+    return keywords;
+}
+
+// 重置智能查询与可视化区域
+function resetNLPAreas() {
+    // 重置页码
+    currentPage = 1;
+    
+    // 清空图表
+    charts = [];
+    
+    // 隐藏数据可视化区域
+    const dataVisualization = document.getElementById('data-visualization');
+    if (dataVisualization) {
+        dataVisualization.classList.add('hidden');
+    }
+    
+    // 清空图表容器
+    const chartsContainer = document.querySelector('.charts-container');
+    if (chartsContainer) {
+        chartsContainer.innerHTML = '';
+    }
+    
+    // 隐藏AI分析区域
+    const aiAnalysis = document.getElementById('ai-analysis');
+    if (aiAnalysis) {
+        aiAnalysis.classList.add('hidden');
+    }
+    
+    // 重置NLP查询结果
+    const nlpResult = document.getElementById('nlp-result');
+    if (nlpResult) {
+        nlpResult.innerHTML = '';
+        nlpResult.classList.add('hidden');
+    }
+    
+    // 清空NLP查询输入
+    const nlpQueryInput = document.getElementById('nlp-query-input');
+    if (nlpQueryInput) {
+        nlpQueryInput.value = '';
+    }
+    
+    // 隐藏NLP进度条
+    hideNLPProgress();
+    
+    // 重置筛选条件
+    const filterContainer = document.getElementById('filter-conditions');
+    if (filterContainer) {
+        filterContainer.innerHTML = '';
+    }
+    
+    // 重置数据库模式
+    useDatabaseMode = false;
+    if (dbManager) {
+        dbManager.close();
+    }
+    
+    addProcessingLog('info', '已重置所有区域', '准备导入新文件');
+}
+
+// 解析CSV文件
+function parseCSV(file) {
+    // 检查PapaParse库是否可用
+    if (typeof Papa === 'undefined') {
+        console.error('PapaParse库未加载');
+        alert('CSV解析库加载失败，请刷新页面重试');
+        document.getElementById('loading').classList.add('hidden');
+        return;
+    }
+    
+    // 更新文件上下文
+    updateFileContext(file.name, '');
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const text = e.target.result;
+            
+            // 检测并处理BOM（字节顺序标记）
+            let cleanText = text;
+            if (text.charCodeAt(0) === 0xFEFF) {
+                cleanText = text.substring(1);
+            }
+            
+            // 使用 PapaParse 解析 CSV
+            Papa.parse(cleanText, {
+                header: true,           // 第一行作为表头
+                skipEmptyLines: true,   // 跳过空行
+                trimHeaders: true,      // 去除表头空白
+                dynamicTyping: false,   // 保持所有值为字符串类型
+                encoding: 'UTF-8',      // 指定编码
+                complete: function(results) {
+                    if (results.errors && results.errors.length > 0) {
+                        console.warn('CSV 解析警告:', results.errors);
+                        // 只显示严重错误
+                        const seriousErrors = results.errors.filter(e => e.code !== 'TooFewFields' && e.code !== 'TooManyFields');
+                        if (seriousErrors.length > 0) {
+                            console.error('CSV 严重错误:', seriousErrors);
+                        }
+                    }
+                    
+                    if (!results.data || results.data.length === 0) {
+                        alert('CSV文件为空或没有有效数据');
+                        document.getElementById('loading').classList.add('hidden');
+                        return;
+                    }
+                    
+                    // 过滤掉完全空白的行
+                    originalData = results.data.filter(row => {
+                        return Object.values(row).some(val => val !== '' && val !== null && val !== undefined);
+                    });
+                    
+                    if (originalData.length === 0) {
+                        alert('CSV文件没有有效数据行');
+                        document.getElementById('loading').classList.add('hidden');
+                        return;
+                    }
+                    
+                    headers = results.meta.fields || Object.keys(originalData[0]);
+                    data = [...originalData]; // 初始化显示数据
+                    
+                    addProcessingLog('success', 'CSV文件解析完成', `共 ${originalData.length} 行，${headers.length} 列`);
+                    
+                    // 更新筛选列选项
+                    updateFilterColumns();
+                    
+                    processData();
+                },
+                error: function(error) {
+                    console.error('CSV 解析失败:', error);
+                    alert('CSV文件解析失败: ' + (error.message || '未知错误'));
+                    document.getElementById('loading').classList.add('hidden');
+                }
+            });
+        } catch (error) {
+            console.error('CSV处理异常:', error);
+            alert('CSV文件处理失败: ' + error.message);
+            document.getElementById('loading').classList.add('hidden');
+        }
     };
     reader.onerror = function(error) {
         console.error('文件读取失败:', error);
-        alert('文件读取失败');
+        alert('文件读取失败，请检查文件是否损坏');
         document.getElementById('loading').classList.add('hidden');
     };
+    
+    // 尝试使用UTF-8编码读取
     reader.readAsText(file, 'UTF-8');
 }
 
 // 解析Excel文件
 function parseExcel(file) {
+    // 检查XLSX库是否可用
+    if (typeof XLSX === 'undefined') {
+        console.error('XLSX库未加载');
+        alert('Excel解析库加载失败，请刷新页面重试');
+        document.getElementById('loading').classList.add('hidden');
+        return;
+    }
+    
+    console.log('开始解析Excel文件:', file.name);
+    
+    // 更新文件上下文
+    updateFileContext(file.name, '');
+    
     const reader = new FileReader();
     reader.onload = function(e) {
         try {
             const fileData = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(fileData, { type: 'array' });
+            
+            // 使用XLSX库解析 - 尝试多种编码
+            console.log('使用XLSX库解析...');
+            let workbook;
+            
+            // 首先尝试使用默认编码（自动检测）
+            try {
+                workbook = XLSX.read(fileData, { 
+                    type: 'array'
+                });
+            } catch (e1) {
+                console.warn('默认编码解析失败，尝试UTF-8编码...');
+                // 如果失败，尝试UTF-8编码
+                workbook = XLSX.read(fileData, { 
+                    type: 'array',
+                    codepage: 65001
+                });
+            }
             
             if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
                 alert('Excel文件没有工作表');
@@ -969,18 +3684,101 @@ function parseExcel(file) {
             }
             
             const firstSheetName = workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[firstSheetName];
-            const jsonData = XLSX.utils.sheet_to_json(worksheet);
+            console.log('工作表名称:', firstSheetName);
             
-            if (!jsonData || jsonData.length === 0) {
-                alert('Excel文件为空或没有数据');
-                document.getElementById('loading').classList.add('hidden');
-                return;
+            // 更新文件上下文中的Sheet名称
+            fileContext.sheetName = firstSheetName;
+            console.log('[文件上下文] Sheet名称:', firstSheetName);
+            
+            const worksheet = workbook.Sheets[firstSheetName];
+            
+            // 获取工作表范围
+            const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
+            console.log('工作表范围:', range);
+            
+            // 手动读取表头（第一行）
+            headers = [];
+            for (let C = range.s.c; C <= range.e.c; ++C) {
+                const cellAddress = XLSX.utils.encode_cell({ r: 0, c: C });
+                const cell = worksheet[cellAddress];
+                let headerValue = '';
+                if (cell && cell.v !== undefined) {
+                    headerValue = String(cell.v).trim();
+                }
+                headers.push(headerValue);
             }
             
-            headers = Object.keys(jsonData[0]);
-            originalData = jsonData; // 存储原始数据
-            data = [...originalData]; // 初始化显示数据
+            console.log('表头:', headers);
+            
+            // 检查是否有乱码
+            const hasGarbled = headers.some(h => /[\ufffd\u0000-\u001f]/.test(h));
+            if (hasGarbled) {
+                console.error('检测到编码问题，表头包含乱码字符');
+                // 尝试使用不同的编码重新读取
+                console.log('尝试使用GBK编码重新读取...');
+                
+                // 使用codepage 936 (GBK) 重新读取
+                const workbookGBK = XLSX.read(fileData, { 
+                    type: 'array',
+                    codepage: 936
+                });
+                const worksheetGBK = workbookGBK.Sheets[workbookGBK.SheetNames[0]];
+                
+                // 重新读取表头
+                headers = [];
+                const rangeGBK = XLSX.utils.decode_range(worksheetGBK['!ref'] || 'A1');
+                for (let C = rangeGBK.s.c; C <= rangeGBK.e.c; ++C) {
+                    const cellAddress = XLSX.utils.encode_cell({ r: 0, c: C });
+                    const cell = worksheetGBK[cellAddress];
+                    let headerValue = '';
+                    if (cell && cell.v !== undefined) {
+                        headerValue = String(cell.v).trim();
+                    }
+                    headers.push(headerValue);
+                }
+                
+                console.log('GBK编码表头:', headers);
+                
+                // 检查是否还有乱码
+                const stillGarbled = headers.some(h => /[\ufffd\u0000-\u001f]/.test(h));
+                if (stillGarbled) {
+                    console.error('GBK编码仍然有乱码');
+                }
+            }
+            
+            // 读取数据行
+            originalData = [];
+            const dataRange = hasGarbled ? 
+                XLSX.utils.decode_range(workbook.Sheets[workbook.SheetNames[0]]['!ref'] || 'A1') :
+                range;
+            const dataWorksheet = hasGarbled ? 
+                workbook.Sheets[workbook.SheetNames[0]] : worksheet;
+            
+            for (let R = 1; R <= dataRange.e.r; ++R) {
+                const row = {};
+                let hasData = false;
+                for (let C = dataRange.s.c; C <= dataRange.e.c; ++C) {
+                    const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+                    const cell = dataWorksheet[cellAddress];
+                    const header = headers[C - dataRange.s.c] || `列${C + 1}`;
+                    
+                    let value = '';
+                    if (cell && cell.v !== undefined) {
+                        value = cell.v;
+                        hasData = true;
+                    }
+                    row[header] = value;
+                }
+                if (hasData) {
+                    originalData.push(row);
+                }
+            }
+            
+            data = [...originalData];
+            
+            console.log('数据行数:', originalData.length);
+            
+            addProcessingLog('success', 'Excel文件解析完成', `共 ${originalData.length} 行，${headers.length} 列`);
             
             // 更新筛选列选项
             updateFilterColumns();
@@ -1001,9 +3799,50 @@ function parseExcel(file) {
 }
 
 // 处理数据
-function processData() {
+async function processData() {
     const loading = document.getElementById('loading');
     loading.classList.add('hidden');
+    
+    // 判断是否需要启用数据库模式（数据量大于10000行）
+    const LARGE_DATA_THRESHOLD = 10000;
+    console.log('检查数据库模式:', {
+        dataLength: originalData.length,
+        threshold: LARGE_DATA_THRESHOLD,
+        dbManagerExists: !!dbManager,
+        dbManagerInitialized: dbManager?.isInitialized
+    });
+    
+    if (originalData.length > LARGE_DATA_THRESHOLD && dbManager) {
+        useDatabaseMode = true;
+        addProcessingLog('info', `数据量较大 (${originalData.length} 行)，启用数据库模式`, '使用SQL.js进行高效查询');
+        
+        try {
+            // 初始化数据库并导入数据
+            const initResult = await dbManager.init();
+            console.log('数据库初始化结果:', initResult);
+            
+            if (initResult) {
+                await dbManager.createTableFromData(originalData, headers);
+                addProcessingLog('success', '数据库初始化完成', `已创建数据表，共 ${originalData.length} 行`);
+            } else {
+                throw new Error('数据库初始化返回false');
+            }
+        } catch (error) {
+            console.error('数据库初始化失败:', error);
+            addProcessingLog('warning', '数据库初始化失败，降级使用内存模式', error.message);
+            useDatabaseMode = false;
+        }
+    } else {
+        useDatabaseMode = false;
+        if (originalData.length > LARGE_DATA_THRESHOLD && !dbManager) {
+            addProcessingLog('warning', `数据量较大 (${originalData.length} 行) 但数据库管理器未初始化`, '使用内存模式');
+        } else if (originalData.length > 1000) {
+            addProcessingLog('info', `数据量: ${originalData.length} 行，使用内存模式`);
+        }
+    }
+    
+    // ========== V4.0新增：生成数据画像 ==========
+    generateDataProfile();
     
     // 显示数据预览
     showDataPreview();
@@ -1011,6 +3850,171 @@ function processData() {
     // 显示可视化和AI分析区域（但不自动生成图表）
     document.getElementById('data-visualization').classList.remove('hidden');
     document.getElementById('ai-analysis').classList.remove('hidden');
+}
+
+// V4.0新增：生成数据画像
+function generateDataProfile() {
+    console.log('[V4.0] 开始生成数据画像...');
+    
+    try {
+        const startTime = Date.now();
+        const profile = window.dataProfiler.profile(originalData, headers);
+        const duration = Date.now() - startTime;
+        
+        if (profile) {
+            window.currentDataProfile = profile;
+            addProcessingLog('success', '数据画像生成完成', `${profile.summary}，耗时${duration}ms`);
+            console.log('[V4.0] 数据画像:', profile);
+            updateDataInfoWithProfile(profile);
+            renderDataProfilePanel(profile);
+        }
+    } catch (error) {
+        console.error('[V4.0] 数据画像生成失败:', error);
+        addProcessingLog('warning', '数据画像生成失败', error.message);
+    }
+}
+
+// V4.0新增：渲染数据画像面板
+function renderDataProfilePanel(profile) {
+    const panel = document.getElementById('data-profile-panel');
+    if (!panel || !profile) return;
+    
+    // 显示面板
+    panel.classList.remove('hidden');
+    
+    // 渲染摘要
+    renderProfileSummary(profile);
+    
+    // 渲染列信息
+    renderProfileColumns(profile);
+    
+    // 渲染数据质量
+    renderProfileQuality(profile);
+    
+    // 绑定折叠按钮事件
+    const toggleBtn = document.getElementById('toggle-profile');
+    if (toggleBtn) {
+        toggleBtn.onclick = () => {
+            panel.classList.toggle('collapsed');
+        };
+    }
+}
+
+// 渲染摘要统计
+function renderProfileSummary(profile) {
+    const container = document.getElementById('profile-summary');
+    if (!container) return;
+    
+    const stats = [
+        { label: '总行数', value: profile.shape?.rows || 0, icon: '📊' },
+        { label: '总列数', value: profile.shape?.cols || 0, icon: '📋' },
+        { label: '数值列', value: profile.schema?.numericCols?.length || 0, icon: '🔢' },
+        { label: '文本列', value: profile.schema?.textCols?.length || 0, icon: '📝' },
+        { label: '日期列', value: profile.schema?.dateCols?.length || 0, icon: '📅' },
+        { label: '分类列', value: profile.schema?.categoricalCols?.length || 0, icon: '🏷️' }
+    ];
+    
+    container.innerHTML = stats.map(stat => `
+        <div class="profile-stat">
+            <span class="stat-value">${stat.icon} ${stat.value}</span>
+            <span class="stat-label">${stat.label}</span>
+        </div>
+    `).join('');
+}
+
+// 渲染列信息
+function renderProfileColumns(profile) {
+    const container = document.getElementById('profile-columns');
+    if (!container || !profile.columns) return;
+    
+    // 按类型分组
+    const numericCols = Object.entries(profile.columns)
+        .filter(([_, col]) => col.type === 'numeric')
+        .map(([name, _]) => name);
+    
+    const textCols = Object.entries(profile.columns)
+        .filter(([_, col]) => col.type === 'text' && !col.isCategorical)
+        .map(([name, _]) => name);
+    
+    const dateCols = Object.entries(profile.columns)
+        .filter(([_, col]) => col.type === 'datetime')
+        .map(([name, _]) => name);
+    
+    const categoricalCols = Object.entries(profile.columns)
+        .filter(([_, col]) => col.isCategorical)
+        .map(([name, _]) => name);
+    
+    container.innerHTML = `
+        <h4>字段类型分布</h4>
+        <div class="column-list">
+            ${numericCols.map(col => `<span class="column-tag numeric"><span class="tag-icon">🔢</span>${col}</span>`).join('')}
+            ${textCols.map(col => `<span class="column-tag text"><span class="tag-icon">📝</span>${col}</span>`).join('')}
+            ${dateCols.map(col => `<span class="column-tag date"><span class="tag-icon">📅</span>${col}</span>`).join('')}
+            ${categoricalCols.map(col => `<span class="column-tag categorical"><span class="tag-icon">🏷️</span>${col}</span>`).join('')}
+        </div>
+    `;
+}
+
+// 渲染数据质量
+function renderProfileQuality(profile) {
+    const container = document.getElementById('profile-quality');
+    if (!container || !profile.quality) return;
+    
+    const quality = profile.quality;
+    const grade = quality.grade || 'N/A';
+    const completeness = quality.completeness || 0;
+    
+    container.innerHTML = `
+        <h4>数据质量评估</h4>
+        <div class="quality-meter">
+            <div class="quality-bar">
+                <div class="quality-fill grade-${grade.toLowerCase()}" style="width: ${completeness}%"></div>
+            </div>
+            <span class="quality-label grade-${grade.toLowerCase()}">${grade}</span>
+        </div>
+        <div class="quality-details">
+            <div class="quality-item">
+                <div class="item-value">${completeness}%</div>
+                <div class="item-label">完整度</div>
+            </div>
+            <div class="quality-item">
+                <div class="item-value">${quality.uniqueness || 0}%</div>
+                <div class="item-label">唯一性</div>
+            </div>
+            <div class="quality-item">
+                <div class="item-value">${quality.emptyCells || 0}</div>
+                <div class="item-label">空值数</div>
+            </div>
+            <div class="quality-item">
+                <div class="item-value">${quality.duplicateRows || 0}</div>
+                <div class="item-label">重复行</div>
+            </div>
+        </div>
+    `;
+}
+
+// V4.0新增：更新数据信息显示（包含画像信息）
+function updateDataInfoWithProfile(profile) {
+    const dataInfo = document.getElementById('data-info');
+    if (!dataInfo || !profile) return;
+    
+    const qualityGrade = profile.quality?.grade || 'N/A';
+    const gradeColors = {
+        'A': '#4caf50',
+        'B': '#8bc34a', 
+        'C': '#ff9800',
+        'D': '#ff5722',
+        'F': '#f44336'
+    };
+    const gradeColor = gradeColors[qualityGrade] || '#666';
+    
+    dataInfo.innerHTML = `
+        <span class="data-stat">📊 ${profile.shape.rows} 行 × ${profile.shape.cols} 列</span>
+        <span class="data-stat">🔢 数值型 ${profile.schema?.numericCols?.length || 0} 个</span>
+        <span class="data-stat">📝 文本型 ${profile.schema?.textCols?.length || 0} 个</span>
+        <span class="data-stat">📅 日期型 ${profile.schema?.dateCols?.length || 0} 个</span>
+        <span class="data-stat" style="color: ${gradeColor};">✓ 质量 ${profile.quality?.completeness || 0}% (${qualityGrade})</span>
+    `;
 }
 
 // 更新筛选列选项
@@ -1139,6 +4143,22 @@ function showDataPreview() {
     const thead = table.querySelector('thead');
     const tbody = table.querySelector('tbody');
     
+    // 更新数据信息显示
+    const totalRowsEl = document.getElementById('total-rows');
+    const totalColsEl = document.getElementById('total-cols');
+    const modeBadge = document.getElementById('mode-badge');
+    const techInfo = document.getElementById('tech-info');
+    
+    if (totalRowsEl) totalRowsEl.textContent = originalData.length.toLocaleString();
+    if (totalColsEl) totalColsEl.textContent = headers.length;
+    if (modeBadge) {
+        modeBadge.textContent = useDatabaseMode ? '数据库模式' : '内存模式';
+        modeBadge.className = 'info-item mode-badge' + (useDatabaseMode ? ' database' : '');
+    }
+    if (techInfo) {
+        techInfo.textContent = useDatabaseMode ? 'SQL.js 数据库模式' : '内存模式';
+    }
+    
     // 清空表格
     thead.innerHTML = '';
     tbody.innerHTML = '';
@@ -1184,62 +4204,66 @@ function showDataPreview() {
         tbody.appendChild(tr);
     });
     
-    // 创建分页控件
-    createPaginationControls(previewSection, totalPages);
+    // 更新分页控件（使用HTML中的固定分页控件）
+    updatePaginationControls(totalPages);
     
     previewSection.classList.remove('hidden');
 }
 
-// 创建分页控件
-function createPaginationControls(container, totalPages) {
-    // 移除旧的分页控件
-    const existingPagination = container.querySelector('.pagination-container');
-    if (existingPagination) {
-        existingPagination.remove();
+// 更新分页控件（使用HTML中的固定分页控件）
+function updatePaginationControls(totalPages) {
+    const paginationContainer = document.getElementById('table-pagination');
+    if (!paginationContainer) return;
+    
+    const prevBtn = document.getElementById('prev-page');
+    const nextBtn = document.getElementById('next-page');
+    const currentPageEl = document.getElementById('current-page');
+    const totalPagesEl = document.getElementById('total-pages');
+    const totalRowsEl = document.getElementById('pagination-total-rows');
+    
+    // 更新页码显示
+    if (currentPageEl) currentPageEl.textContent = currentPage;
+    if (totalPagesEl) totalPagesEl.textContent = totalPages;
+    if (totalRowsEl) totalRowsEl.textContent = data.length.toLocaleString();
+    
+    // 更新按钮状态
+    if (prevBtn) {
+        prevBtn.disabled = currentPage === 1;
+        prevBtn.style.opacity = currentPage === 1 ? '0.5' : '1';
+    }
+    if (nextBtn) {
+        nextBtn.disabled = currentPage === totalPages || totalPages === 0;
+        nextBtn.style.opacity = (currentPage === totalPages || totalPages === 0) ? '0.5' : '1';
     }
     
-    if (totalPages <= 1) return;
+    // 显示/隐藏分页控件
+    paginationContainer.style.display = totalPages <= 1 ? 'none' : 'flex';
+}
+
+// 初始化分页控件事件
+function initPaginationControls() {
+    const prevBtn = document.getElementById('prev-page');
+    const nextBtn = document.getElementById('next-page');
     
-    const paginationContainer = document.createElement('div');
-    paginationContainer.className = 'pagination-container';
-    paginationContainer.style.cssText = 'display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 20px; padding: 10px;';
+    if (prevBtn) {
+        prevBtn.onclick = () => {
+            if (currentPage > 1) {
+                currentPage--;
+                showDataPreview();
+            }
+        };
+    }
     
-    // 上一页按钮
-    const prevBtn = document.createElement('button');
-    prevBtn.textContent = '上一页';
-    prevBtn.disabled = currentPage === 1;
-    prevBtn.style.cssText = 'padding: 8px 16px; border: none; border-radius: 4px; background: #667eea; color: white; cursor: pointer; opacity: ' + (currentPage === 1 ? '0.5' : '1') + ';';
-    prevBtn.onclick = () => {
-        if (currentPage > 1) {
-            currentPage--;
-            showDataPreview();
-        }
-    };
+    if (nextBtn) {
+        nextBtn.onclick = () => {
+            const totalPages = Math.ceil(data.length / pageSize);
+            if (currentPage < totalPages) {
+                currentPage++;
+                showDataPreview();
+            }
+        };
+    }
     
-    // 页码信息
-    const pageInfo = document.createElement('span');
-    pageInfo.textContent = `第 ${currentPage} / ${totalPages} 页 (共 ${data.length} 条数据)`;
-    pageInfo.style.cssText = 'color: #666; font-size: 14px;';
-    
-    // 下一页按钮
-    const nextBtn = document.createElement('button');
-    nextBtn.textContent = '下一页';
-    nextBtn.disabled = currentPage === totalPages;
-    nextBtn.style.cssText = 'padding: 8px 16px; border: none; border-radius: 4px; background: #667eea; color: white; cursor: pointer; opacity: ' + (currentPage === totalPages ? '0.5' : '1') + ';';
-    nextBtn.onclick = () => {
-        if (currentPage < totalPages) {
-            currentPage++;
-            showDataPreview();
-        }
-    };
-    
-    paginationContainer.appendChild(prevBtn);
-    paginationContainer.appendChild(pageInfo);
-    paginationContainer.appendChild(nextBtn);
-    
-    // 插入到表格后面
-    const table = container.querySelector('#data-table');
-    table.parentNode.insertBefore(paginationContainer, table.nextSibling);
 }
 
 // 显示数据统计
@@ -1767,106 +4791,160 @@ function createLineChartForRecommendation(ctx, recommendation) {
     }
 }
 
-// 生成AI分析报告
+// 生成AI分析报告（V3.2重构：精简概览 + 大模型深度洞察）
 async function generateAIReport() {
     const reportContent = document.getElementById('report-content');
-    reportContent.innerHTML = '<div class="loading"><div class="spinner"></div><p>生成分析报告中...</p></div>';
+    reportContent.innerHTML = '<div class="loading"><div class="spinner"></div><p>正在调用大模型进行深度分析...</p></div>';
     
-    // 准备数据摘要
-    const dataSummary = {
-        columns: headers,
-        rowCount: data.length,
-        columnCount: headers.length,
-        stats: headers.map(header => ({
-            column: header,
-            ...calculateStats(header)
-        }))
-    };
+    // 1. 数据统计概览：精简为一句话（不超过100字）
+    const totalRows = data.length;
+    const totalCols = headers.length;
+    const numericCols = headers.filter(h => {
+        const vals = data.slice(0, 100).map(row => row[h]).filter(v => v !== '' && v !== null);
+        return vals.length > 0 && vals.every(v => !isNaN(parseFloat(v)));
+    }).length;
+    const textCols = totalCols - numericCols;
     
-    // 生成数据统计表格HTML - 使用紧凑的表格形式
-    let statsTableHTML = `
-        <div class="stats-table-container" style="margin-bottom: 30px; overflow-x: auto;">
-            <table class="stats-table" style="width: 100%; border-collapse: collapse; font-size: 0.85em;">
-                <thead>
-                    <tr style="background: #667eea; color: white;">
-                        <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">列名</th>
-                        <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">类型</th>
-                        <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">有效数据</th>
-                        <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">平均值</th>
-                        <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">最大值</th>
-                        <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">最小值</th>
-                        <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">唯一值</th>
-                        <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">缺失值</th>
-                    </tr>
-                </thead>
-                <tbody>
-    `;
+    // 计算数据完整性
+    let totalCells = totalRows * totalCols;
+    let emptyCells = 0;
+    data.slice(0, 1000).forEach(row => {
+        headers.forEach(h => {
+            if (row[h] === '' || row[h] === null || row[h] === undefined) emptyCells++;
+        });
+    });
+    const completeness = ((1 - emptyCells / (Math.min(data.length, 1000) * totalCols)) * 100).toFixed(1);
     
-    dataSummary.stats.forEach((stat, index) => {
-        const isNumeric = stat.avg !== null;
-        const uniqueCount = isNumeric ? '-' : new Set(data.map(row => row[stat.column]).filter(val => val !== '' && val !== null && val !== undefined)).size;
-        const rowBg = index % 2 === 0 ? '#fff' : '#f8f9fa';
-        
-        statsTableHTML += `
-            <tr style="background: ${rowBg};">
-                <td style="padding: 8px 10px; border: 1px solid #ddd; font-weight: 500; color: #667eea;">${stat.column}</td>
-                <td style="padding: 8px 10px; border: 1px solid #ddd; text-align: center;">${isNumeric ? '数值' : '文本'}</td>
-                <td style="padding: 8px 10px; border: 1px solid #ddd; text-align: center;">${stat.count - stat.missing}</td>
-                <td style="padding: 8px 10px; border: 1px solid #ddd; text-align: center;">${isNumeric ? stat.avg.toFixed(2) : '-'}</td>
-                <td style="padding: 8px 10px; border: 1px solid #ddd; text-align: center;">${isNumeric ? stat.max : '-'}</td>
-                <td style="padding: 8px 10px; border: 1px solid #ddd; text-align: center;">${isNumeric ? stat.min : '-'}</td>
-                <td style="padding: 8px 10px; border: 1px solid #ddd; text-align: center;">${uniqueCount}</td>
-                <td style="padding: 8px 10px; border: 1px solid #ddd; text-align: center;">${stat.missing}</td>
-            </tr>
-        `;
+    // 精简概览（不超过100字）
+    const summaryText = `数据集共${totalRows}行×${totalCols}列，其中数值型字段${numericCols}个、文本型字段${textCols}个，数据完整度${completeness}%。`;
+    
+    // 2. 准备数据样本供大模型分析（取前10行作为样本，减少Token消耗）
+    const sampleData = data.slice(0, 10).map(row => {
+        const obj = {};
+        headers.forEach(h => obj[h] = row[h]);
+        return obj;
     });
     
-    statsTableHTML += '</tbody></table></div>';
+    // 3. 构建深度分析提示词（传递业务上下文）
+    const analysisPrompt = buildDeepAnalysisPrompt(summaryText, headers, sampleData, fileContext);
     
-    // 构建统计信息字符串
-    const statsString = dataSummary.stats.map(stat => {
-        return `
-${stat.column}：
-- 平均值：${stat.avg !== null ? stat.avg.toFixed(2) : 'N/A'}
-- 最大值：${stat.max !== null ? stat.max : 'N/A'}
-- 最小值：${stat.min !== null ? stat.min : 'N/A'}
-- 缺失值：${stat.missing}
-`;
-    }).join('');
-    
-    // 获取配置的 prompt 并替换变量
-    const prompt = config.ai.prompts.dataAnalysis
-        .replace('{{rowCount}}', dataSummary.rowCount)
-        .replace('{{columnCount}}', dataSummary.columnCount)
-        .replace('{{columns}}', dataSummary.columns.join(', '))
-        .replace('{{stats}}', statsString);
-    
-    console.log('使用的 prompt:', prompt);
+    console.log('[AI报告] 开始调用大模型进行深度分析...');
+    console.log('[AI报告] 提示词长度:', analysisPrompt.length, '字符');
     
     try {
-        // 尝试调用大模型API
-        const aiResponse = await callLLMAPI(prompt);
+        // 调用大模型API（增加超时时间到120秒，因为分析可能需要较长时间）
+        const aiResponse = await callLLMAPI(analysisPrompt, null, 120000);
         
-        // 显示数据统计和AI分析结果
+        // 显示精简概览 + AI深度洞察
         reportContent.innerHTML = `
-            <h3 style="color: #667eea; margin-bottom: 20px;">数据统计概览</h3>
-            ${statsTableHTML}
-            <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
-            <h3 style="color: #667eea; margin-bottom: 20px;">AI 深度分析</h3>
-            <div style="white-space: pre-wrap; line-height: 1.8; background: #f8f9fa; padding: 20px; border-radius: 8px;">${aiResponse}</div>
+            <div class="report-section">
+                <h3 style="color: #667eea; margin-bottom: 15px; font-size: 1.1em;">📊 数据概览</h3>
+                <p style="color: #666; margin-bottom: 25px; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #667eea;">${summaryText}</p>
+            </div>
+            <div class="report-section">
+                <h3 style="color: #667eea; margin-bottom: 15px; font-size: 1.1em;">🤖 AI 深度洞察</h3>
+                <div class="ai-insight-content" style="white-space: pre-wrap; line-height: 1.8; background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%); padding: 25px; border-radius: 12px; font-size: 0.95em;">${formatAIResponse(aiResponse)}</div>
+            </div>
+            <div class="report-footer" style="margin-top: 20px; text-align: right; color: #999; font-size: 0.85em;">
+                生成时间：${new Date().toLocaleString()}
+            </div>
         `;
+        
+        console.log('[AI报告] 深度分析完成');
+        
     } catch (error) {
-        console.error('AI API调用失败:', error);
-        // API调用失败时，使用本地生成的报告
-        const report = generateMockReport(dataSummary, prompt);
+        console.error('[AI报告] 大模型调用失败:', error);
+        
+        // 降级方案：显示错误提示，引导用户检查API配置
         reportContent.innerHTML = `
-            <h3 style="color: #667eea; margin-bottom: 20px;">数据统计概览</h3>
-            ${statsTableHTML}
-            <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
-            <h3 style="color: #667eea; margin-bottom: 20px;">AI 深度分析（本地生成）</h3>
-            <div style="white-space: pre-wrap; line-height: 1.8; background: #f8f9fa; padding: 20px; border-radius: 8px;">${report}</div>
+            <div class="report-section">
+                <h3 style="color: #667eea; margin-bottom: 15px; font-size: 1.1em;">📊 数据概览</h3>
+                <p style="color: #666; margin-bottom: 25px; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #667eea;">${summaryText}</p>
+            </div>
+            <div class="report-section">
+                <h3 style="color: #dc3545; margin-bottom: 15px; font-size: 1.1em;">⚠️ AI分析暂时不可用</h3>
+                <div style="background: #fff3cd; padding: 20px; border-radius: 8px; border-left: 4px solid #ffc107;">
+                    <p style="margin-bottom: 10px;"><strong>原因：</strong>${error.message || '大模型API调用失败'}</p>
+                    <p style="margin-bottom: 10px;"><strong>建议：</strong></p>
+                    <ul style="margin-left: 20px; color: #666;">
+                        <li>检查 config.js 中的 API Key 和 API URL 配置</li>
+                        <li>确认网络连接正常</li>
+                        <li>稍后重试</li>
+                    </ul>
+                </div>
+            </div>
         `;
     }
+}
+
+// 构建深度分析提示词（V3.2新增）
+function buildDeepAnalysisPrompt(summaryText, columns, sampleData, fileContext) {
+    // 提取文件业务上下文
+    const businessContext = fileContext && fileContext.fileKeywords && fileContext.fileKeywords.length > 0 
+        ? `业务领域：${fileContext.fileKeywords.join('、')}` 
+        : '';
+    
+    // 分析各列的数据特征
+    const columnProfiles = columns.map(col => {
+        const values = sampleData.map(row => row[col]).filter(v => v !== '' && v !== null && v !== undefined);
+        const uniqueValues = [...new Set(values)];
+        const isNumeric = values.length > 0 && values.every(v => !isNaN(parseFloat(v)));
+        
+        if (isNumeric) {
+            const nums = values.map(v => parseFloat(v));
+            return {
+                name: col,
+                type: '数值',
+                min: Math.min(...nums),
+                max: Math.max(...nums),
+                avg: (nums.reduce((a, b) => a + b, 0) / nums.length).toFixed(2),
+                uniqueCount: uniqueValues.length
+            };
+        } else {
+            return {
+                name: col,
+                type: '文本',
+                uniqueCount: uniqueValues.length,
+                topValues: uniqueValues.slice(0, 5)
+            };
+        }
+    });
+    
+    // 构建精简提示词（减少Token消耗）
+    const columnInfo = columnProfiles.map(p => {
+        if (p.type === '数值') {
+            return `${p.name}:数值,范围${p.min}~${p.max},均值${p.avg}`;
+        } else {
+            return `${p.name}:文本,${p.uniqueCount}个不同值`;
+        }
+    }).join('; ');
+    
+    return `作为数据分析师，请分析以下数据并给出洞察。
+
+数据概况：${summaryText}${businessContext ? ',' + businessContext : ''}
+字段：${columnInfo}
+样本：${JSON.stringify(sampleData)}
+
+请输出（300字内）：
+1.关键发现（2条，用数字支撑）
+2.业务洞察（2条）  
+3.行动建议（2条）
+
+要求：简洁专业，避免基础统计，重点讲"为什么"和"怎么办"。`;
+}
+
+// 格式化AI响应（支持Markdown标题）
+function formatAIResponse(text) {
+    if (!text) return '';
+    
+    // 将Markdown标题转换为HTML
+    let formatted = text
+        .replace(/###\s*(.+)/g, '<h4 style="color: #667eea; margin: 20px 0 10px 0;">$1</h4>')
+        .replace(/##\s*(.+)/g, '<h3 style="color: #667eea; margin: 25px 0 15px 0;">$1</h3>')
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\n/g, '<br>');
+    
+    return formatted;
 }
 
 // 生成图表推荐
@@ -1940,62 +5018,7 @@ function generateMockChartRecommendation(columnName, dataType, uniqueCount, min,
     return `图表推荐报告\n\n数据列：${columnName}\n数据类型：${dataType}\n唯一值数量：${uniqueCount}\n数据范围：${min !== null ? min : 'N/A'} - ${max !== null ? max : 'N/A'}\n\n${recommendation}\n\n使用的 Prompt：\n${prompt.substring(0, 200)}...`;
 }
 
-// 生成模拟报告
-function generateMockReport(dataSummary, prompt) {
-    // 生成数据摘要
-    const dataSummaryText = `本数据表包含 ${dataSummary.rowCount} 行数据，${dataSummary.columnCount} 列字段，涵盖了 ${dataSummary.columns.join('、')} 等信息。`;
-    
-    // 生成整体概况
-    const overviewText = `
-## 数据整体概况
 
-- 数据总量：${dataSummary.rowCount} 条记录
-- 字段数量：${dataSummary.columnCount} 个字段
-- 字段名称：${dataSummary.columns.join('、')}
-- 数据完整性：
-${dataSummary.stats.map(stat => `  - ${stat.column}：缺失值 ${stat.missing} 个，占比 ${((stat.missing / dataSummary.rowCount) * 100).toFixed(2)}%`).join('\n')}
-`;
-    
-    // 生成关键发现
-    let keyFindings = `
-## 关键发现
-
-`;
-    
-    // 分析数值列的异常值和趋势
-    dataSummary.stats.forEach(stat => {
-        if (stat.avg !== null) {
-            keyFindings += `- ${stat.column}：平均值 ${stat.avg.toFixed(2)}，最大值 ${stat.max}，最小值 ${stat.min}\n`;
-        }
-    });
-    
-    // 生成actionable建议
-    const actionableSuggestions = `
-##  actionable建议
-
-1. **数据质量优化**：针对缺失值较多的字段，建议进行数据清洗和补充
-2. **业务分析**：基于数据分布情况，建议重点关注数值列的变化趋势
-3. **可视化改进**：可以使用更多类型的图表来展示数据关系
-4. **数据集成**：考虑与其他数据源结合，获得更全面的分析视角
-`;
-    
-    return `# 智能数据洞察报告
-
-## 数据摘要
-${dataSummaryText}${overviewText}${keyFindings}${actionableSuggestions}
-## 详细统计信息
-${dataSummary.stats.map(stat => {
-    return `
-### ${stat.column}
-- 平均值：${stat.avg !== null ? stat.avg.toFixed(2) : 'N/A'}
-- 最大值：${stat.max !== null ? stat.max : 'N/A'}
-- 最小值：${stat.min !== null ? stat.min : 'N/A'}
-- 缺失值：${stat.missing}
-`;
-}).join('')}
-
-生成时间：${new Date().toLocaleString()}`;
-}
 
 // 导出PDF
 function exportPDF() {
@@ -2021,7 +5044,7 @@ function exportChartAsImage(chart, chartTitle) {
     }
 }
 
-// 导出图片（批量导出所有图表）
+// 导出单个图表
 function exportImage() {
     if (charts.length === 0) {
         alert('没有图表可导出');
@@ -2036,9 +5059,30 @@ function exportImage() {
     }
 }
 
+// 导出所有图表
+function exportAllCharts() {
+    if (charts.length === 0) {
+        alert('没有图表可导出');
+        return;
+    }
+    
+    // 依次导出所有图表
+    charts.forEach((chart, index) => {
+        setTimeout(() => {
+            exportChartAsImage(chart, `图表${index + 1}`);
+        }, index * 500); // 每个图表间隔500ms，避免浏览器阻塞
+    });
+    
+    addProcessingLog('success', '批量导出图表', `共导出 ${charts.length} 个图表`);
+}
+
 // 初始化应用
-function init() {
+async function init() {
     initEventListeners();
+    initSkillManager();
+    initIntentRecognizer();
+    await initDatabaseManager();
+    initPaginationControls();
 }
 
 // 处理自然语言查询
@@ -2832,6 +5876,13 @@ ${dataInfo.sampleData.map((row, index) => `行${index + 1}: ${Object.entries(row
 
 // 根据配置创建图表
 function createChartFromConfig(config, container, aiResponse = null) {
+    // 检查Chart.js是否可用
+    if (typeof Chart === 'undefined') {
+        console.error('Chart.js未加载');
+        container.innerHTML = '<div style="color: #dc3545; padding: 20px;">图表库未加载，请刷新页面重试</div>';
+        return;
+    }
+    
     const { chartType, xAxisColumn, yAxisColumn, labelColumn, valueColumn, title, description, aggregateFunction = 'avg', sortOrder = null, dataTransform = null } = config;
     
     console.log('创建图表:', config);
@@ -2862,33 +5913,351 @@ function createChartFromConfig(config, container, aiResponse = null) {
         return colors;
     };
     
-    // 数据预处理函数
+    // 数据预处理函数 - 支持单位转换和小数位格式化
     const transformValue = (val, transform) => {
-        if (!transform || val === null || val === undefined || isNaN(val)) return val;
+        if (val === null || val === undefined) return val;
         
-        let result = parseFloat(val);
-        const { operation, value: opValue } = transform;
+        // 处理千分位逗号、货币符号
+        let str = val.toString();
+        str = str.replace(/,/g, '').replace(/[￥$€£\s]/g, '');
         
-        switch (operation) {
-            case 'divide':
-                result = result / opValue;
-                break;
-            case 'multiply':
-                result = result * opValue;
-                break;
-            case 'add':
-                result = result + opValue;
-                break;
-            case 'subtract':
-                result = result - opValue;
-                break;
+        let result = parseFloat(str);
+        if (isNaN(result)) return val;
+        
+        // 处理formula表达式（如 "value / 60"）
+        if (transform && transform.formula) {
+            const formula = transform.formula.toLowerCase().replace(/\s/g, '');
+            // 解析 value / 60 或 value * 60 等格式
+            const match = formula.match(/value([\*\/\+\-])(\d+(?:\.\d+)?)/);
+            if (match) {
+                const operator = match[1];
+                const operand = parseFloat(match[2]);
+                switch (operator) {
+                    case '/':
+                        result = result / operand;
+                        break;
+                    case '*':
+                        result = result * operand;
+                        break;
+                    case '+':
+                        result = result + operand;
+                        break;
+                    case '-':
+                        result = result - operand;
+                        break;
+                }
+            }
+        }
+        // 处理嵌套的unitConversion结构（带formula，如"秒数/60"）
+        else if (transform && transform.unitConversion && transform.unitConversion.formula) {
+            const formula = transform.unitConversion.formula.toLowerCase().replace(/\s/g, '');
+            // 支持 "秒数/60"、"value/60"、"数值*0.01" 等格式
+            const match = formula.match(/(?:value|数值|秒数|分钟数|小时数)([\*\/\+\-])(\d+(?:\.\d+)?)/);
+            if (match) {
+                const operator = match[1];
+                const operand = parseFloat(match[2]);
+                switch (operator) {
+                    case '/':
+                        result = result / operand;
+                        break;
+                    case '*':
+                        result = result * operand;
+                        break;
+                    case '+':
+                        result = result + operand;
+                        break;
+                    case '-':
+                        result = result - operand;
+                        break;
+                }
+            }
+        }
+        // 处理嵌套的unitConversion结构（带operation和factor）
+        else if (transform && transform.unitConversion && transform.unitConversion.operation) {
+            const { operation, factor } = transform.unitConversion;
+            switch (operation) {
+                case 'divide':
+                    result = result / factor;
+                    break;
+                case 'multiply':
+                    result = result * factor;
+                    break;
+                case 'add':
+                    result = result + factor;
+                    break;
+                case 'subtract':
+                    result = result - factor;
+                    break;
+            }
+        }
+        // 处理直接的operation结构（兼容旧格式）
+        else if (transform && transform.operation) {
+            const opValue = transform.value || transform.factor || 1;
+            switch (transform.operation) {
+                case 'divide':
+                    result = result / opValue;
+                    break;
+                case 'multiply':
+                    result = result * opValue;
+                    break;
+                case 'add':
+                    result = result + opValue;
+                    break;
+                case 'subtract':
+                    result = result - opValue;
+                    break;
+            }
+        }
+        
+        // 应用小数位格式化
+        if (transform && transform.decimalPlaces !== undefined) {
+            result = parseFloat(result.toFixed(transform.decimalPlaces));
         }
         
         return result;
     };
     
+    // 格式化数值显示 - 保留指定小数位
+    const formatValue = (val, decimalPlaces) => {
+        if (val === null || val === undefined || isNaN(val)) return val;
+        if (decimalPlaces === undefined || decimalPlaces === null) return val;
+        return parseFloat(val.toFixed(decimalPlaces));
+    };
+    
+    // 创建整体统计图表（无分组）
+    const createOverallChart = (config, container, aiResponse) => {
+        const { yAxisColumn, title, description, aggregateFunction = 'avg', dataTransform = null } = config;
+        
+        // 找到实际的Y轴列
+        let actualYColumn = yAxisColumn;
+        if (yAxisColumn && !headers.includes(yAxisColumn)) {
+            actualYColumn = headers.find(h => h.includes(yAxisColumn) || yAxisColumn.includes(h));
+        }
+        
+        if (!actualYColumn) {
+            container.innerHTML = `<div style="color: #666; padding: 20px;">错误：数值列"${yAxisColumn}"不存在</div>`;
+            return;
+        }
+        
+        // 收集所有数值
+        const values = [];
+        data.forEach(row => {
+            // 处理千分位逗号、货币符号
+            let rawVal = row[actualYColumn];
+            if (rawVal !== null && rawVal !== undefined) {
+                let str = rawVal.toString().replace(/,/g, '').replace(/[￥$€£\s]/g, '');
+                let val = parseFloat(str);
+                if (!isNaN(val)) {
+                    // 应用数据转换
+                    if (dataTransform) {
+                        val = transformValue(val, dataTransform);
+                    }
+                    values.push(val);
+                }
+            }
+        });
+        
+        if (values.length === 0) {
+            container.innerHTML = `<div style="color: #666; padding: 20px;">没有有效的数值数据</div>`;
+            return;
+        }
+        
+        // 计算聚合值
+        let result;
+        switch (aggregateFunction.toLowerCase()) {
+            case 'avg':
+            case 'average':
+                result = values.reduce((a, b) => a + b, 0) / values.length;
+                break;
+            case 'sum':
+                result = values.reduce((a, b) => a + b, 0);
+                break;
+            case 'max':
+                result = Math.max(...values);
+                break;
+            case 'min':
+                result = Math.min(...values);
+                break;
+            case 'count':
+                result = values.length;
+                break;
+            default:
+                result = values.reduce((a, b) => a + b, 0) / values.length;
+        }
+        
+        // 格式化结果
+        const formattedResult = formatValue(result, dataTransform?.decimalPlaces);
+        
+        // 创建图表容器
+        const chartContainer = document.createElement('div');
+        chartContainer.className = 'chart-container';
+        chartContainer.innerHTML = `
+            <div class="chart-header">
+                <h3>${title || `${actualYColumn}统计`}</h3>
+                <p>${description || `统计所有${actualYColumn}的${aggregateFunction === 'avg' ? '平均值' : '总和'}`}</p>
+            </div>
+            <div class="chart-wrapper" style="height: 300px; position: relative;">
+                <canvas id="overall-chart"></canvas>
+            </div>
+            <div class="chart-stats" style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                <div style="display: flex; justify-content: space-around; text-align: center;">
+                    <div>
+                        <div style="font-size: 24px; font-weight: bold; color: #667eea;">${formattedResult.toLocaleString()}</div>
+                        <div style="color: #666; font-size: 12px;">${aggregateFunction === 'avg' ? '平均值' : aggregateFunction === 'sum' ? '总和' : '统计值'}</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 24px; font-weight: bold; color: #667eea;">${values.length.toLocaleString()}</div>
+                        <div style="color: #666; font-size: 12px;">数据条数</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 24px; font-weight: bold; color: #667eea;">${formatValue(Math.max(...values), dataTransform?.decimalPlaces).toLocaleString()}</div>
+                        <div style="color: #666; font-size: 12px;">最大值</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 24px; font-weight: bold; color: #667eea;">${formatValue(Math.min(...values), dataTransform?.decimalPlaces).toLocaleString()}</div>
+                        <div style="color: #666; font-size: 12px;">最小值</div>
+                    </div>
+                </div>
+            </div>
+        `;
+        container.appendChild(chartContainer);
+        
+        // 创建Chart.js图表
+        const ctx = chartContainer.querySelector('#overall-chart').getContext('2d');
+        const chart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['整体统计'],
+                datasets: [{
+                    label: actualYColumn,
+                    data: [formattedResult],
+                    backgroundColor: 'rgba(102, 126, 234, 0.6)',
+                    borderColor: 'rgba(102, 126, 234, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `${actualYColumn}: ${context.parsed.y.toLocaleString()}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: actualYColumn
+                        }
+                    }
+                }
+            }
+        });
+        
+        charts.push(chart);
+    };
+    
+    // 创建散点图
+    const createScatterChart = (config, container, scatterData, xColumn, yColumn, aiResponse) => {
+        const { title, description } = config;
+        
+        // 创建图表容器
+        const chartContainer = document.createElement('div');
+        chartContainer.className = 'chart-wrapper';
+        chartContainer.style.cssText = 'background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px;';
+        
+        // 添加标题
+        const titleDiv = document.createElement('div');
+        titleDiv.style.marginBottom = '15px';
+        titleDiv.innerHTML = `
+            <h4 style="margin: 0 0 5px 0; color: #333;">${title || `${xColumn}${yColumn ? ' vs ' + yColumn : ''}散点图`}</h4>
+            ${description ? `<p style="margin: 0; color: #666; font-size: 0.9em;">${description}</p>` : ''}
+            <p style="margin: 5px 0 0 0; color: #667eea; font-size: 0.85em;">共 ${scatterData.length} 个数据点</p>
+        `;
+        chartContainer.appendChild(titleDiv);
+        
+        // 创建canvas容器
+        const canvasContainer = document.createElement('div');
+        canvasContainer.style.cssText = 'height: 400px; position: relative;';
+        chartContainer.appendChild(canvasContainer);
+        
+        // 创建canvas
+        const canvas = document.createElement('canvas');
+        canvasContainer.appendChild(canvas);
+        
+        // 添加到容器
+        container.appendChild(chartContainer);
+        
+        // 创建Chart.js散点图
+        const ctx = canvas.getContext('2d');
+        const chart = new Chart(ctx, {
+            type: 'scatter',
+            data: {
+                datasets: [{
+                    label: yColumn || '数值',
+                    data: scatterData,
+                    backgroundColor: 'rgba(102, 126, 234, 0.6)',
+                    borderColor: 'rgba(102, 126, 234, 1)',
+                    borderWidth: 1,
+                    pointRadius: 5,
+                    pointHoverRadius: 7
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const point = context.raw;
+                                return `${xColumn}: ${point.x.toFixed(2)}, ${yColumn || '索引'}: ${point.y.toFixed(2)}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        type: 'linear',
+                        position: 'bottom',
+                        title: {
+                            display: true,
+                            text: xColumn
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: yColumn || '索引'
+                        }
+                    }
+                }
+            }
+        });
+        
+        charts.push(chart);
+    };
+    
     // 处理柱状图和折线图
     if (chartType === 'bar' || chartType === 'line') {
+        // 检查是否是整体统计（无分组）
+        if (config.isOverall || !xAxisColumn) {
+            // 整体统计：计算所有数据的平均值/总和
+            return createOverallChart(config, container, aiResponse);
+        }
+        
         // 找到实际的X轴列
         let actualXColumn = xAxisColumn;
         if (!headers.includes(xAxisColumn)) {
@@ -2916,13 +6285,18 @@ function createChartFromConfig(config, container, aiResponse = null) {
                 const keyStr = key.toString().trim();
                 
                 if (actualYColumn && headers.includes(actualYColumn)) {
-                    // 使用Y轴列的值
-                    let val = parseFloat(row[actualYColumn]);
+                    // 使用Y轴列的值，处理千分位逗号
+                    let rawVal = row[actualYColumn];
+                    let val = NaN;
+                    if (rawVal !== null && rawVal !== undefined) {
+                        let str = rawVal.toString().replace(/,/g, '').replace(/[￥$€£\s]/g, '');
+                        val = parseFloat(str);
+                    }
                     
-                    // 应用数据预处理
-                    if (dataTransform && (dataTransform.column === actualYColumn || dataTransform.column === yAxisColumn)) {
+                    // 应用数据预处理（如果配置了dataTransform）
+                    if (dataTransform && (dataTransform.formula || dataTransform.unitConversion || dataTransform.operation)) {
                         val = transformValue(val, dataTransform);
-                        transformInfo = `（单位：${dataTransform.unit || '转换后'}）`;
+                        transformInfo = `（单位：${dataTransform.unit || dataTransform.unitConversion?.to || '转换后'}）`;
                     }
                     
                     if (!isNaN(val)) {
@@ -2966,6 +6340,12 @@ function createChartFromConfig(config, container, aiResponse = null) {
                     default:
                         result = vals.reduce((a, b) => a + b, 0) / vals.length;
                 }
+                
+                // 应用小数位格式化
+                if (dataTransform && dataTransform.decimalPlaces !== undefined) {
+                    result = parseFloat(result.toFixed(dataTransform.decimalPlaces));
+                }
+                
                 counts[key] = result;
             }
         } else {
@@ -3002,32 +6382,127 @@ function createChartFromConfig(config, container, aiResponse = null) {
             return;
         }
         
+        // 找到实际的数值列（如果有）
+        let actualValueColumn = valueColumn;
+        if (valueColumn && !headers.includes(valueColumn)) {
+            actualValueColumn = headers.find(h => h.includes(valueColumn) || valueColumn.includes(h));
+        }
+        
         // 统计数据
         const counts = {};
+        const aggFunc = (config.aggregateFunction || 'count').toLowerCase();
+        
         data.forEach(row => {
             const key = row[actualLabelColumn];
             if (key !== undefined && key !== null && key !== '') {
                 const keyStr = key.toString().trim();
-                if (valueColumn && headers.includes(valueColumn)) {
-                    // 使用数值列的值
-                    const val = parseFloat(row[valueColumn]);
+                
+                // 根据聚合函数类型决定如何统计
+                if (aggFunc === 'count') {
+                    // 计数模式：只统计出现次数
+                    counts[keyStr] = (counts[keyStr] || 0) + 1;
+                } else if (aggFunc === 'sum' && actualValueColumn) {
+                    // 求和模式：累加数值列，处理千分位逗号
+                    let rawVal = row[actualValueColumn];
+                    let val = NaN;
+                    if (rawVal !== null && rawVal !== undefined) {
+                        let str = rawVal.toString().replace(/,/g, '').replace(/[￥$€£\s]/g, '');
+                        val = parseFloat(str);
+                    }
                     if (!isNaN(val)) {
                         counts[keyStr] = (counts[keyStr] || 0) + val;
                     }
+                } else if ((aggFunc === 'avg' || aggFunc === 'average') && actualValueColumn) {
+                    // 平均值模式：收集所有值后计算平均，处理千分位逗号
+                    let rawVal = row[actualValueColumn];
+                    let val = NaN;
+                    if (rawVal !== null && rawVal !== undefined) {
+                        let str = rawVal.toString().replace(/,/g, '').replace(/[￥$€£\s]/g, '');
+                        val = parseFloat(str);
+                    }
+                    if (!isNaN(val)) {
+                        if (!counts[keyStr]) {
+                            counts[keyStr] = { sum: 0, count: 0 };
+                        }
+                        counts[keyStr].sum += val;
+                        counts[keyStr].count += 1;
+                    }
                 } else {
-                    // 计数
+                    // 默认计数
                     counts[keyStr] = (counts[keyStr] || 0) + 1;
                 }
             }
         });
         
+        // 处理平均值计算
+        if (aggFunc === 'avg' || aggFunc === 'average') {
+            for (const key in counts) {
+                if (counts[key] && typeof counts[key] === 'object') {
+                    counts[key] = counts[key].sum / counts[key].count;
+                }
+            }
+        }
+        
         // 排序并取前10个
         const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 10);
         labels = sorted.map(([k, v]) => k);
         values = sorted.map(([k, v]) => v);
+    } else if (chartType === 'scatter') {
+        // 散点图处理
+        let actualXColumn = xAxisColumn;
+        if (!headers.includes(xAxisColumn)) {
+            actualXColumn = headers.find(h => h.includes(xAxisColumn) || xAxisColumn.includes(h));
+        }
+        
+        if (!actualXColumn) {
+            container.innerHTML = `<div style="color: #666; padding: 20px;">错误：X轴列"${xAxisColumn}"不存在</div>`;
+            return;
+        }
+        
+        // 找到实际的Y轴列（如果有）
+        let actualYColumn = yAxisColumn;
+        if (yAxisColumn && !headers.includes(yAxisColumn)) {
+            actualYColumn = headers.find(h => h.includes(yAxisColumn) || yAxisColumn.includes(h));
+        }
+        
+        // 准备散点图数据，处理千分位逗号
+        const scatterData = [];
+        data.forEach((row, index) => {
+            let xRaw = row[actualXColumn];
+            let yRaw = actualYColumn ? row[actualYColumn] : index;
+            
+            let xVal = NaN;
+            let yVal = NaN;
+            
+            if (xRaw !== null && xRaw !== undefined) {
+                let str = xRaw.toString().replace(/,/g, '').replace(/[￥$€£\s]/g, '');
+                xVal = parseFloat(str);
+            }
+            
+            if (actualYColumn) {
+                if (yRaw !== null && yRaw !== undefined) {
+                    let str = yRaw.toString().replace(/,/g, '').replace(/[￥$€£\s]/g, '');
+                    yVal = parseFloat(str);
+                }
+            } else {
+                yVal = index;
+            }
+            
+            if (!isNaN(xVal) && !isNaN(yVal)) {
+                scatterData.push({ x: xVal, y: yVal });
+            }
+        });
+        
+        if (scatterData.length === 0) {
+            container.innerHTML = `<div style="color: #666; padding: 20px;">无有效数据可绘制散点图</div>`;
+            return;
+        }
+        
+        // 创建散点图
+        return createScatterChart(config, container, scatterData, actualXColumn, actualYColumn, aiResponse);
     }
     
-    if (labels.length === 0) {
+    if (labels.length === 0 && chartType !== 'scatter') {
         container.innerHTML = `<div style="color: #666; padding: 20px;">无有效数据可绘制图表</div>`;
         return;
     }
@@ -3117,10 +6592,12 @@ function createChartFromConfig(config, container, aiResponse = null) {
     statsDiv.style.cssText = 'margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;';
     
     // 准备表格数据
+    const decimalPlaces = dataTransform && dataTransform.decimalPlaces !== undefined ? dataTransform.decimalPlaces : 2;
     const tableData = labels.map((label, index) => ({
         rank: index + 1,
         label: label,
-        value: values[index],
+        value: typeof values[index] === 'number' ? values[index].toFixed(decimalPlaces) : values[index],
+        rawValue: values[index],
         percentage: ((values[index] / values.reduce((a, b) => a + b, 0)) * 100).toFixed(2)
     }));
     
@@ -3128,7 +6605,7 @@ function createChartFromConfig(config, container, aiResponse = null) {
     let tableHTML = '<h5 style="margin: 0 0 10px 0; color: #333;">统计结果</h5>';
     tableHTML += '<div class="stats-container">';
     tableHTML += '<table>';
-    tableHTML += '<thead><tr><th>排名</th><th>名称</th><th>数量</th><th>占比</th></tr></thead>';
+    tableHTML += '<thead><tr><th>排名</th><th>名称</th><th>数值</th><th>占比</th></tr></thead>';
     tableHTML += '<tbody>';
     
     tableData.forEach((item, index) => {
@@ -3137,7 +6614,9 @@ function createChartFromConfig(config, container, aiResponse = null) {
     });
     
     tableHTML += '</tbody></table></div>';
-    tableHTML += `<div style="margin-top: 10px; color: #666; font-size: 0.85em;">总计：${values.reduce((a, b) => a + b, 0)}</div>`;
+    const totalValue = values.reduce((a, b) => a + b, 0);
+    const formattedTotal = typeof totalValue === 'number' ? totalValue.toFixed(decimalPlaces) : totalValue;
+    tableHTML += `<div style="margin-top: 10px; color: #666; font-size: 0.85em;">总计：${formattedTotal}</div>`;
     
     statsDiv.innerHTML = tableHTML;
     chartWrapper.appendChild(statsDiv);
@@ -3479,6 +6958,43 @@ function exportQueryResult() {
     printWindow.document.close();
 }
 
+// V3.0新增：调用BERT语义匹配配置生成API
+async function callBERTConfigAPI(userInput, intent, columns) {
+    const apiUrl = `${API_BASE_URL}/api/generate-config`;
+    
+    console.log('[V3.0] 调用BERT语义匹配API:', { apiUrl, intent, columns });
+    
+    try {
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                text: userInput,
+                intent: intent,
+                columns: columns
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`API请求失败: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        console.log('[V3.0] BERT语义匹配结果:', result);
+        
+        if (result.success && result.config) {
+            return result.config;
+        }
+        
+        return null;
+    } catch (error) {
+        console.error('[V3.0] BERT语义匹配失败:', error);
+        throw error;
+    }
+}
+
 // 调用大模型API（带超时控制）
 async function callLLMAPI(prompt, signal = null, timeout = 15000) {
     const apiKey = config.ai.apiKey;
@@ -3491,20 +7007,145 @@ async function callLLMAPI(prompt, signal = null, timeout = 15000) {
         throw new Error('API密钥未配置');
     }
     
-    // 创建超时控制
-    const timeoutController = new AbortController();
-    const timeoutId = setTimeout(() => {
-        timeoutController.abort();
-    }, timeout);
+    // V4.0新增：重试机制
+    const maxRetries = 2;
+    const retryDelay = 3000;
+    let lastError = null;
     
-    // 合并signal
-    let finalSignal = timeoutController.signal;
-    if (signal) {
-        // 如果外部提供了signal，需要监听两个signal
-        signal.addEventListener('abort', () => {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        console.log(`[API调用] 第${attempt}次尝试，超时时间: ${timeout}ms`);
+        
+        // 创建超时控制
+        const timeoutController = new AbortController();
+        const timeoutId = setTimeout(() => {
             timeoutController.abort();
-        });
+        }, timeout);
+        
+        // 合并signal
+        let finalSignal = timeoutController.signal;
+        if (signal) {
+            signal.addEventListener('abort', () => {
+                timeoutController.abort();
+            });
+        }
+        
+        const fetchOptions = {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+                model: model,
+                messages: [
+                    {
+                        role: 'user',
+                        content: prompt
+                    }
+                ],
+                temperature: config.ai.temperature || 0.7,
+                max_tokens: config.ai.maxTokens || 1000
+            }),
+            signal: finalSignal
+        };
+        
+        try {
+            console.log('发送请求到:', `${apiUrl}/chat/completions`);
+            const startTime = Date.now();
+            const response = await fetch(`${apiUrl}/chat/completions`, fetchOptions);
+            const endTime = Date.now();
+            console.log(`API响应时间: ${endTime - startTime}ms, 状态: ${response.status}`);
+            
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('API错误响应:', errorText);
+                
+                let errorMessage = `API请求失败: ${response.status}`;
+                try {
+                    const errorData = JSON.parse(errorText);
+                    if (errorData.message) {
+                        errorMessage = errorData.message;
+                    } else if (errorData.error && errorData.error.message) {
+                        errorMessage = errorData.error.message;
+                    }
+                } catch (e) {
+                    errorMessage = errorText || `HTTP ${response.status} 错误`;
+                }
+                
+                if (response.status === 503 || response.status === 429) {
+                    errorMessage += '，建议稍后重试';
+                } else if (response.status === 401) {
+                    errorMessage = 'API密钥无效，请检查配置';
+                } else if (response.status === 0) {
+                    errorMessage = '网络请求失败，请检查网络连接或API地址是否正确';
+                }
+                
+                throw new Error(errorMessage);
+            }
+            
+            const data = await response.json();
+            
+            if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+                throw new Error('API响应格式不正确');
+            }
+            
+            console.log(`[API调用] 第${attempt}次尝试成功`);
+            return data.choices[0].message.content;
+            
+        } catch (error) {
+            clearTimeout(timeoutId);
+            lastError = error;
+            
+            console.error(`[API调用] 第${attempt}次尝试失败:`, error.message);
+            
+            // 如果是超时或网络错误，且还有重试机会，则等待后重试
+            if (attempt < maxRetries && (
+                error.name === 'AbortError' || 
+                error.message.includes('Failed to fetch') ||
+                error.message.includes('网络')
+            )) {
+                console.log(`[API调用] 等待${retryDelay}ms后重试...`);
+                await new Promise(resolve => setTimeout(resolve, retryDelay));
+                continue;
+            }
+            
+            // 如果是用户主动取消，不重试
+            if (signal && signal.aborted) {
+                throw new Error('用户取消了请求');
+            }
+            
+            // 最后一次尝试失败，抛出错误
+            if (attempt === maxRetries) {
+                if (error.name === 'AbortError') {
+                    throw new Error(`请求超时（已重试${maxRetries}次），可能原因：网络连接问题、API服务繁忙或API地址配置错误`);
+                }
+                if (error.message && error.message.includes('Failed to fetch')) {
+                    throw new Error('网络请求失败，请检查：1)网络连接是否正常 2)API地址是否正确 3)是否有跨域限制');
+                }
+                throw error;
+            }
+        }
     }
+    
+    // 所有重试都失败
+    throw lastError || new Error('API调用失败');
+}
+
+// V3.3新增：测试API连接
+async function testAPIConnection() {
+    const apiKey = config.ai.apiKey;
+    const apiUrl = config.ai.apiUrl;
+    const model = config.ai.model;
+    
+    console.log('[API测试] 开始测试连接:', { apiUrl, model, apiKey: apiKey ? '已配置' : '未配置' });
+    
+    if (!apiKey || apiKey === 'your-api-key-here') {
+        throw new Error('API密钥未配置，请在config.js中设置');
+    }
+    
+    const testPrompt = '你好，请回复"API连接测试成功"'; // 使用简单的测试提示词
     
     const fetchOptions = {
         method: 'POST',
@@ -3517,29 +7158,27 @@ async function callLLMAPI(prompt, signal = null, timeout = 15000) {
             messages: [
                 {
                     role: 'user',
-                    content: prompt
+                    content: testPrompt
                 }
             ],
-            temperature: config.ai.temperature || 0.7,
-            max_tokens: config.ai.maxTokens || 1000
-        }),
-        signal: finalSignal
+            temperature: 0.7,
+            max_tokens: 50
+        })
     };
     
     try {
-        console.log('发送请求到:', `${apiUrl}/chat/completions`);
+        console.log('[API测试] 发送请求到:', `${apiUrl}/chat/completions`);
         const startTime = Date.now();
         const response = await fetch(`${apiUrl}/chat/completions`, fetchOptions);
         const endTime = Date.now();
-        console.log(`API响应时间: ${endTime - startTime}ms, 状态: ${response.status}`);
+        const duration = endTime - startTime;
         
-        clearTimeout(timeoutId);
+        console.log(`[API测试] 响应时间: ${duration}ms, 状态: ${response.status}`);
         
         if (!response.ok) {
             const errorText = await response.text();
-            console.error('API错误响应:', errorText);
+            console.error('[API测试] 错误响应:', errorText);
             
-            // 解析错误信息，提供更友好的提示
             let errorMessage = `API请求失败: ${response.status}`;
             try {
                 const errorData = JSON.parse(errorText);
@@ -3552,11 +7191,10 @@ async function callLLMAPI(prompt, signal = null, timeout = 15000) {
                 errorMessage = errorText || `HTTP ${response.status} 错误`;
             }
             
-            // 针对特定错误码提供建议
-            if (response.status === 503 || response.status === 429) {
-                errorMessage += '，建议稍后重试';
-            } else if (response.status === 401) {
-                errorMessage = 'API密钥无效，请检查配置';
+            if (response.status === 401) {
+                errorMessage = 'API密钥无效，请检查config.js中的apiKey配置';
+            } else if (response.status === 0) {
+                errorMessage = '网络请求失败，请检查网络连接或API地址是否正确';
             }
             
             throw new Error(errorMessage);
@@ -3568,13 +7206,15 @@ async function callLLMAPI(prompt, signal = null, timeout = 15000) {
             throw new Error('API响应格式不正确');
         }
         
-        return data.choices[0].message.content;
+        const responseContent = data.choices[0].message.content;
+        console.log('[API测试] 响应内容:', responseContent);
+        
+        return `连接成功 (${duration}ms)`;
     } catch (error) {
-        clearTimeout(timeoutId);
-        if (error.name === 'AbortError') {
-            throw new Error('请求超时，请稍后重试');
+        console.error('[API测试] 连接失败:', error);
+        if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+            throw new Error('网络请求失败，请检查：1)网络连接 2)API地址是否正确 3)是否有跨域限制(CORS)');
         }
-        console.error('API调用详细错误:', error);
         throw error;
     }
 }
@@ -3694,5 +7334,182 @@ function generateMockNLPAnswer(query, dataInfo) {
     return "我需要分析数据来提供准确回答。";
 }
 
+// ========== V4.0新增：显示Agent查询结果 ==========
+function displayAgentQueryResult(userInput, config, analysisResult, explanationResult, totalStartTime) {
+    endOperationTiming();
+    
+    // 显示结果
+    setNLPProgress(90, '正在生成结果...');
+    
+    const nlpResult = document.getElementById('nlp-result');
+    if (!nlpResult) return;
+    
+    // 构建结果HTML - 简化版，不显示额外标题
+    let html = '';
+    
+    // 显示执行计划（仅复杂查询显示）
+    if (analysisResult.plan && analysisResult.plan.complexity !== 'simple') {
+        html += `
+            <div class="result-section" style="margin-bottom: 15px;">
+                <div class="section-title" style="color: #667eea; font-weight: 600; margin-bottom: 8px;">
+                    📋 执行计划
+                </div>
+                <div class="plan-summary" style="background: #f8f9fa; padding: 10px; border-radius: 6px; font-size: 13px;">
+                    ${analysisResult.plan.summary || '查询已执行'}
+                </div>
+            </div>
+        `;
+    }
+    
+    // 显示主要结果
+    if (analysisResult.summary) {
+        html += `
+            <div class="result-section" style="margin-bottom: 15px;">
+                <div class="section-title" style="color: #4caf50; font-weight: 600; margin-bottom: 8px;">
+                    📊 分析结果
+                </div>
+                <div class="analysis-summary" style="background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); padding: 15px; border-radius: 8px; font-size: 15px; font-weight: 500;">
+                    ${analysisResult.summary}
+                </div>
+            </div>
+        `;
+    }
+    
+    // 显示详细数据（如果有）
+    if (analysisResult.data) {
+        html += `
+            <div class="result-section" style="margin-bottom: 15px;">
+                <div class="section-title" style="color: #2196f3; font-weight: 600; margin-bottom: 8px;">
+                    📈 详细数据
+                </div>
+        `;
+        
+        // 如果是数组，显示表格
+        if (Array.isArray(analysisResult.data) && analysisResult.data.length > 0) {
+            const firstItem = analysisResult.data[0];
+            
+            if (firstItem.group !== undefined && (firstItem.value !== undefined || firstItem.count !== undefined)) {
+                // 分组数据
+                const valueKey = firstItem.value !== undefined ? 'value' : 'count';
+                const valueLabel = firstItem.value !== undefined ? '数值' : '数量';
+                
+                html += `
+                    <div style="overflow-x: auto;">
+                        <table class="result-table" style="width: 100%; border-collapse: collapse; min-width: 300px;">
+                            <thead>
+                                <tr style="background: #667eea; color: white;">
+                                    <th style="padding: 10px; text-align: left;">排名</th>
+                                    <th style="padding: 10px; text-align: left;">分组</th>
+                                    <th style="padding: 10px; text-align: left;">${valueLabel}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${analysisResult.data.slice(0, 10).map((item, index) => `
+                                    <tr style="background: ${index === 0 ? '#e8f4f8' : (index % 2 === 0 ? 'white' : '#f8f9fa')};">
+                                        <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: ${index === 0 ? 'bold' : 'normal'};">${index + 1}</td>
+                                        <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: ${index === 0 ? 'bold' : 'normal'};">${item.group}</td>
+                                        <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: ${index === 0 ? 'bold' : 'normal'};">${typeof item[valueKey] === 'number' ? item[valueKey].toFixed(2) : item[valueKey]}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            } else if (firstItem.row) {
+                // Top N数据
+                html += `
+                    <div style="overflow-x: auto;">
+                        <table class="result-table" style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="background: #667eea; color: white;">
+                                    <th style="padding: 10px; text-align: left;">排名</th>
+                                    ${Object.keys(firstItem.row).map(key => `<th style="padding: 10px; text-align: left;">${key}</th>`).join('')}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${analysisResult.data.slice(0, 10).map((item, index) => `
+                                    <tr style="background: ${index === 0 ? '#e8f4f8' : (index % 2 === 0 ? 'white' : '#f8f9fa')};">
+                                        <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: ${index === 0 ? 'bold' : 'normal'};">${index + 1}</td>
+                                        ${Object.values(item.row).map(val => `<td style="padding: 10px; border-bottom: 1px solid #eee;">${val || ''}</td>`).join('')}
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+        } else if (analysisResult.data.row) {
+            // 单条记录
+            html += `
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                    <table class="result-table" style="width: 100%; border-collapse: collapse;">
+                        <tr style="background: #667eea; color: white;">
+                            ${Object.keys(analysisResult.data.row).map(key => `<th style="padding: 10px; text-align: left;">${key}</th>`).join('')}
+                        </tr>
+                        <tr>
+                            ${Object.values(analysisResult.data.row).map(val => `<td style="padding: 10px; border-bottom: 1px solid #eee;">${val || ''}</td>`).join('')}
+                        </tr>
+                    </table>
+                </div>
+            `;
+        }
+        
+        html += `</div>`;
+    }
+    
+    // 显示洞察（如果有）
+    if (explanationResult && explanationResult.insights && explanationResult.insights.length > 0) {
+        html += `
+            <div class="result-section" style="margin-bottom: 15px;">
+                <div class="section-title" style="color: #ff9800; font-weight: 600; margin-bottom: 8px;">
+                    💡 洞察发现
+                </div>
+                <ul style="margin: 0; padding-left: 20px; color: #666;">
+                    ${explanationResult.insights.map(insight => `<li style="margin-bottom: 5px;">${insight}</li>`).join('')}
+                </ul>
+            </div>
+        `;
+    }
+    
+    // 显示建议（如果有）
+    if (explanationResult && explanationResult.suggestions && explanationResult.suggestions.length > 0) {
+        html += `
+            <div class="result-section" style="margin-bottom: 15px;">
+                <div class="section-title" style="color: #9c27b0; font-weight: 600; margin-bottom: 8px;">
+                    📌 行动建议
+                </div>
+                <ul style="margin: 0; padding-left: 20px; color: #666;">
+                    ${explanationResult.suggestions.map(suggestion => `<li style="margin-bottom: 5px;">${suggestion}</li>`).join('')}
+                </ul>
+            </div>
+        `;
+    }
+    
+    // 显示执行信息
+    const totalDuration = Date.now() - totalStartTime;
+    html += `
+        <div class="result-footer" style="margin-top: 15px; padding-top: 10px; border-top: 1px solid #eee; color: #999; font-size: 12px;">
+            <span>⏱️ 总耗时: ${totalDuration}ms</span>
+            <span style="margin-left: 15px;">🤖 Agent: ${analysisResult.agent || 'analysis'}</span>
+        </div>
+    `;
+    
+    nlpResult.innerHTML = html;
+    nlpResult.classList.remove('hidden');
+    
+    // 记录日志
+    addProcessingLog('performance', 'Agent查询完成', `总耗时: ${totalDuration}ms`);
+    
+    setNLPProgress(100, '完成');
+    setTimeout(() => {
+        hideNLPProgress();
+    }, 500);
+}
+
 // 页面加载完成后初始化
-window.addEventListener('DOMContentLoaded', init);
+window.addEventListener('DOMContentLoaded', () => {
+    init().catch(error => {
+        console.error('初始化失败:', error);
+        alert('应用初始化失败，请刷新页面重试');
+    });
+});

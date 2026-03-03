@@ -1,26 +1,73 @@
-# 数据文件
-*.csv
-*.xlsx
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
 
-# 配置文件（包含敏感信息）
-config.js
+# Model files (large)
+model/
+model_backup/
+model_v33/
+requirement_model/
+*.bin
+*.safetensors
+*.onnx
 
-# 依赖目录
-node_modules/
+# Training data
+training_data/
+train_data.json
+val_data.json
+training_data_expanded.json
+training_data_large.json
+requirement_train.json
+requirement_val.json
+requirement_train_data.json
 
-# 日志文件
-*.log
+# Test files
+test_data.json
+test_results.json
+requirement_test.json
+results/
+results_v33/
 
-# 系统文件
+# Backup
+backup_v33/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
 .DS_Store
 Thumbs.db
 
-# IDE配置
-.vscode/
-.idea/
-*.swp
-*.swo
+# Config (contains API keys)
+config.js
 
-# 临时文件
-*.tmp
-*.temp
+# Cloudflared
+cloudflared.exe
+cloudflared-config.yml
+
+# Logs
+*.log
+training_output.txt
+training_notes.json
