@@ -370,8 +370,9 @@ class QueryConfigGenerator {
                     {
                         // 按照X绘制Y的柱状图（明确指定分组列和数值列）
                         // 如"按照省份绘制销售额的柱状图" → X轴=省份, Y轴=销售额
-                        regex: /按[照]?(.+?)(绘制|画|生成|做)(.+?)的柱状图/,
-                        extract: (match, columns) => {
+                        // V4.0修复：使用更精确的正则，确保正确提取X和Y
+                        regex: /按[照]?(.+?)(绘制|画|生成|做)(.+?)的柱状图$/,
+                        extract: (match, columns, userInput) => {
                             const xDesc = match[1].trim();
                             const yDesc = match[3].trim();
                             console.log(`[CHART_BAR] 匹配"按照X绘制Y的柱状图": X=${xDesc}, Y=${yDesc}`);
@@ -381,8 +382,8 @@ class QueryConfigGenerator {
                             
                             console.log(`[CHART_BAR] 匹配结果: X=${xAxisColumn}, Y=${yAxisColumn}`);
                             
-                            // 如果成功匹配到Y轴列，使用sum聚合；否则使用count
-                            const aggregateFunction = yAxisColumn ? 'sum' : 'count';
+                            // V4.0修复：智能选择聚合函数
+                            const aggregateFunction = this.determineAggregateFunction(userInput, yAxisColumn);
                             
                             return {
                                 chartType: 'bar',
@@ -393,12 +394,13 @@ class QueryConfigGenerator {
                         }
                     },
                     {
-                        // 按照X绘制柱状图（只指定分组列，默认计数）
-                        regex: /按[照]?(.+?)(绘制|画|生成|做).*柱状图/,
-                        extract: (match, columns) => ({
+                        // 按照X绘制柱状图（只指定分组列）
+                        // V4.0修复：排除包含"的"字的情况，避免与上面的模式冲突
+                        regex: /按[照]?([^的]+?)(绘制|画|生成|做)柱状图$/,
+                        extract: (match, columns, userInput) => ({
                             chartType: 'bar',
                             xAxisColumn: this.findColumn(match[1], columns),
-                            aggregateFunction: 'count'
+                            aggregateFunction: this.determineAggregateFunction(userInput, null)
                         })
                     },
                     {
