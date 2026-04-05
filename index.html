@@ -2,646 +2,2512 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>智能数据分析助手</title>
-    <link rel="stylesheet" href="styles.css?v=5.0.0">
-    <link rel="stylesheet" href="final-layout.css?v=1.0.5">
-    <script src="js/chart.min.js"></script>
+    <!-- SheetJS库用于解析Excel -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-    <script src="config.js"></script>
-    <!-- 快速修复脚本 -->
-    <script src="quick_fix.js"></script>
-    <!-- V6.0简化版文件上传修复脚本 -->
-    <script src="upload_simple_fix.js"></script>
-    <!-- 日志复制功能修复脚本 -->
-    <script src="log_copy_fix.js"></script>
-    <!-- Bug修复脚本 V1.0 - 修复空输入拦截和筛选条件添加 -->
-    <script src="bugfix_v1.js"></script>
-    <!-- Bug修复脚本 V2.0 - 意图识别可视化 + 统计超时优化 -->
-    <script src="bugfix_v2.js"></script>
-    <script src="script.js"></script>
-    <script>
-        // V3.0: 检查Chart.js是否加载成功
-        window.addEventListener('load', function() {
-            if (typeof Chart === 'undefined') {
-                console.error('[V3.0] Chart.js 加载失败，请检查网络连接');
-                // 显示错误提示
-                setTimeout(function() {
-                    const vizSection = document.getElementById('data-visualization');
-                    if (vizSection) {
-                        vizSection.innerHTML = '<div style="color: #dc3545; padding: 20px; text-align: center;">' +
-                            '<h3>图表库加载失败</h3>' +
-                            '<p>请检查网络连接后刷新页面重试</p>' +
-                            '<button onclick="location.reload()" style="padding: 10px 20px; margin-top: 10px; cursor: pointer;">刷新页面</button>' +
-                            '</div>';
-                        vizSection.classList.remove('hidden');
-                    }
-                }, 1000);
-            } else {
-                console.log('[V3.0] Chart.js 加载成功');
-            }
-        });
-    </script>
+    <!-- Chart.js用于图表渲染 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #4F46E5;
+            --success: #10B981;
+            --danger: #EF4444;
+            --warning: #F59E0B;
+            --bg: #F9FAFB;
+            --white: #FFFFFF;
+            --gray-100: #F3F4F6;
+            --gray-200: #E5E7EB;
+            --gray-500: #6B7280;
+            --gray-900: #111827;
+        }
+        html, body { width: 100%; height: 100%; overflow: hidden; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--gray-900); min-height: 100vh; }
+        .navbar { background: var(--white); border-bottom: 1px solid var(--gray-200); padding: 0.75rem 1.5rem; display: flex; justify-content: space-between; align-items: center; height: 56px; box-sizing: border-box; position: sticky; top: 0; z-index: 100; }
+        .navbar-brand { display: flex; align-items: center; gap: 0.75rem; }
+        .navbar-brand h1 { font-size: 1.25rem; font-weight: 700; background: linear-gradient(135deg, var(--primary), var(--success)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .navbar-actions { display: flex; gap: 0.5rem; }
+        .btn { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; border-radius: 0.5rem; font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: all 0.2s; border: none; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover:not(:disabled) { background: #4338CA; }
+        .btn-secondary { background: var(--gray-100); color: var(--gray-900); border: 1px solid var(--gray-200); }
+        .btn-ghost { background: transparent; color: var(--gray-500); padding: 0.375rem; }
+        .btn-ghost:hover { background: var(--gray-100); color: var(--gray-900); }
+        .btn-icon { padding: 0.5rem; border-radius: 0.375rem; }
+        .main-container { display: grid; grid-template-columns: 1fr 320px; gap: 1rem; padding: 1rem 1.5rem; max-width: 1800px; margin: 0 auto; width: 100%; height: calc(100vh - 56px); box-sizing: border-box; overflow: hidden; }
+        .card { background: var(--white); border-radius: 0.75rem; border: 1px solid var(--gray-200); }
+        .sidebar .card { flex-shrink: 0; }
+        .card-header { padding: 0.75rem 1rem; border-bottom: 1px solid var(--gray-200); display: flex; justify-content: space-between; align-items: center; }
+        .card-title { font-size: 0.875rem; font-weight: 600; }
+        .card-body { padding: 0.75rem; }
+        
+        /* 左侧主面板 */
+        .main-panel { display: flex; flex-direction: column; gap: 0; min-width: 0; flex: 1; min-height: 0; overflow: hidden; height: 100%; }
+        .chat-container { flex: 1; display: flex; flex-direction: column; min-height: 0; height: 100%; overflow: hidden; border-radius: 0.75rem; border: 1px solid var(--gray-200); background: var(--white); }
+        .chat-header { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; border-bottom: 1px solid var(--gray-200); }
+        .chat-messages { flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 1rem; min-height: 0; scroll-behavior: smooth; background: var(--white); }
+        .message { display: flex; gap: 0.75rem; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .message.user { flex-direction: row-reverse; }
+        .message-avatar { width: 32px; height: 32px; border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .message.user .message-avatar { background: var(--primary); color: white; }
+        .message.assistant .message-avatar { background: var(--gray-100); color: var(--gray-500); }
+        .message-content { max-width: 85%; padding: 0.75rem 1rem; border-radius: 0.75rem; font-size: 0.875rem; line-height: 1.6; }
+        .message.user .message-content { background: var(--primary); color: white; border-bottom-right-radius: 0.25rem; }
+        .message.assistant .message-content { background: var(--gray-100); color: var(--gray-900); border-bottom-left-radius: 0.25rem; }
+        .data-table-container { margin-top: 0.75rem; overflow-x: auto; border-radius: 0.5rem; border: 1px solid var(--gray-200); }
+        .data-table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; min-width: 400px; }
+        .data-table th { background: var(--gray-100); padding: 0.5rem 0.75rem; text-align: left; font-weight: 600; border-bottom: 1px solid var(--gray-200); white-space: nowrap; position: sticky; top: 0; z-index: 1; }
+        .data-table td { padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--gray-200); color: var(--gray-500); white-space: nowrap; }
+        .data-table tr:last-child td { border-bottom: none; }
+        .data-table tbody tr:hover { background: rgba(79,70,229,0.05); cursor: pointer; }
+        .data-table-controls { flex-wrap: wrap; gap: 0.5rem; }
+        .table-row:nth-child(even) { background: rgba(0,0,0,0.02); }
+        
+        /* 筛选条件样式 */
+        .filter-condition { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap; }
+        .filter-result { margin-bottom: 0.5rem; }
+        /* 输入区域 - 在chat-container内部 */
+        .input-area { 
+            padding: 0.75rem 1rem; 
+            border-top: 1px solid var(--gray-200); 
+            background: var(--white); 
+            flex-shrink: 0;
+        }
+        .input-wrapper { display: flex; gap: 0.75rem; align-items: stretch; }
+        .input-box { flex: 1; min-width: 0; }
+        .input-field { 
+            width: 100%; 
+            padding: 0.625rem 1rem; 
+            border: 1px solid var(--gray-200); 
+            border-radius: 0.75rem; 
+            font-size: 0.875rem; 
+            outline: none; 
+            transition: all 0.2s; 
+            resize: none; 
+            font-family: inherit; 
+            height: 72px; 
+            min-height: 72px; 
+            max-height: 150px; 
+            overflow-y: auto; 
+            line-height: 1.5; 
+            box-sizing: border-box; 
+        }
+        .input-field:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79,70,229,0.1); }
+        .send-btn { 
+            width: 72px; 
+            height: 72px; 
+            min-height: 72px; 
+            border-radius: 0.75rem; 
+            background: var(--primary); 
+            color: white; 
+            border: none; 
+            cursor: pointer; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            transition: all 0.2s; 
+            flex-shrink: 0; 
+        }
+        .send-btn:hover:not(:disabled) { background: #4338CA; }
+        .send-btn:disabled { background: var(--gray-200); cursor: not-allowed; }
+        
+        /* 右侧边栏 */
+        .sidebar { display: flex; flex-direction: column; gap: 0.75rem; height: 100%; overflow-y: auto; padding-right: 0.25rem; }
+        .sidebar::-webkit-scrollbar { width: 6px; }
+        .sidebar::-webkit-scrollbar-track { background: transparent; }
+        .sidebar::-webkit-scrollbar-thumb { background: var(--gray-300); border-radius: 3px; }
+        .status-card .card-header { display: flex; justify-content: space-between; align-items: center; }
+        /* 状态栏 - 一行设计 */
+        .status-bar { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+        .status-item { 
+            display: flex; align-items: center; gap: 0.375rem; 
+            padding: 0.375rem 0.625rem; background: var(--gray-100); 
+            border-radius: 0.5rem; flex: 1; min-width: 0;
+        }
+        .status-item .label { font-size: 0.75rem; font-weight: 500; white-space: nowrap; }
+        .status-item .value { font-size: 0.75rem; color: var(--gray-500); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .vector-indicator { width: 8px; height: 8px; border-radius: 50%; background: var(--gray-500); flex-shrink: 0; }
+        .vector-indicator.active { background: var(--success); animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .vector-status { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: var(--gray-100); border-radius: 0.5rem; }
+        .setting-btn { cursor: pointer; padding: 0.25rem; border-radius: 0.25rem; color: var(--gray-500); }
+        .setting-btn:hover { background: var(--gray-100); color: var(--gray-900); }
+        
+        /* 上传区域 - 紧凑设计 */
+        .upload-area { }
+        .upload-zone { border: 2px dashed var(--gray-200); border-radius: 0.5rem; padding: 1.5rem 1rem; text-align: center; cursor: pointer; transition: all 0.3s; background: var(--gray-100); }
+        .upload-zone:hover, .upload-zone.dragover { border-color: var(--primary); background: rgba(79,70,229,0.05); }
+        .upload-zone-icon { width: 40px; height: 40px; margin: 0 auto 0.5rem; background: linear-gradient(135deg, var(--primary), var(--success)); border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; color: white; }
+        .upload-zone h3 { font-size: 0.875rem; margin-bottom: 0.25rem; }
+        .upload-zone p { color: var(--gray-500); font-size: 0.75rem; }
+        .upload-zone .hint { margin-top: 0.5rem; font-size: 0.6875rem; color: var(--gray-500); }
+        
+        /* 文件列表 */
+        .file-list { margin-top: 0.5rem; }
+        .file-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background: var(--gray-100); border-radius: 0.5rem; margin-bottom: 0.375rem; }
+        .file-item-icon { width: 32px; height: 32px; background: var(--primary); border-radius: 0.375rem; display: flex; align-items: center; justify-content: center; color: white; flex-shrink: 0; }
+        .file-item-info { flex: 1; min-width: 0; }
+        .file-item-name { font-weight: 500; font-size: 0.8125rem; margin-bottom: 0.125rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .file-item-meta { font-size: 0.6875rem; color: var(--gray-500); }
+        .file-item-status { padding: 0.125rem 0.375rem; border-radius: 0.25rem; font-size: 0.6875rem; font-weight: 500; flex-shrink: 0; }
+        .file-item-status.ready { background: rgba(16,185,129,0.1); color: var(--success); }
+        .file-item-status.pending { background: rgba(245,158,11,0.1); color: var(--warning); }
+        .file-item .btn-close { background: none; border: none; cursor: pointer; color: var(--gray-500); padding: 0.125rem; border-radius: 0.25rem; flex-shrink: 0; }
+        .file-item .btn-close:hover { background: rgba(239,68,68,0.1); color: var(--danger); }
+        
+        /* 数据概览 - 紧凑 */
+        .data-overview { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; margin-top: 0.5rem; }
+        .stat-card { background: var(--gray-100); border-radius: 0.5rem; padding: 0.5rem; text-align: center; }
+        .stat-value { font-size: 1.125rem; font-weight: 700; color: var(--primary); margin-bottom: 0.125rem; }
+        .stat-label { font-size: 0.6875rem; color: var(--gray-500); text-transform: uppercase; }
+        .column-list { display: flex; flex-wrap: wrap; gap: 0.25rem; margin-top: 0.5rem; }
+        .column-tag { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.25rem 0.5rem; background: var(--gray-100); border-radius: 9999px; font-size: 0.6875rem; font-weight: 500; color: var(--gray-500); }
+        .type-badge { padding: 0.0625rem 0.25rem; border-radius: 0.25rem; font-size: 0.5625rem; font-weight: 600; text-transform: uppercase; }
+        .type-badge.number { background: rgba(16,185,129,0.1); color: var(--success); }
+        .type-badge.string { background: rgba(59,130,246,0.1); color: #3B82F6; }
+        
+        /* 快捷示例和历史 */
+        .quick-tips, .history-list { display: flex; flex-direction: column; gap: 0.375rem; max-height: 200px; overflow-y: auto; }
+        .quick-tip, .history-item { padding: 0.5rem 0.75rem; background: var(--gray-100); border-radius: 0.375rem; cursor: pointer; transition: all 0.2s; font-size: 0.8125rem; color: var(--gray-500); border: none; text-align: left; width: 100%; }
+        .quick-tip:hover, .history-item:hover { background: var(--primary); color: white; }
+        .history-item-query { margin-bottom: 0.125rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .history-item-time { font-size: 0.6875rem; opacity: 0.7; }
+        
+        /* 弹窗 */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; visibility: hidden; transition: all 0.3s; }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal { background: var(--white); border-radius: 0.75rem; width: 95%; max-width: 700px; max-height: 80vh; overflow: hidden; transform: scale(0.9); transition: all 0.3s; }
+        .modal-overlay.active .modal { transform: scale(1); }
+        .modal-header { padding: 0.75rem 1rem; border-bottom: 1px solid var(--gray-200); display: flex; justify-content: space-between; align-items: center; }
+        .modal-header-left { display: flex; align-items: center; gap: 0.5rem; }
+        .modal-actions { display: flex; gap: 0.25rem; }
+        .modal-close, .modal-action { background: none; border: none; cursor: pointer; color: var(--gray-500); padding: 0.25rem; border-radius: 0.25rem; }
+        .modal-close:hover, .modal-action:hover { background: var(--gray-100); color: var(--gray-900); }
+        .modal-body { padding: 1rem; max-height: 60vh; overflow-y: auto; }
+        .log-panel { background: #1E1E1E; color: #D4D4D4; font-family: 'Consolas', 'Monaco', monospace; font-size: 0.75rem; padding: 0.75rem; border-radius: 0.5rem; max-height: 400px; overflow-y: auto; line-height: 1.6; }
+        .log-entry { margin-bottom: 0.125rem; }
+        .log-entry .timestamp { color: #6A9955; }
+        .log-entry .level { padding: 0.0625rem 0.25rem; border-radius: 0.25rem; margin-right: 0.5rem; font-size: 0.625rem; font-weight: 600; }
+        .log-entry .level.INFO { background: rgba(59,130,246,0.2); color: #60A5FA; }
+        .log-entry .level.SUCCESS { background: rgba(16,185,129,0.2); color: #34D399; }
+        .log-entry .level.WARNING { background: rgba(245,158,11,0.2); color: #FBBF24; }
+        .log-entry .level.ERROR { background: rgba(239,68,68,0.2); color: #F87171; }
+        .log-entry .message { color: #D4D4D4; word-break: break-all; }
+        
+        /* 意图显示 */
+        .intent-display { background: var(--gray-100); border-radius: 0.5rem; padding: 0.5rem 0.75rem; margin-bottom: 0.75rem; }
+        .intent-label { font-size: 0.6875rem; color: var(--gray-500); margin-bottom: 0.375rem; text-transform: uppercase; }
+        .intent-tags { display: flex; flex-wrap: wrap; gap: 0.375rem; }
+        .intent-tag { padding: 0.125rem 0.375rem; background: var(--primary); color: white; border-radius: 0.25rem; font-size: 0.6875rem; font-weight: 500; }
+        
+        /* 空状态 */
+        .empty-state { text-align: center; padding: 2rem 1rem; color: var(--gray-500); }
+        .empty-state-icon { width: 48px; height: 48px; margin: 0 auto 0.75rem; background: var(--gray-100); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .empty-state h3 { font-size: 0.875rem; margin-bottom: 0.25rem; }
+        .empty-state p { font-size: 0.75rem; }
+        
+        /* Toast */
+        .toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%) translateY(100px); background: var(--gray-900); color: white; padding: 0.75rem 1.25rem; border-radius: 0.5rem; font-size: 0.875rem; opacity: 0; transition: all 0.3s; z-index: 2000; }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+        .toast.success { background: var(--success); }
+        .toast.error { background: var(--danger); }
+        
+        /* 设置弹窗 */
+        .settings-section { margin-bottom: 1rem; }
+        .settings-section:last-child { margin-bottom: 0; }
+        .settings-title { font-size: 0.75rem; font-weight: 600; color: var(--gray-500); margin-bottom: 0.5rem; text-transform: uppercase; }
+        .settings-item { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid var(--gray-100); }
+        .settings-item:last-child { border-bottom: none; }
+        .settings-label { font-size: 0.875rem; }
+        .toggle-switch { position: relative; width: 44px; height: 24px; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider { position: absolute; cursor: pointer; inset: 0; background-color: var(--gray-200); transition: 0.3s; border-radius: 24px; }
+        .toggle-slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: 0.3s; border-radius: 50%; }
+        .toggle-switch input:checked + .toggle-slider { background-color: var(--primary); }
+        .toggle-switch input:checked + .toggle-slider:before { transform: translateX(20px); }
+        
+        #fileInput { display: none; }
+        
+        .chart-export-btn { margin-top: 0.5rem; padding: 0.375rem 0.75rem; background: var(--gray-100); border: 1px solid var(--gray-200); border-radius: 0.375rem; font-size: 0.75rem; cursor: pointer; display: inline-flex; align-items: center; gap: 0.25rem; transition: all 0.2s; }
+        .chart-export-btn:hover { background: var(--primary); color: white; border-color: var(--primary); }
+        
+        /* 追问选项样式 */
+        .confirm-options { margin: 1rem 0; padding: 0.75rem; background: var(--gray-100); border-radius: 0.5rem; }
+        .confirm-title { font-size: 0.8125rem; font-weight: 500; margin-bottom: 0.5rem; color: var(--gray-900); }
+        .confirm-buttons { display: flex; flex-wrap: wrap; gap: 0.375rem; }
+        .confirm-btn { padding: 0.375rem 0.75rem; background: var(--white); border: 1px solid var(--gray-200); border-radius: 0.375rem; font-size: 0.75rem; cursor: pointer; transition: all 0.2s; }
+        .confirm-btn:hover { background: var(--primary); color: white; border-color: var(--primary); }
+        .confirm-btn.selected { background: var(--primary); color: white; border-color: var(--primary); }
+        
+        /* 图表放大查看弹窗 */
+        .chart-zoom-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+        }
+        .chart-zoom-modal.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        .chart-zoom-content {
+            background: white;
+            border-radius: 0.75rem;
+            width: 95%;
+            max-width: 1200px;
+            max-height: 90vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .chart-zoom-header {
+            padding: 1rem;
+            border-bottom: 1px solid var(--gray-200);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .chart-zoom-header h3 {
+            font-size: 1rem;
+            font-weight: 600;
+        }
+        .chart-zoom-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .chart-zoom-body {
+            flex: 1;
+            padding: 1.5rem;
+            overflow: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f8f9fa;
+        }
+        .chart-zoom-body canvas {
+            max-width: 100%;
+            max-height: 70vh;
+        }
+        .chart-zoom-footer {
+            padding: 0.75rem 1rem;
+            border-top: 1px solid var(--gray-200);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8125rem;
+            color: var(--gray-500);
+        }
+        
+        /* 响应式适配 */
+        @media (max-width: 1024px) {
+            .main-container { grid-template-columns: 1fr; padding: 1rem; height: auto; overflow: visible; }
+            .chat-container { max-height: calc(100vh - 200px); }
+            .sidebar { order: -1; height: auto; overflow: visible; }
+            .data-overview { grid-template-columns: repeat(4, 1fr); }
+        }
+        @media (max-width: 768px) {
+            .navbar { padding: 0.5rem 1rem; }
+            .navbar-brand h1 { font-size: 1rem; }
+            .main-container { padding: 0.75rem; gap: 0.75rem; }
+            .data-overview { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <div class="header-content">
-                <div class="header-left">
-                    <h1>🔍 智能数据分析助手 <span class="version-badge">V6.0</span></h1>
-                    <p>上传您的数据文件，说出您的分析需求</p>
-                </div>
-                <div class="header-right">
-                    <button id="agent-workflow-btn" class="icon-btn" title="Agent工作流 (V6.0新功能)">
-                        <span class="icon">🤖</span>
-                        <span class="new-badge">NEW</span>
-                    </button>
-                    <button id="performance-monitor-btn" class="icon-btn" title="性能监控 (V6.0新功能)">
-                        <span class="icon">📊</span>
-                        <span class="new-badge">NEW</span>
-                    </button>
-                    <button id="toggle-log-btn" class="icon-btn" title="查看处理日志">
-                        <span class="icon">📋</span>
-                        <span class="badge" id="log-badge" style="display: none;">0</span>
-                    </button>
-                    <button id="settings-btn" class="icon-btn" title="系统设置">
-                        <span class="icon">⚙️</span>
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
+            <h1>智能数据分析助手</h1>
+        </div>
+        <div class="navbar-actions">
+            <button class="btn btn-ghost btn-icon" id="logBtn" title="系统日志">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            </button>
+        </div>
+    </nav>
+
+    <div class="main-container">
+        <!-- 左侧：智能分析对话 -->
+        <div class="main-panel">
+            <div class="card chat-container">
+                <div class="chat-header">
+                    <h2 class="card-title">智能分析</h2>
+                    <button class="btn btn-ghost btn-icon" id="clearBtn" title="清空会话">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                     </button>
                 </div>
-            </div>
-        </header>
-        
-        <main>
-            <!-- 文件上传区域 -->
-            <section class="upload-section">
-                <div id="drop-area" class="drop-area">
-                    <div class="drop-content">
-                        <div class="upload-icon">
-                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                <polyline points="17 8 12 3 7 8"></polyline>
-                                <line x1="12" y1="3" x2="12" y2="15"></line>
-                            </svg>
+                <div class="chat-messages" id="chatMessages">
+                    <div class="empty-state" id="emptyState">
+                        <div class="empty-state-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                         </div>
-                        <h3>拖拽文件到此处或点击上传</h3>
-                        <p>支持 CSV 和 Excel (.xlsx) 文件，最大支持 100MB</p>
-                        <input type="file" id="file-input" accept=".csv,.xlsx">
+                        <h3>开始您的数据分析</h3>
+                        <p>上传数据文件后，输入您的问题</p>
                     </div>
                 </div>
-            </section>
-            
-            <!-- 加载动画（优化版） -->
-            <div id="loading" class="loading-overlay hidden">
-                <div class="loading-content">
-                    <div class="loading-spinner">
-                        <div class="spinner-ring"></div>
-                        <div class="spinner-ring"></div>
-                        <div class="spinner-ring"></div>
-                    </div>
-                    <div class="loading-text">
-                        <span id="loading-main-text">正在处理数据</span>
-                        <span id="loading-sub-text" class="loading-dots"></span>
-                    </div>
-                    <div class="loading-progress">
-                        <div class="loading-progress-bar" id="loading-progress-bar"></div>
-                    </div>
-                    <div class="loading-tips" id="loading-tips">
-                        <span class="tip-icon">💡</span>
-                        <span class="tip-text">正在解析文件结构...</span>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- V5.0重构：数据画像区域 -->
-            <section id="data-preview" class="hidden">
-                <div class="section-header">
-                    <h2>📊 数据画像</h2>
-                    <div class="header-actions">
-                        <div class="data-info" id="data-info">
-                            <span class="info-item"><span class="info-icon">📊</span> <span id="total-rows">0</span> 行 × <span id="total-cols">0</span> 列</span>
-                            <span class="info-item"><span class="info-icon">🔢</span> 数值型 <span id="numeric-cols">0</span> 个</span>
-                            <span class="info-item"><span class="info-icon">📝</span> 文本型 <span id="text-cols">0</span> 个</span>
-                            <span class="info-item"><span class="info-icon">📅</span> 日期型 <span id="date-cols">0</span> 个</span>
-                            <span class="info-item"><span class="info-icon">✅</span> 质量 <span id="quality-grade">A</span></span>
-                            <span class="info-item"><span class="info-icon">📊</span> 向量化 <span id="vectorization-status">❌ 未向量化</span></span>
+                <div class="input-area">
+                    <div class="input-wrapper">
+                        <div class="input-box">
+                            <textarea class="input-field" id="queryInput" placeholder="请输入您的分析问题，如：华东地区的销售额是多少？" rows="1"></textarea>
                         </div>
-                        <button id="view-profile-detail-btn" class="btn btn-sm btn-outline">
-                            查看详情
+                        <button class="send-btn" id="sendBtn" disabled>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
                         </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧：上传和状态 -->
+        <div class="sidebar">
+            <!-- 系统状态 + 设置 -->
+            <div class="card status-card">
+                <div class="card-header">
+                    <h2 class="card-title">系统状态</h2>
+                    <button class="setting-btn" id="settingsBtn" title="系统设置">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="status-bar">
+                        <div class="status-item" title="数据向量化状态">
+                            <div class="vector-indicator" id="vectorIndicator"></div>
+                            <span class="label">向量化</span>
+                            <span class="value" id="vectorStatusText">未初始化</span>
+                        </div>
+                        <div class="status-item" title="本地模型状态">
+                            <div class="vector-indicator active" id="localModelIndicator"></div>
+                            <span class="label">本地模型</span>
+                            <span class="value" id="localModelStatus">就绪</span>
+                        </div>
+                        <div class="status-item" title="大模型接口状态">
+                            <div class="vector-indicator" id="llmIndicator"></div>
+                            <span class="label">大模型</span>
+                            <span class="value" id="llmStatusText">未配置</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 数据文件上传 -->
+            <div class="card upload-area">
+                <div class="card-header">
+                    <h2 class="card-title">上传数据</h2>
+                </div>
+                <div class="card-body">
+                    <div class="upload-zone" id="uploadZone">
+                        <div class="upload-zone-icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        </div>
+                        <h3>拖拽或点击上传</h3>
+                        <p>支持 CSV、Excel 文件</p>
+                    </div>
+                    <div class="file-list" id="fileList"></div>
+                    <div id="dataOverview" style="display: none;">
+                        <div class="data-overview" id="statsGrid"></div>
+                        <h4 style="margin-top:0.75rem;margin-bottom:0.375rem;font-size:0.75rem;color:var(--gray-500);">数据列信息</h4>
+                        <div class="column-list" id="columnList"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 快捷示例 -->
+            <div class="card">
+                <div class="card-header"><h2 class="card-title">快捷示例</h2></div>
+                <div class="card-body">
+                    <div class="quick-tips">
+                        <button class="quick-tip" data-query="显示全部数据">显示全部数据</button>
+                        <button class="quick-tip" data-query="各地区的销售额对比">各地区的销售额对比</button>
+                        <button class="quick-tip" data-query="华东的销售额是多少">华东的销售额是多少</button>
+                        <button class="quick-tip" data-query="各产品类别销量排名">各产品类别销量排名</button>
+                        <button class="quick-tip" data-query="销售额最高的前10家公司">销售额最高的前10家公司</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 历史记录 -->
+            <div class="card">
+                <div class="card-header"><h2 class="card-title">历史记录</h2></div>
+                <div class="card-body">
+                    <div class="history-list" id="historyList">
+                        <div class="empty-state" style="padding:0.75rem;"><p>暂无历史</p></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- 系统日志弹窗 -->
+    <div class="modal-overlay" id="logModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-header-left">
+                    <h3 class="card-title">系统日志</h3>
+                </div>
+                <div class="modal-actions">
+                    <button class="modal-action" id="copyLogBtn" title="复制日志">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                    </button>
+                    <button class="modal-action" id="clearLogBtn" title="清空日志">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                    </button>
+                    <button class="modal-close" id="closeLogModal">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div class="log-panel" id="logPanel"><div class="log-entry"><span class="timestamp">[--:--:--]</span><span class="level INFO">INFO</span><span class="message">系统就绪，等待操作...</span></div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 系统设置弹窗 -->
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="card-title">系统设置</h3>
+                <button class="modal-close" id="closeSettingsModal">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <!-- 大模型API配置 -->
+                <div class="settings-section">
+                    <div class="settings-title">大模型接口配置</div>
+                    <div class="settings-item" style="flex-direction:column;align-items:flex-start;gap:0.5rem;">
+                        <span class="settings-label">API Provider</span>
+                        <select id="llmProvider" style="width:100%;padding:0.5rem;border-radius:0.5rem;border:1px solid var(--gray-200);font-size:0.875rem;">
+                            <option value="openai">OpenAI</option>
+                            <option value="anthropic">Anthropic (Claude)</option>
+                            <option value="azure">Azure OpenAI</option>
+                            <option value="zhipu">智谱GLM</option>
+                            <option value="qwen">阿里通义千问</option>
+                            <option value="doubao">字节豆包</option>
+                            <option value="siliconflow">硅基流动 (SiliconFlow)</option>
+                        </select>
+                    </div>
+                    <div class="settings-item" style="flex-direction:column;align-items:flex-start;gap:0.5rem;margin-top:0.75rem;">
+                        <span class="settings-label">API Key</span>
+                        <input type="password" id="llmApiKey" placeholder="请输入API密钥" style="width:100%;padding:0.5rem;border-radius:0.5rem;border:1px solid var(--gray-200);font-size:0.875rem;">
+                    </div>
+                    <div class="settings-item" style="flex-direction:column;align-items:flex-start;gap:0.5rem;margin-top:0.75rem;">
+                        <span class="settings-label">API Endpoint (可选)</span>
+                        <input type="text" id="llmEndpoint" placeholder="https://api.openai.com/v1" style="width:100%;padding:0.5rem;border-radius:0.5rem;border:1px solid var(--gray-200);font-size:0.875rem;">
+                    </div>
+                    <div class="settings-item" style="flex-direction:column;align-items:flex-start;gap:0.5rem;margin-top:0.75rem;">
+                        <span class="settings-label">Model Name</span>
+                        <input type="text" id="llmModel" placeholder="gpt-4o-mini" value="gpt-4o-mini" style="width:100%;padding:0.5rem;border-radius:0.5rem;border:1px solid var(--gray-200);font-size:0.875rem;">
+                    </div>
+                    <div class="settings-item" style="margin-top:0.75rem;">
+                        <span class="settings-label">测试连接</span>
+                        <button id="testLlmBtn" class="btn btn-secondary" style="padding:0.375rem 0.75rem;font-size:0.75rem;">测试</button>
                     </div>
                 </div>
                 
-                <!-- 左右分栏布局：左侧对话窗口，右侧所有其他内容 -->
-                <div class="main-content-layout">
-                    <!-- 左侧：智能对话窗口 -->
-                    <div class="left-panel">
-                        <div class="conversation-section">
-                            <div class="conversation-header">
-                                <h3>💬 智能数据分析助手</h3>
-                                <div class="conversation-status" id="conversation-status">
-                                    <span class="status-dot"></span>
-                                    <span class="status-text">就绪</span>
-                                </div>
-                            </div>
-                            
-                            <div class="conversation-messages" id="conversation-messages">
-                                <!-- 对话消息将动态添加到这里 -->
-                                <div class="message system">
-                                    <div class="message-content">
-                                        <p>你好！我是智能数据洞察助手，有什么可以帮助你的吗？</p>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="conversation-form">
-                                <div class="input-wrapper">
-                                    <textarea id="conversation-input" placeholder="请输入您的数据分析需求..." rows="3"></textarea>
-                                    <button id="clear-conversation" class="clear-btn" title="清空">×</button>
-                                </div>
-                                <button id="send-message" class="btn btn-primary">
-                                    <span class="btn-icon">💬</span> 发送
-                                </button>
-                            </div>
-                            
-                            <div id="conversation-progress" class="query-progress hidden">
-                                <div class="progress-container">
-                                    <div class="progress-bar">
-                                        <div class="progress-fill" id="conversation-progress-fill"></div>
-                                    </div>
-                                    <div class="progress-info">
-                                        <span class="progress-percent" id="conversation-progress-percent">0%</span>
-                                        <span class="progress-text">正在分析您的需求...</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- 右侧：所有其他内容 -->
-                    <div class="right-panel">
-                        <!-- 数据筛选区域 -->
-                        <div class="preview-controls">
-                            <div class="filter-section">
-                                <div class="filter-header">
-                                    <h3>🔧 数据筛选</h3>
-                                    <button id="toggle-filter" class="toggle-btn" title="展开/收起">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                            <polyline points="6 9 12 15 18 9"></polyline>
-                                        </svg>
-                                    </button>
-                                </div>
-                                <div class="filter-body" id="filter-body">
-                                    <div id="filter-conditions">
-                                        <!-- 筛选条件将动态添加到这里 -->
-                                    </div>
-                                    <div class="filter-actions">
-                                        <button id="add-filter" class="btn btn-outline">
-                                            <span class="btn-icon">+</span> 添加条件
-                                        </button>
-                                        <button id="apply-filter" class="btn btn-primary">
-                                            <span class="btn-icon">✓</span> 应用筛选
-                                        </button>
-                                        <button id="clear-filter" class="btn btn-secondary">
-                                            <span class="btn-icon">×</span> 清除筛选
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- 结果展示区域 -->
-                        <div id="conversation-result" class="conversation-result hidden">
-                            <!-- 查询结果将动态显示在这里 -->
-                        </div>
-                        
-                        <!-- 数据表格 -->
-                        <div class="preview-container">
-                            <div class="table-scroll-wrapper">
-                                <table id="data-table">
-                                    <thead></thead>
-                                    <tbody></tbody>
-                                </table>
-                            </div>
-                            <div class="table-pagination" id="table-pagination">
-                                <button id="prev-page" class="page-btn" disabled>上一页</button>
-                                <span class="page-info">第 <span id="current-page">1</span> / <span id="total-pages">1</span> 页 (共 <span id="pagination-total-rows">0</span> 条数据)</span>
-                                <button id="next-page" class="page-btn">下一页</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-            
-            <!-- 数据可视化区域 -->
-            <section id="data-visualization" class="hidden">
-                <div class="section-header">
-                    <h2>📈 数据可视化</h2>
-                    <div class="chart-actions">
-                        <button id="export-all-charts" class="btn btn-outline">导出所有图表</button>
-                    </div>
-                </div>
-                <div class="charts-container"></div>
-            </section>
-            
-            <!-- AI 数据分析报告区域 -->
-            <section id="ai-analysis" class="hidden">
-                <div class="section-header">
-                    <h2>🤖 AI 数据分析报告</h2>
-                </div>
-                <div class="ai-report">
-                    <div class="report-actions">
-                        <button id="generate-report" class="btn btn-primary">
-                            <span class="btn-icon">✨</span> 生成分析报告
-                        </button>
-                        <button id="export-pdf" class="btn btn-info">
-                            <span class="btn-icon">📄</span> 导出为 PDF
-                        </button>
-                        <button id="export-image" class="btn btn-secondary">
-                            <span class="btn-icon">🖼</span> 导出为图片
-                        </button>
-                    </div>
-                    <div id="report-content"></div>
-                </div>
-            </section>
-        </main>
-        
-        <!-- V5.0优化：底部工具栏 -->
-        <footer class="app-footer">
-            <div class="footer-left">
-                <span class="tech-info" id="tech-info">内存模式</span>
-            </div>
-            <div class="footer-right">
-                <!-- V5.0：错误报告和反馈功能将在后续版本重构 -->
-            </div>
-        </footer>
-    </div>
-    
-    <!-- 处理日志弹窗 -->
-    <div id="log-modal" class="modal hidden">
-        <div class="modal-overlay"></div>
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>📋 处理日志</h3>
-                <div class="modal-actions">
-                    <button id="copy-log" class="btn btn-sm btn-outline">复制日志</button>
-                    <button id="clear-log" class="btn btn-sm btn-secondary">清空</button>
-                    <button id="close-log-modal" class="modal-close">×</button>
-                </div>
-            </div>
-            <div class="modal-body">
-                <div id="processing-log" class="log-container"></div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- V5.0新增：数据画像详细弹窗 -->
-    <div id="profile-detail-modal" class="modal hidden">
-        <div class="modal-overlay"></div>
-        <div class="modal-content modal-lg">
-            <div class="modal-header">
-                <h3>📋 数据画像详情</h3>
-                <button id="close-profile-detail-modal" class="modal-close">×</button>
-            </div>
-            <div class="modal-body">
-                <div id="profile-detail-content" class="profile-detail-content">
-                    <!-- 详细数据画像内容将动态填充 -->
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- 设置弹窗 -->
-    <div id="settings-modal" class="modal hidden">
-        <div class="modal-overlay"></div>
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>⚙️ 系统设置</h3>
-                <button id="close-settings-modal" class="modal-close">×</button>
-            </div>
-            <div class="modal-body">
-                <div class="settings-group">
-                    <h4>🎯 意图识别设置</h4>
-                    <div class="setting-item">
-                        <label>
-                            <input type="checkbox" id="use-local-intent" checked>
-                            <span>使用本地意图识别（更快）</span>
+                <div class="settings-section">
+                    <div class="settings-title">意图识别</div>
+                    <div class="settings-item">
+                        <span class="settings-label">优先使用本地模型</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="localModelToggle" checked>
+                            <span class="toggle-slider"></span>
                         </label>
-                        <p class="setting-hint">启用后将优先使用规则匹配和本地BERT模型，响应更快</p>
                     </div>
-                    <div class="setting-item">
-                        <label>
-                            <input type="checkbox" id="use-llm-fallback" checked>
-                            <span>启用大模型兜底（更准确）</span>
-                        </label>
-                        <p class="setting-hint">当规则和本地模型置信度都很低时，调用大模型API进行兜底</p>
-                    </div>
-                    <div class="setting-item">
-                        <label>
-                            <span>置信度阈值：</span>
-                            <input type="range" id="confidence-threshold" min="0.3" max="0.8" step="0.1" value="0.5">
-                            <span id="threshold-value">0.5</span>
-                        </label>
-                        <p class="setting-hint">低于此阈值时将调用下一层识别方案</p>
+                    <div class="settings-item" style="margin-top:0.5rem;">
+                        <span class="settings-label">本地模型就绪</span>
+                        <span class="vector-indicator active" style="width:8px;height:8px;border-radius:50%;background:var(--success);"></span>
                     </div>
                 </div>
-                <div class="settings-group">
-                    <h4>📊 数据处理设置</h4>
-                    <div class="setting-item">
-                        <label>
-                            <input type="checkbox" id="use-database-mode" checked>
-                            <span>大数据自动启用数据库模式</span>
+                
+                <div class="settings-section">
+                    <div class="settings-title">显示设置</div>
+                    <div class="settings-item">
+                        <span class="settings-label">显示详细日志</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="verboseLogToggle" checked>
+                            <span class="toggle-slider"></span>
                         </label>
-                        <p class="setting-hint">数据量超过10000行时自动使用SQL.js数据库</p>
-                    </div>
-                </div>
-                <div class="settings-group">
-                    <h4>🔌 AI API 设置</h4>
-                    <div class="setting-item">
-                        <label>
-                            <span>API地址：</span>
-                            <input type="text" id="api-url-input" value="https://api.siliconflow.cn/v1" style="width: 280px; padding: 5px; margin-left: 10px;">
-                        </label>
-                        <p class="setting-hint">Silicon Flow API地址，修改后点击保存</p>
-                    </div>
-                    <div class="setting-item">
-                        <button id="test-api-btn" class="btn-secondary" style="padding: 8px 16px; cursor: pointer;">🧪 测试API连接</button>
-                        <span id="api-test-result" style="margin-left: 10px;"></span>
-                    </div>
-                </div>
-                <div class="settings-group">
-                    <h4>ℹ️ 系统状态</h4>
-                    <div class="status-item">
-                        <span class="status-label">本地模型：</span>
-                        <span class="status-value" id="local-model-status">检测中...</span>
-                    </div>
-                    <div class="status-item">
-                        <span class="status-label">大模型API：</span>
-                        <span class="status-value" id="llm-api-status">已配置</span>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    
-    <!-- V3.0 UI 组件样式 -->
-    <link rel="stylesheet" href="css/feedback-ui.css">
-    <link rel="stylesheet" href="css/error-guide-ui.css">
-    
-    <!-- V5.0 核心模块 -->
-    <script type="module">
-        console.log('[V5.0] 开始加载模块...');
-        
-        try {
-            // 导入 V5.0 核心模块
-            const { default: App } = await import('./js/app.js');
-            const { default: DataManager } = await import('./js/dataManager.js');
-            const { default: QueryPipeline } = await import('./js/queryPipeline.js');
-            
-            // 导入原有模块
-            const { default: chartRecommender } = await import('./js/chartRecommender.js?v=5');
-            const { default: errorCollector } = await import('./js/errorCollector.js?v=5');
-            const { default: feedbackManager } = await import('./js/feedbackManager.js?v=5');
-            const { default: dataPreprocessor } = await import('./js/dataPreprocessor.js?v=5');
-            const { default: autoFixer } = await import('./js/autoFixer.js?v=5');
-            const { default: feedbackUI } = await import('./js/feedbackUI.js?v=5');
-            const { default: errorGuideUI } = await import('./js/errorGuideUI.js?v=5');
-            const { default: requirementClassifier } = await import('./js/requirementClassifier.js?v=5');
-            const { default: llmPrompts } = await import('./js/llmPrompts.js?v=5');
-            const { default: entityExtractor } = await import('./js/entityExtractor.js');
-            const { default: agentRouter, AnalysisAgent, ChartAgent, ExplanationAgent, PlanningAgent } = await import('./js/agentSystem.js');
-            const { default: executionPlanUI } = await import('./js/executionPlanUI.js');
-            
-            console.log('[V6.0] 所有模块导入成功');
-            
-            // 初始化应用
-            const app = new App();
-            const dataManager = new DataManager();
-            const queryPipeline = new QueryPipeline();
-            await queryPipeline.init();
-            
-            // 暴露到全局作用域
-            window.app = app;
-            window.dataManager = dataManager;
-            window.queryPipeline = queryPipeline;
-            window.chartRecommender = chartRecommender;
-            window.errorCollector = errorCollector;
-            window.feedbackManager = feedbackManager;
-            window.dataPreprocessor = dataPreprocessor;
-            window.autoFixer = autoFixer;
-            window.feedbackUI = feedbackUI;
-            window.errorGuideUI = errorGuideUI;
-            window.requirementClassifier = requirementClassifier;
-            window.llmPrompts = llmPrompts;
-            
-            // V4.0 新模块暴露
-            // window.dataProfiler = dataProfiler; // 已由 script.js 内联创建
-            window.agentRouter = agentRouter;
-            window.AnalysisAgent = AnalysisAgent;
-            window.ChartAgent = ChartAgent;
-            window.ExplanationAgent = ExplanationAgent;
-            window.PlanningAgent = PlanningAgent;
-            window.executionPlanUI = executionPlanUI;
-            window.entityExtractor = entityExtractor;
-            
-            console.log('[V4.0] 模块已暴露到全局作用域');
-            
-            // 初始化
-            initAll();
-            
-        } catch (error) {
-            console.error('[V4.0] 模块加载失败:', error);
-        }
-        
-        function initAll() {
-            console.log('[V4.0] 开始初始化...');
-            
-            // V3.0 初始化
-            if (window.feedbackUI?.init) {
-                window.feedbackUI.init();
-                console.log('[V3.0] 反馈 UI 已初始化');
-            }
-            
-            if (window.errorGuideUI?.init) {
-                window.errorGuideUI.init();
-                console.log('[V3.0] 错误引导 UI 已初始化');
-            }
-            
-            if (window.autoFixer?.scheduleAutoFix) {
-                window.autoFixer.scheduleAutoFix(60);
-                console.log('[V3.0] 自动修复定时任务已启动');
-            }
-            
-            // V4.0 初始化
-            if (window.executionPlanUI?.init) {
-                window.executionPlanUI.init();
-                console.log('[V4.0] 执行计划UI已初始化');
-            }
-            
-            if (window.agentRouter) {
-                const agentStatus = window.agentRouter.getAgentStatus();
-                console.log('[V4.0] Agent状态:', agentStatus);
-            }
-            
-            console.log('[V4.0] ✅ 初始化完成');
-            console.log('[V4.0] 数据画像:', window.dataProfiler ? '✅' : '❌');
-            console.log('[V4.0] Agent调度:', window.agentRouter ? '✅' : '❌');
-            console.log('[V4.0] 实体抽取:', window.entityExtractor ? '✅' : '❌');
-            
-            // 触发一个全局事件，通知script.js模块已就绪
-            window.v4ModulesLoaded = true;
-            document.dispatchEvent(new CustomEvent('v4-modules-loaded'));
-        }
-    </script>
-    
-    <!-- V3.0 集成补丁 -->
-    <script src="v3-integration.js"></script>
-    
-    <!-- V5.0 Agent工作流可视化面板 -->
-    <div id="agent-workflow-panel" class="agent-workflow-panel">
-        <div class="agent-workflow-header">
-            <h3>🤖 Agent工作流可视化</h3>
-            <button id="close-agent-workflow" class="close-btn">&times;</button>
-        </div>
-        <div class="agent-workflow-body">
-            <div id="workflow-container">
-                <p style="color: #666; text-align: center;">点击"开始分析"查看Agent工作流</p>
-            </div>
-        </div>
-    </div>
-    
-    <!-- V5.0 性能监控面板 -->
-    <div id="performance-panel" class="performance-panel">
-        <div class="performance-header">
-            <h3>📊 系统性能监控</h3>
-            <button id="close-performance" class="close-btn">&times;</button>
-        </div>
-        <div class="performance-body">
-            <div class="metric-card">
-                <h4>API响应时间</h4>
-                <div class="metric-value" id="api-response-time">-- ms</div>
-            </div>
-            <div class="metric-card">
-                <h4>缓存命中率</h4>
-                <div class="metric-value" id="cache-hit-rate">--%</div>
-            </div>
-            <div class="metric-card">
-                <h4>并发请求数</h4>
-                <div class="metric-value" id="concurrent-requests">-- / 10</div>
-            </div>
-            <div class="metric-card">
-                <h4>系统状态</h4>
-                <div class="metric-value" id="system-status" style="color: #38ef7d;">运行正常</div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- V5.0 功能脚本 -->
+
+    <input type="file" id="fileInput" accept=".csv,.xlsx,.xls">
+    <div class="toast" id="toast"></div>
+
     <script>
-        // V5.0 Agent工作流面板控制
-        document.getElementById('agent-workflow-btn').addEventListener('click', function() {
-            document.getElementById('agent-workflow-panel').classList.toggle('active');
-            document.getElementById('performance-panel').classList.remove('active');
-        });
+        // App State
+        const AppState = {
+            files: [], currentFile: null, data: null, columns: [],
+            vectors: [], vectorReady: false, history: [],
+            isProcessing: false, idCounter: 0,
+            currentIntent: null, // 当前正在处理的意图
+            pendingChartConfig: null // 待确认的图表配置
+        };
+
+        // Logger
+        const Logger = {
+            logs: [],
+            info(msg) { this.log('INFO', msg); },
+            success(msg) { this.log('SUCCESS', msg); },
+            warn(msg) { this.log('WARNING', msg); },
+            error(msg) { this.log('ERROR', msg); },
+            log(level, msg) {
+                const entry = { time: new Date().toLocaleTimeString('zh-CN', { hour12: false }), level, msg };
+                this.logs.push(entry);
+                const panel = $('logPanel');
+                if (panel) {
+                    panel.innerHTML += `<div class="log-entry"><span class="timestamp">[${entry.time}]</span><span class="level ${entry.level}">${entry.level}</span><span class="message">${entry.msg}</span></div>`;
+                    panel.scrollTop = panel.scrollHeight;
+                }
+            },
+            clear() { this.logs = []; $('logPanel').innerHTML = '<div class="log-entry"><span class="timestamp">[--:--:--]</span><span class="level INFO">INFO</span><span class="message">日志已清空</span></div>'; }
+        };
+
+        // Intent Type Table - defines all supported intent types and their required fields
+        const INTENT_TYPES = {
+            'query_value': { name: '数值查询', requiredFields: ['targetColumn', 'filterColumn', 'filterValue'], description: '查询特定条件下的数值' },
+            'filter_query': { name: '筛选查询', requiredFields: ['filterColumn', 'filterValue'], description: '筛选符合条件的记录' },
+            'sort_query': { name: '排序查询', requiredFields: ['sortColumn'], optionalFields: ['sortDirection'], description: '按指定规则排序' },
+            'aggregate': { name: '统计汇总', requiredFields: ['groupColumn', 'aggregateColumn'], optionalFields: ['aggregateMethod'], description: '按维度分组统计' },
+            'extremum': { name: '极值查询', requiredFields: ['targetColumn'], optionalFields: ['extremumType', 'limit'], description: '查询最大最小值' },
+            'compare': { name: '对比分析', requiredFields: ['groupColumn', 'valueColumn'], description: '对比不同维度的数据' },
+            'trend': { name: '趋势分析', requiredFields: ['timeColumn', 'valueColumn'], description: '分析数据变化趋势' }
+        };
+
+        // Chart Type Table - defines chart type configs, aligned with Excel chart capabilities
+        // Key difference: scatter plot requires BOTH X and Y to be numeric types
+        const CHART_TYPES = {
+            'bar': { name: '柱状图', keywords: ['柱状', '柱形', '柱', '条形'], requiredFields: ['xAxis', 'yAxis'], axisConfig: { xAxis: 'string', yAxis: 'number' }, xAxisLabel: 'X轴分类', yAxisLabel: 'Y轴数值', description: '比较不同类别的数值' },
+            'line': { name: '折线图', keywords: ['折线', '曲线', '趋势线'], requiredFields: ['xAxis', 'yAxis'], axisConfig: { xAxis: 'any', yAxis: 'number' }, xAxisLabel: 'X轴序列', yAxisLabel: 'Y轴数值', description: '展示数据变化趋势' },
+            'pie': { name: '饼图', keywords: ['饼', '占比', '比例'], requiredFields: ['valueColumn'], optionalFields: ['labelColumn'], axisConfig: { valueColumn: 'number', labelColumn: 'string' }, yAxisLabel: '数值', description: '展示各部分占比' },
+            'scatter': { name: '散点图', keywords: ['散点', '散布', 'XY'], requiredFields: ['xAxis', 'yAxis'], axisConfig: { xAxis: 'number', yAxis: 'number' }, xAxisLabel: 'X轴数值', yAxisLabel: 'Y轴数值', description: '展示两数值变量关系（XY都必须是数值）' },
+            'area': { name: '面积图', keywords: ['面积'], requiredFields: ['xAxis', 'yAxis'], axisConfig: { xAxis: 'any', yAxis: 'number' }, description: '展示数据累积效果' },
+            'doughnut': { name: '环形图', keywords: ['环形', '环'], requiredFields: ['valueColumn'], optionalFields: ['labelColumn'], description: '展示各部分占比环形样式' }
+        };
+
+        function $(id) { return document.getElementById(id); }
+        function genId() { return 'f' + (++AppState.idCounter).toString(36); }
+
+        function showToast(msg, type = '') {
+            const t = $('toast'); t.textContent = msg; t.className = 'toast show' + (type ? ' ' + type : '');
+            setTimeout(() => t.classList.remove('show'), 3000);
+        }
+
+        // 文件处理
+        function setupFileUpload() {
+            const zone = $('uploadZone'), input = $('fileInput');
+            zone.addEventListener('click', () => input.click());
+            zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+            zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+            zone.addEventListener('drop', e => { e.preventDefault(); zone.classList.remove('dragover'); if (e.dataTransfer.files.length) handleFiles(e.dataTransfer.files); });
+            input.addEventListener('change', () => { if (input.files.length) handleFiles(input.files); });
+            $('uploadBtn')?.addEventListener('click', () => input.click());
+        }
+
+        async function handleFiles(files) {
+            for (const f of files) {
+                const ext = f.name.split('.').pop().toLowerCase();
+                if (!['csv', 'xlsx', 'xls'].includes(ext)) { showToast('仅支持CSV和Excel文件', 'error'); continue; }
+                const id = genId();
+                AppState.files.push({ id, name: f.name, type: ext.toUpperCase(), size: f.size, status: 'pending' });
+                renderFileList();
+                try {
+                    let data, cols;
+                    if (ext === 'csv') {
+                        const text = await f.text();
+                        const result = parseCSV(text);
+                        data = result.data; cols = result.cols;
+                    } else {
+                        // Excel需要使用ArrayBuffer获取原始二进制数据
+                        const buffer = await f.arrayBuffer();
+                        const result = await parseExcel(buffer, f.name);
+                        data = result.data; cols = result.cols;
+                    }
+                    if (!data?.length || !cols?.length) { showToast('文件内容为空', 'error'); AppState.files = AppState.files.filter(x => x.id !== id); renderFileList(); continue; }
+                    AppState.currentFile = AppState.files.find(x => x.id === id);
+                    AppState.currentFile.status = 'ready';
+                    AppState.currentFile.rowCount = data.length;
+                    AppState.data = data;
+                    AppState.columns = cols;
+                    renderFileList();
+                    renderDataOverview();
+                    await initVectorization();
+                    $('sendBtn').disabled = false;
+                    showToast(`${f.name} 上传成功 (${data.length}行)`, 'success');
+                    Logger.info(`处理文件: ${f.name}`);
+                    Logger.success(`解析完成: ${data.length}行 ${cols.length}列`);
+                } catch (err) {
+                    Logger.error(`解析失败: ${err.message}`);
+                    showToast(`解析失败: ${err.message}`, 'error');
+                    AppState.files = AppState.files.filter(x => x.id !== id);
+                    renderFileList();
+                }
+            }
+        }
+
+        function parseCSV(text) {
+            const lines = text.trim().split(/\r?\n/);
+            if (lines.length < 2) return { data: [], cols: [] };
+            const headers = parseCSVLine(lines[0]);
+            const data = [];
+            for (let i = 1; i < lines.length; i++) {
+                const values = parseCSVLine(lines[i]);
+                if (values.length === headers.length) {
+                    const row = {}; headers.forEach((h, j) => row[h.trim()] = values[j]?.trim() || '');
+                    data.push(row);
+                }
+            }
+            const cols = headers.map(h => {
+                const sample = data.find(r => r[h] && r[h] !== '-')?.[h] || '';
+                const isNum = !isNaN(parseFloat(sample)) && sample !== '';
+                return { name: h.trim(), type: isNum ? 'number' : 'string' };
+            });
+            return { data, cols };
+        }
+
+        function parseCSVLine(line) {
+            const res = []; let cur = '', inQ = false;
+            for (const c of line) { if (c === '"') inQ = !inQ; else if (c === ',' && !inQ) { res.push(cur); cur = ''; } else cur += c; }
+            res.push(cur); return res;
+        }
+
+        async function parseExcel(binary, filename) {
+            try {
+                // 使用SheetJS解析Excel
+                const binaryData = new Uint8Array(binary);
+                const workbook = XLSX.read(binaryData, { type: 'array', cellDates: true, cellNF: true });
+                
+                // 获取第一个工作表
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                
+                // 转换为JSON
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+                
+                if (!jsonData || jsonData.length === 0) {
+                    throw new Error('Excel文件内容为空');
+                }
+                
+                // 获取列名（表头）
+                const headers = Object.keys(jsonData[0]);
+                
+                // 转换数据格式
+                const rows = jsonData.map(row => {
+                    const newRow = {};
+                    headers.forEach(h => {
+                        let val = row[h];
+                        // 处理日期对象
+                        if (val instanceof Date) {
+                            val = val.toISOString().split('T')[0];
+                        }
+                        newRow[h] = val !== undefined && val !== null ? String(val) : '';
+                    });
+                    return newRow;
+                });
+                
+                // 确定列类型
+                const cols = headers.map(h => {
+                    const sample = rows.find(r => r[h] && r[h] !== '-')?.[h] || '';
+                    const isNum = !isNaN(parseFloat(sample)) && sample !== '';
+                    return { name: h.trim(), type: isNum ? 'number' : 'string' };
+                });
+                
+                Logger.info(`Excel解析完成: ${rows.length}行 ${cols.length}列`);
+                return { data: rows, cols };
+            } catch (err) {
+                Logger.error(`Excel解析失败: ${err.message}`);
+                throw new Error(`Excel解析失败: ${err.message}`);
+            }
+        }
+
+        function renderFileList() {
+            if (!AppState.files.length) { $('fileList').innerHTML = ''; return; }
+            $('fileList').innerHTML = AppState.files.map(f => `<div class="file-item">
+                <div class="file-item-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+                <div class="file-item-info"><div class="file-item-name">${f.name}</div><div class="file-item-meta">${f.type} | ${(f.size/1024).toFixed(1)}KB${f.rowCount ? ` | ${f.rowCount}行` : ''}</div></div>
+                <span class="file-item-status ${f.status}">${f.status === 'ready' ? '就绪' : '处理中'}</span>
+                <button class="btn-close" onclick="removeFile('${f.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+            </div>`).join('');
+        }
+
+        function removeFile(id) {
+            AppState.files = AppState.files.filter(f => f.id !== id);
+            if (AppState.currentFile?.id === id) { AppState.currentFile = null; AppState.data = null; AppState.columns = []; $('dataOverview').style.display = 'none'; $('sendBtn').disabled = true; }
+            renderFileList(); Logger.info('文件已移除');
+        }
+
+        function renderDataOverview() {
+            if (!AppState.currentFile || !AppState.data) { $('dataOverview').style.display = 'none'; return; }
+            $('dataOverview').style.display = 'block';
+            $('statsGrid').innerHTML = `
+                <div class="stat-card"><div class="stat-value">${AppState.data.length}</div><div class="stat-label">行数</div></div>
+                <div class="stat-card"><div class="stat-value">${AppState.columns.length}</div><div class="stat-label">列数</div></div>
+                <div class="stat-card"><div class="stat-value">${AppState.columns.filter(c => c.type === 'number').length}</div><div class="stat-label">数值列</div></div>
+                <div class="stat-card"><div class="stat-value">${AppState.columns.filter(c => c.type === 'string').length}</div><div class="stat-label">文本列</div></div>`;
+            $('columnList').innerHTML = AppState.columns.map(c => `<span class="column-tag">${c.name}<span class="type-badge ${c.type}">${c.type === 'number' ? '数值' : '文本'}</span></span>`).join('');
+        }
+
+        async function initVectorization() {
+            if (!AppState.data?.length) return;
+            try {
+                Logger.info('初始化向量化...');
+                $('vectorIndicator').className = 'vector-indicator';
+                $('vectorStatusText').textContent = '初始化中...';
+                await new Promise(r => setTimeout(r, 500));
+                AppState.vectors = AppState.data.map(row => { const v = {}; AppState.columns.forEach(c => { v[c.name] = c.type === 'number' ? parseFloat(row[c.name]) || 0 : hashStr(row[c.name] || ''); }); return v; });
+                AppState.vectorReady = true;
+                $('vectorIndicator').className = 'vector-indicator active';
+                $('vectorStatusText').textContent = '就绪';
+                Logger.success('向量化完成');
+            } catch (err) { Logger.error(`向量化失败: ${err.message}`); $('vectorIndicator').className = 'vector-indicator'; $('vectorStatusText').textContent = '失败'; }
+        }
+
+        function hashStr(s) { let h = 0; for (let i = 0; i < s.length; i++) { h = ((h << 5) - h) + s.charCodeAt(i); h = h & h; } return Math.abs(h); }
+
+        // 意图识别 - V7修复版本（修复区域过滤bug，添加表格显示功能）
+        function analyzeIntent(query) {
+            Logger.info(`分析意图: "${query}"`);
+            const lq = query.toLowerCase();
+            const intents = [];
+            
+            // 检测意图类型
+            const hasChart = /绘|图|图表|柱状|折线|饼图|柱形|曲线|可视化|展示/.test(query);
+            const hasAgg = /销售|利润|数量|总额|合计|统计|求和|汇总/.test(query);
+            const hasComp = /对比|比较|差异/.test(query);
+            const hasTrend = /趋势|变化|增长|下降/.test(query);
+            const hasRank = /排名|前|最高|最低/.test(query);
+            const hasFilter = /筛选|过滤|查找|查询/.test(query);
+            const hasShowAll = /显示全部|查看全部|查看数据|查看表格|显示数据|展示全部|所有数据/.test(query);
+            
+            // 只有图表、统计、对比、趋势、排名、筛选、显示全部意图
+            // 没有这些关键词时，返回拒识意图
+            if (!hasChart && !hasAgg && !hasComp && !hasTrend && !hasRank && !hasFilter && !hasShowAll) {
+                Logger.info('未识别到任何数据分析意图');
+                return { 
+                    intents: [{ type: 'reject', reason: '未识别到数据分析相关意图' }], 
+                    vField: null, detRegs: [], rField: null, chartType: null 
+                };
+            }
+            
+            let xField = null, yField = null; // X轴(维度)、Y轴(数值)
+            
+            // ===== 第一步：从用户查询中精确提取 X轴(维度) =====
+            // 先检测明确的维度关键词
+            const dimKeywords = ['省份', '地区', '区域', '城市', '分公司', '省公司', '大区', '公司', '产品类别'];
+            
+            // 模式1：按XX绘制（XX在"按"和"绘制"之间）- 需要排除标点符号
+            const dimMatch1 = query.match(/按([\\u4e00-\\u9fa5a-zA-Z0-9]+)绘制/i);
+            // 模式2：用XX作为维度
+            const dimMatch2 = query.match(/用([\\u4e00-\\u9fa5a-zA-Z0-9]+)作为维度/i);
+            // 模式3：横轴/维度用XX
+            const dimMatch3 = query.match(/横轴用([\\u4e00-\\u9fa5a-zA-Z0-9]+)/i);
+            
+            let userSpecifiedDim = null;
+            if (dimMatch1) {
+                userSpecifiedDim = dimMatch1[1];
+            } else if (dimMatch2) {
+                userSpecifiedDim = dimMatch2[1];
+            } else if (dimMatch3) {
+                userSpecifiedDim = dimMatch3[1];
+            } else {
+                // 检查查询中是否包含维度关键词
+                for (const kw of dimKeywords) {
+                    if (lq.includes(kw)) {
+                        userSpecifiedDim = kw;
+                        break;
+                    }
+                }
+            }
+            
+            // 如果用户指定了维度，精确匹配列名
+            if (userSpecifiedDim) {
+                Logger.info(`用户指定维度: ${userSpecifiedDim}`);
+                // 特殊映射：用户说的"省份"可能对应"省公司"列
+                const dimMapping = {
+                    '省份': ['省公司', '区域', '地区'],
+                    '地区': ['地区', '区域', '省公司'],
+                    '区域': ['区域', '地区', '省公司'],
+                    '城市': ['城市'],
+                    '公司': ['公司', '分公司', '省公司']
+                };
+                
+                const possibleMatches = dimMapping[userSpecifiedDim] || [userSpecifiedDim];
+                
+                for (const c of AppState.columns) {
+                    if (c.type === 'string') {
+                        const cn = c.name;
+                        // 完全匹配
+                        if (possibleMatches.includes(cn)) {
+                            xField = c.name;
+                            Logger.info(`匹配到维度列: ${xField}`);
+                            break;
+                        }
+                    }
+                }
+                
+                // 如果还没匹配到，用宽松匹配
+                if (!xField) {
+                    for (const c of AppState.columns) {
+                        if (c.type === 'string') {
+                            const cn = c.name;
+                            if (cn.includes(userSpecifiedDim) || userSpecifiedDim.includes(cn)) {
+                                xField = c.name;
+                                Logger.info(`匹配到维度列(宽松): ${xField}`);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // ===== 第二步：从用户查询中精确提取 Y轴(数值) =====
+            const valKeywords = ['销售额', '销售总额', '销售金额', '利润额', '利润总额', '利润金额', '利润', '数量', '金额', '总额', '合计', '客户数'];
+            
+            // 模式1：绘制XX的柱状图 - 匹配"绘制"和"的柱状图"之间的内容
+            const valMatch1 = query.match(/绘制([\\u4e00-\\u9fa5a-zA-Z0-9]+)的?柱状/i);
+            // 模式2：绘制XX（到图表类型之前）
+            const valMatch2 = query.match(/绘制([\\u4e00-\\u9fa5a-zA-Z0-9]+?)(柱状|柱形|饼图|折线|图表|$)/i);
+            // 模式3：用XX作为Y轴/数值
+            const valMatch3 = query.match(/用([\\u4e00-\\u9fa5a-zA-Z0-9]+)作为(数值|Y轴|纵轴)/i);
+            // 模式4：纵轴用XX
+            const valMatch4 = query.match(/纵轴用([\\u4e00-\\u9fa5a-zA-Z0-9]+)/i);
+            
+            let userSpecifiedVal = null;
+            if (valMatch1) {
+                userSpecifiedVal = valMatch1[1].trim();
+            } else if (valMatch2) {
+                userSpecifiedVal = valMatch2[1].trim();
+            } else if (valMatch3) {
+                userSpecifiedVal = valMatch3[1];
+            } else if (valMatch4) {
+                userSpecifiedVal = valMatch4[1];
+            } else {
+                // 检查查询中是否包含数值关键词
+                for (const kw of valKeywords) {
+                    if (lq.includes(kw)) {
+                        userSpecifiedVal = kw;
+                        break;
+                    }
+                }
+            }
+            
+            // 精确匹配数值字段
+            if (userSpecifiedVal) {
+                Logger.info(`用户指定数值: ${userSpecifiedVal}`);
+                for (const c of AppState.columns) {
+                    if (c.type === 'number') {
+                        const cn = c.name;
+                        // 完全匹配或包含匹配
+                        if (cn === userSpecifiedVal || cn.includes(userSpecifiedVal) || userSpecifiedVal.includes(cn)) {
+                            yField = c.name;
+                            Logger.info(`匹配到数值列: ${yField}`);
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            // ===== 第三步：检测区域关键词（用于筛选） =====
+            const regs = ['华东', '华北', '华南', '华中', '西南', '西北', '东北'];
+            const cityNames = ['北京', '上海', '广州', '深圳', '南京', '杭州', '天津', '石家庄', '武汉', '长沙', '郑州', '成都', '重庆', '昆明', '西安', '兰州', '乌鲁木齐', '沈阳', '哈尔滨', '长春', '厦门', '苏州', '宁波', '青岛', '济南', '福州', '合肥', '南昌', '南宁', '贵阳', '拉萨', '西宁', '呼和浩特', '大连'];
+            
+            let detRegs = regs.filter(r => lq.includes(r));
+            const detCities = cityNames.filter(c => lq.includes(c));
+            
+            // 确定图表类型
+            let chartType = 'bar';
+            if (/饼|环形|占比/.test(query)) {
+                chartType = 'doughnut';
+                if (/^(?!.*环形|环).*$/.test(query)) chartType = 'pie';
+            }
+            else if (/折线|曲线|趋势/.test(query)) chartType = 'line';
+            else if (/柱状|柱形|柱|条形/.test(query)) chartType = 'bar';
+            else if (/散点|散布|XY/.test(query)) chartType = 'scatter';
+            else if (/面积/.test(query)) chartType = 'area';
+            else chartType = 'bar'; // 默认柱状图
+            
+            // ===== 第四步：构建图表意图，检查是否需要追问 =====
+            if (hasChart) {
+                const intent = { 
+                    type: 'chart', 
+                    chartType: chartType,
+                    xField: xField,
+                    yField: yField,
+                    regions: detRegs.length ? detRegs : (detCities.length ? detCities : null),
+                    needsConfirmation: false,
+                    missingFields: []
+                };
+                
+                // 检查缺失字段 - 根据图表类型配置决定需要哪些字段
+                const chartCfg = CHART_TYPES[chartType] || {};
+                
+                // 根据图表类型决定追问顺序
+                // 饼图/环形图只需要Y轴(数值列)
+                if (chartType === 'pie' || chartType === 'doughnut') {
+                    if (!yField) {
+                        intent.missingFields.push('yField');
+                    }
+                }
+                // 散点图：需要X轴和Y轴，且都必须是数值
+                else if (chartType === 'scatter') {
+                    if (!xField) {
+                        intent.missingFields.push('xField');
+                    }
+                    if (!yField) {
+                        intent.missingFields.push('yField');
+                    }
+                }
+                // 柱状图/折线图/面积图：需要X轴(分类)和Y轴(数值)
+                else {
+                    if (!xField) {
+                        intent.missingFields.push('xField');
+                    }
+                    if (!yField) {
+                        intent.missingFields.push('yField');
+                    }
+                }
+                
+                // 只要有一个字段缺失就需要追问
+                if (intent.missingFields.length > 0) {
+                    intent.needsConfirmation = true;
+                }
+                
+                intents.push(intent);
+            }
+            
+            // 添加其他意图
+            let vField = yField || AppState.columns.find(c => c.type === 'number')?.name;
+            
+            // 显示全部数据意图
+            if (hasShowAll) {
+                intents.push({ type: 'show_all', field: vField });
+            }
+            if (hasAgg) intents.push({ type: 'aggregation', field: vField, regions: detRegs.length ? detRegs : (detCities.length ? detCities : null), rField: xField, useRegion: detRegs.length > 0 || detCities.length === 0 });
+            if (hasComp) intents.push({ type: 'comparison', field: vField, rField: xField });
+            if (hasTrend) intents.push({ type: 'trend', field: vField });
+            if (hasRank) intents.push({ type: 'ranking', field: vField, limit: extractLimit(query) });
+            if (hasFilter && !hasShowAll) intents.push({ type: 'filter', field: vField, regions: detRegs.length ? detRegs : detCities, rField: xField });
+            
+            Logger.info(`识别${intents.length}个意图，xField=${xField}, yField=${yField}, detRegs=${JSON.stringify(detRegs)}`);
+            return { intents, vField, detRegs, rField: xField, chartType };
+        }
         
-        document.getElementById('close-agent-workflow').addEventListener('click', function() {
-            document.getElementById('agent-workflow-panel').classList.remove('active');
-        });
+        // 获取可用维度列（字符串类型）
+        function getAvailableDimensionColumns() {
+            return AppState.columns.filter(c => c.type === 'string');
+        }
         
-        // V5.0 性能监控面板控制
-        document.getElementById('performance-monitor-btn').addEventListener('click', function() {
-            document.getElementById('performance-panel').classList.toggle('active');
-            document.getElementById('agent-workflow-panel').classList.remove('active');
-            updatePerformanceMetrics();
-        });
-        
-        document.getElementById('close-performance').addEventListener('click', function() {
-            document.getElementById('performance-panel').classList.remove('active');
-        });
-        
-        // V5.0 更新性能指标
-        function updatePerformanceMetrics() {
-            // 检查性能面板是否激活，只有激活时才更新
-            const performancePanel = document.getElementById('performance-panel');
-            if (!performancePanel || !performancePanel.classList.contains('active')) {
+        // 获取可用数值列
+        function getAvailableValueColumns() {
+            return AppState.columns.filter(c => c.type === 'number');
+        }
+
+        function extractLimit(q) { const m = q.match(/前(\d+)/); return m ? parseInt(m[1]) : 10; }
+
+        async function processQuery(query) {
+            if (!query.trim() || !AppState.data) { showToast('请先上传数据', 'error'); return; }
+            if (AppState.isProcessing) return;
+            
+            // 检查是否是追问回复
+            if (AppState.currentIntent) {
+                await handleIntentConfirmation(query);
                 return;
             }
             
-            // 更新API响应时间
-            fetch('http://127.0.0.1:5001/api/v1/performance/metrics')
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('API not available');
+            AppState.isProcessing = true; $('sendBtn').disabled = true;
+            addMsg('user', query);
+            $('queryInput').value = '';
+            $('emptyState').style.display = 'none';
+            addToHistory(query);
+            try {
+                Logger.info(`处理查询: "${query}"`);
+                const { intents, vField, detRegs } = analyzeIntent(query);
+                
+                // 检查是否有拒识意图
+                const rejectIntent = intents.find(i => i.type === 'reject');
+                if (rejectIntent) {
+                    addMsg('assistant', `<div class="intent-display"><div class="intent-label">识别的意图</div><div class="intent-tags"><span class="intent-tag" style="background:var(--warning);">无法识别</span></div></div>
+                    <p style="margin-top:0.75rem;">您好！我是智能数据分析助手，专注于帮您分析数据。</p>
+                    <p style="margin-top:0.5rem;">您可以尝试：</p>
+                    <ul style="margin-top:0.5rem;padding-left:1.25rem;font-size:0.875rem;color:var(--gray-500);">
+                        <li>统计类："各地区的销售额是多少"</li>
+                        <li>图表类："绘制柱状图"或"按省份绘制销售额"</li>
+                        <li>筛选类："筛选华东地区的数据"</li>
+                        <li>排名类："销售额最高的前10家公司"</li>
+                    </ul>
+                    <p style="margin-top:0.75rem;font-size:0.8125rem;color:var(--gray-500);">请告诉我您想分析什么数据？</p>`);
+                    AppState.isProcessing = false;
+                    $('sendBtn').disabled = !AppState.currentFile;
+                    scrollChat();
+                    return;
+                }
+                
+                // 检查图表意图是否需要追问（缺少X轴或Y轴）
+                const chartIntent = intents.find(i => i.type === 'chart');
+                if (chartIntent?.needsConfirmation) {
+                    await showChartConfirmation(chartIntent);
+                    return;
+                }
+                
+                // 无需追问，直接处理
+                let content = '';
+                for (const i of intents) {
+                    switch (i.type) {
+                        case 'aggregation': content += await handleAgg(i, detRegs, vField); break;
+                        case 'comparison': content += await handleComp(i, vField); break;
+                        case 'trend': content += await handleTrend(i, vField); break;
+                        case 'ranking': content += await handleRank(i, vField); break;
+                        case 'chart': content += await handleChart(i, detRegs); break;
+                        case 'filter': content += await handleFilter(i, detRegs, vField); break;
+                        case 'show_all': content += await handleShowAll(i); break;
+                        default: content += `<p style="color:var(--gray-500);">暂不支持该类型的分析</p>`;
                     }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.status === 'success') {
-                        const metrics = data.data;
-                        
-                        // 计算所有API的平均响应时间
-                        let totalAvg = 0;
-                        let count = 0;
-                        Object.keys(metrics).forEach(key => {
-                            if (metrics[key] && metrics[key].avg) {
-                                totalAvg += metrics[key].avg;
-                                count++;
-                            }
-                        });
-                        
-                        if (count > 0) {
-                            const avgResponseTime = Math.round(totalAvg / count);
-                            document.getElementById('api-response-time').textContent = avgResponseTime + ' ms';
-                        }
-                        
-                        // 计算缓存命中率（如果有缓存数据）
-                        if (metrics.cache_hits && metrics.cache_misses) {
-                            const total = metrics.cache_hits + metrics.cache_misses;
-                            if (total > 0) {
-                                const hitRate = Math.round((metrics.cache_hits / total) * 100);
-                                document.getElementById('cache-hit-rate').textContent = hitRate + '%';
-                            }
-                        }
-                    }
-                })
-                .catch(err => {
-                    console.log('性能监控更新失败:', err);
-                    // 显示默认值
-                    document.getElementById('api-response-time').textContent = '-- ms';
-                    document.getElementById('cache-hit-rate').textContent = '--%';
-                });
-            
-            // 更新并发状态
-            fetch('http://127.0.0.1:5001/api/v1/performance/concurrency/status')
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('API not available');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.status === 'success') {
-                        const status = data.data;
-                        document.getElementById('concurrent-requests').textContent = 
-                            status.active_tasks + ' / ' + status.max_concurrent;
-                    }
-                })
-                .catch(err => {
-                    console.log('并发状态更新失败:', err);
-                    document.getElementById('concurrent-requests').textContent = '-- / 10';
-                });
+                }
+                const intentHtml = `<div class="intent-display"><div class="intent-label">识别的意图</div><div class="intent-tags">${intents.map(i => `<span class="intent-tag">${i.type}</span>`).join('')}</div></div>`;
+                addMsg('assistant', intentHtml + content);
+                Logger.success('处理完成');
+            } catch (err) { Logger.error(`失败: ${err.message}`); addMsg('assistant', `处理失败: ${err.message}`); }
+            finally { AppState.isProcessing = false; $('sendBtn').disabled = !AppState.currentFile; scrollChat(); }
         }
         
-        // 立即执行一次性能指标更新
-        // 注释掉自动更新，只有在打开性能面板时才更新
-        // updatePerformanceMetrics();
+        // 显示图表要素追问 - V2版本，根据图表类型显示正确的字段
+        async function showChartConfirmation(intent) {
+            Logger.info(`进入图表追问: type=${intent.chartType}, missingFields=${JSON.stringify(intent.missingFields)}`);
+            
+            // 获取图表类型配置
+            const chartConfig = CHART_TYPES[intent.chartType] || {};
+            const chartTypeLabel = chartConfig.name || '图表';
+            
+            // 存储当前意图和追问状态
+            AppState.currentIntent = intent;
+            AppState.confirmStep = intent.missingFields[0];
+            
+            let optionsHtml = '';
+            
+            // 根据缺失字段类型进行追问
+            if (intent.missingFields.includes('xField')) {
+                // 获取可用的X轴字段（根据图表类型配置）
+                let availableCols = [];
+                if (intent.chartType === 'scatter') {
+                    // 散点图：X轴必须是数值类型
+                    availableCols = AppState.columns.filter(c => c.type === 'number');
+                    if (availableCols.length === 0) {
+                        addMsg('assistant', `<p style="color:var(--warning);">散点图需要至少2个数值类型列来绑制X轴和Y轴。当前数据中没有数值列。</p>`);
+                        AppState.currentIntent = null;
+                        AppState.isProcessing = false;
+                        scrollChat();
+                        return;
+                    }
+                    optionsHtml = `
+                        <div class="confirm-options">
+                            <div class="confirm-title">散点图配置 - 请选择 X轴（必须是数值类型）：</div>
+                            <div class="confirm-buttons">
+                                ${availableCols.map(c => `<button class="confirm-btn" data-field="xField" data-value="${c.name}">${c.name}</button>`).join('')}
+                            </div>
+                        </div>
+                        <p style="margin-top:0.5rem;font-size:0.8125rem;color:var(--warning);">
+                            散点图X轴和Y轴都必须是数值类型，用于展示两个数值变量之间的关系
+                        </p>
+                    `;
+                } else if (intent.chartType === 'pie' || intent.chartType === 'doughnut') {
+                    // 饼图/环形图不需要X轴，跳过
+                    intent.missingFields = intent.missingFields.filter(f => f !== 'xField');
+                    AppState.currentIntent = intent;
+                    await showChartConfirmation(intent);
+                    return;
+                } else {
+                    // 柱状图/折线图：X轴是分类维度
+                    availableCols = AppState.columns.filter(c => c.type === 'string');
+                    if (availableCols.length === 0) {
+                        addMsg('assistant', `<p style="color:var(--warning);">柱状图和折线图需要至少1个文本类型列作为分类维度。</p>`);
+                        AppState.currentIntent = null;
+                        AppState.isProcessing = false;
+                        scrollChat();
+                        return;
+                    }
+                    optionsHtml = `
+                        <div class="confirm-options">
+                            <div class="confirm-title">请选择 ${chartConfig.xAxisLabel || 'X轴'}：</div>
+                            <div class="confirm-buttons">
+                                ${availableCols.map(c => `<button class="confirm-btn" data-field="xField" data-value="${c.name}">${c.name}</button>`).join('')}
+                            </div>
+                        </div>
+                        <p style="margin-top:0.5rem;font-size:0.8125rem;color:var(--gray-500);">
+                            ${chartTypeLabel}：${chartConfig.xAxisLabel || 'X轴'}用于分组统计
+                        </p>
+                    `;
+                }
+            } else if (intent.missingFields.includes('yField')) {
+                // Y轴 - 柱状图/折线图/散点图都需要
+                if (intent.chartType === 'pie' || intent.chartType === 'doughnut') {
+                    // 饼图/环形图：只需要数值列
+                    const valCols = AppState.columns.filter(c => c.type === 'number');
+                    if (valCols.length === 0) {
+                        addMsg('assistant', `<p style="color:var(--warning);">饼图需要至少1个数值列。</p>`);
+                        AppState.currentIntent = null;
+                        AppState.isProcessing = false;
+                        scrollChat();
+                        return;
+                    }
+                    optionsHtml = `
+                        <div class="confirm-options">
+                            <div class="confirm-title">请选择数值列（用于计算占比）：</div>
+                            <div class="confirm-buttons">
+                                ${valCols.map(c => `<button class="confirm-btn" data-field="yField" data-value="${c.name}">${c.name}</button>`).join('')}
+                            </div>
+                        </div>
+                        <p style="margin-top:0.5rem;font-size:0.8125rem;color:var(--gray-500);">
+                            将绘制${chartTypeLabel}，按类别统计所选数值的总和
+                        </p>
+                    `;
+                } else if (intent.chartType === 'scatter') {
+                    // 散点图：Y轴也必须是数值，且不能和X轴相同
+                    const existingX = intent.xField;
+                    const valCols = AppState.columns.filter(c => c.type === 'number' && c.name !== existingX);
+                    if (valCols.length === 0) {
+                        addMsg('assistant', `<p style="color:var(--warning);">散点图需要至少2个不同的数值类型列。已选择"${existingX}"作为X轴，但没有其他可用数值列。</p>`);
+                        AppState.currentIntent = null;
+                        AppState.isProcessing = false;
+                        scrollChat();
+                        return;
+                    }
+                    optionsHtml = `
+                        <div class="confirm-options">
+                            <div class="confirm-title">散点图配置 - 请选择 Y轴（必须是数值类型，且不能是X轴）：</div>
+                            <div class="confirm-buttons">
+                                ${valCols.map(c => `<button class="confirm-btn" data-field="yField" data-value="${c.name}">${c.name}</button>`).join('')}
+                            </div>
+                        </div>
+                        <p style="margin-top:0.5rem;font-size:0.8125rem;color:var(--warning);">
+                            已选择X轴="${existingX || '未选择'}"，请选择Y轴（必须是数值列，用于分析两者的关系）
+                        </p>
+                    `;
+                } else {
+                    // 柱状图/折线图：Y轴是数值列
+                    const valCols = AppState.columns.filter(c => c.type === 'number');
+                    if (valCols.length === 0) {
+                        addMsg('assistant', `<p style="color:var(--warning);">柱状图需要至少1个数值列。</p>`);
+                        AppState.currentIntent = null;
+                        AppState.isProcessing = false;
+                        scrollChat();
+                        return;
+                    }
+                    optionsHtml = `
+                        <div class="confirm-options">
+                            <div class="confirm-title">请选择 ${chartConfig.yAxisLabel || 'Y轴数值'}：</div>
+                            <div class="confirm-buttons">
+                                ${valCols.map(c => `<button class="confirm-btn" data-field="yField" data-value="${c.name}">${c.name}</button>`).join('')}
+                            </div>
+                        </div>
+                        <p style="margin-top:0.5rem;font-size:0.8125rem;color:var(--gray-500);">
+                            ${chartTypeLabel}：${chartConfig.yAxisLabel || 'Y轴数值'}用于展示统计数值
+                        </p>
+                    `;
+                }
+            }
+            
+            const intentHtml = `<div class="intent-display"><div class="intent-label">识别的意图</div><div class="intent-tags"><span class="intent-tag">chart</span><span class="intent-tag" style="background:var(--warning);">待确认</span></div></div>`;
+            addMsg('assistant', intentHtml + optionsHtml);
+            AppState.isProcessing = false;
+            scrollChat();
+        }
         
-        // 每5秒自动更新性能指标
-        // 注释掉自动更新，避免频繁的404错误
-        // setInterval(updatePerformanceMetrics, 5000);
+        // 获取可用区域列表
+        function getAvailableRegions(rField) {
+            if (!rField || !AppState.data?.length) return [];
+            const regions = new Set();
+            AppState.data.forEach(row => {
+                const val = row[rField];
+                if (val) regions.add(val);
+            });
+            return Array.from(regions).slice(0, 12);
+        }
         
-        console.log('[V6.0] 智能数据分析助手 V6.0 已加载');
-        console.log('[V6.0] 新功能: Agent工作流可视化、性能监控');
+        // 处理意图确认（追问回复）
+        async function handleIntentConfirmation(selectedValue) {
+            const intent = AppState.currentIntent;
+            if (!intent) return;
+            
+            // 获取当前追问的字段
+            const currentField = intent.missingFields[0];
+            if (!currentField) return;
+            
+            // 更新意图中的字段
+            if (currentField === 'xField') {
+                intent.xField = selectedValue;
+                intent.missingFields = intent.missingFields.filter(f => f !== 'xField');
+                Logger.info(`已选择X轴字段: ${selectedValue}`);
+            } else if (currentField === 'yField') {
+                intent.yField = selectedValue;
+                intent.missingFields = intent.missingFields.filter(f => f !== 'yField');
+                Logger.info(`已选择Y轴字段: ${selectedValue}`);
+            }
+            
+            // 显示用户的选择
+            addMsg('user', selectedValue);
+            $('queryInput').value = '';
+            
+            // 如果还有缺失字段，继续追问
+            if (intent.missingFields.length > 0) {
+                AppState.currentIntent = intent;
+                await showChartConfirmation(intent);
+                return;
+            }
+            
+            // 所有字段都已确认，执行图表绘制
+            AppState.currentIntent = null;
+            AppState.isProcessing = true;
+            
+            try {
+                const content = await handleChart(intent, intent.regions);
+                addMsg('assistant', content);
+                Logger.success('图表生成完成');
+            } catch (err) {
+                Logger.error(`处理失败: ${err.message}`);
+                addMsg('assistant', `<p style="color:var(--danger);">处理失败: ${err.message}</p>`);
+            } finally {
+                AppState.isProcessing = false;
+                $('sendBtn').disabled = !AppState.currentFile;
+                scrollChat();
+            }
+        }
+
+        async function handleAgg(intent, regs, vField) {
+            const regions = intent.regions || regs;
+            Logger.info(`handleAgg: vField=${vField}, rField=${intent.rField}, regions=${JSON.stringify(regions)}`);
+            
+            // 核心修复：当用户指定了区域（如"华东的销售额是多少"）但rField为空时，
+            // 自动查找包含该区域值的列进行过滤
+            let filterField = intent.rField;
+            let filteredData = AppState.data;
+            
+            if (regions?.length && !filterField) {
+                // 用户指定了区域但没有明确分组维度，需要过滤数据
+                const targetRegion = regions[0];
+                // 查找包含该区域值的列
+                for (const col of AppState.columns) {
+                    if (col.type === 'string') {
+                        const sampleVal = AppState.data.find(r => r[col.name] && r[col.name].includes(targetRegion));
+                        if (sampleVal) {
+                            filterField = col.name;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            // 执行过滤
+            if (regions?.length && filterField) {
+                const reg = regions[0];
+                filteredData = AppState.data.filter(r => {
+                    const v = r[filterField] || '';
+                    return v === reg || v.includes(reg);
+                });
+                Logger.info(`按${filterField}=${reg}过滤，剩余${filteredData.length}条记录`);
+            }
+            
+            if (filteredData.length === 0) {
+                return `<p>未找到符合条件的数据。</p>`;
+            }
+            
+            // 计算汇总
+            const sum = filteredData.reduce((a, r) => a + (parseFloat(r[vField]) || 0), 0);
+            const avg = sum / filteredData.length;
+            
+            // 根据是否有分组维度决定输出格式
+            if (regions?.length && filterField && !intent.rField) {
+                // 用户查询"华东的销售额是多少"，只显示汇总结果
+                let html = `<p><strong>${regions[0]}地区</strong>的${vField}分析结果：</p>`;
+                html += `<p style="font-size:1.5rem;font-weight:700;color:var(--primary);margin:1rem 0;">${sum.toLocaleString()}</p>`;
+                html += `<p>共 <strong>${filteredData.length}</strong> 条记录，平均 <strong>${avg.toLocaleString()}</strong></p>`;
+                html += `<p style="margin-top:0.5rem;font-size:0.8125rem;color:var(--gray-500);">以下是符合条件的数据明细：</p>`;
+                html += renderTable(filteredData.slice(0, 10));
+                Logger.info(`${regions[0]}地区${vField}: ${sum}`);
+                return html;
+            } else if (intent.rField) {
+                // 用户查询"各地区的销售额对比"，显示分组结果
+                const stats = {};
+                filteredData.forEach(r => {
+                    const key = r[intent.rField] || '未知';
+                    if (!stats[key]) stats[key] = { cnt: 0, total: 0 };
+                    stats[key].cnt++;
+                    stats[key].total += parseFloat(r[vField]) || 0;
+                });
+                const sorted = Object.entries(stats).sort((a, b) => b[1].total - a[1].total);
+                let html = `<p><strong>各${intent.rField}${vField}汇总</strong></p>`;
+                html += `<div class="data-overview" style="margin-top:1rem;"><div class="stat-card"><div class="stat-value">${sum.toLocaleString()}</div><div class="stat-label">总额</div></div><div class="stat-card"><div class="stat-value">${avg.toFixed(2)}</div><div class="stat-label">平均值</div></div></div>`;
+                html += renderTable(sorted.map(([k, s]) => ({ [intent.rField]: k, '总额': s.total.toLocaleString(), '平均值': (s.total / s.cnt).toFixed(2), '记录数': s.cnt })));
+                return html;
+            } else {
+                // 全局统计
+                return `<p><strong>全局${vField}统计</strong></p><div class="data-overview" style="margin-top:1rem;"><div class="stat-card"><div class="stat-value">${sum.toLocaleString()}</div><div class="stat-label">总额</div></div><div class="stat-card"><div class="stat-value">${avg.toFixed(2)}</div><div class="stat-label">平均值</div></div></div>`;
+            }
+        }
+
+        async function handleComp(intent, vField) {
+            if (!intent.rField) return '<p>无区域字段可比较。</p>';
+            const stats = {};
+            AppState.data.forEach(r => { const reg = r[intent.rField] || '未知'; if (!stats[reg]) stats[reg] = { cnt: 0, tot: 0 }; stats[reg].cnt++; stats[reg].tot += parseFloat(r[vField]) || 0; });
+            const sorted = Object.entries(stats).sort((a, b) => b[1].tot - a[1].tot).slice(0, 10);
+            return `<p><strong>各区域${vField}对比</strong></p>` + renderTable(sorted.map(([r, s]) => ({ [intent.rField]: r, '总额': s.tot.toLocaleString(), '平均': (s.tot / s.cnt).toFixed(2), '记录数': s.cnt })));
+        }
+
+        async function handleTrend(intent, vField) { return `<p><strong>${vField}趋势</strong></p>` + renderTable(AppState.data.slice(0, 10)); }
+        async function handleRank(intent, vField) {
+            let rankF = AppState.columns.find(c => c.type === 'string' && !['地区', '区域', '城市'].some(k => c.name.includes(k)))?.name || '序号';
+            if (!rankF) rankF = AppState.columns.find(c => c.type === 'string')?.name || '序号';
+            const sorted = [...AppState.data].sort((a, b) => (parseFloat(b[vField]) || 0) - (parseFloat(a[vField]) || 0)).slice(0, intent.limit || 10);
+            return `<p><strong>${vField}排名</strong></p>` + renderTable(sorted.map((r, i) => ({ '排名': i + 1, [rankF]: r[rankF], [vField]: parseFloat(r[vField]).toLocaleString() })));
+        }
+        
+        async function handleChart(intent, detRegs) {
+            const { chartType, xField, yField, regions } = intent;
+            const selectedRegion = detRegs?.[0] || (regions?.[0] && regions[0] !== 'all' ? regions[0] : null);
+            Logger.info(`handleChart: type=${chartType}, x=${xField}, y=${yField}, region=${selectedRegion || 'all'}`);
+            
+            // 过滤数据（如果有指定区域）
+            let filteredData = AppState.data;
+            if (selectedRegion && intent.rField) {
+                filteredData = AppState.data.filter(r => {
+                    const v = r[intent.rField] || '';
+                    return v === selectedRegion || v.includes(selectedRegion);
+                });
+            }
+            
+            // 准备图表数据 - 按xField分组统计yField的总和
+            let chartData;
+            if (xField && yField) {
+                const stats = {};
+                filteredData.forEach(r => {
+                    const label = r[xField] || '未知';
+                    if (!stats[label]) stats[label] = 0;
+                    stats[label] += parseFloat(r[yField]) || 0;
+                });
+                chartData = Object.entries(stats)
+                    .map(([label, value]) => ({ label, value }))
+                    .sort((a, b) => b.value - a.value) // 按值降序排列
+                    .slice(0, 15); // 最多显示15个
+            } else if (yField) {
+                // 没有xField时，使用前N条数据
+                chartData = filteredData.slice(0, 10).map((r, i) => ({
+                    label: r[Object.keys(r).find(k => k !== yField)] || `项${i + 1}`,
+                    value: parseFloat(r[yField]) || 0
+                }));
+            } else {
+                return '<p>无法生成图表：缺少数值字段。</p>';
+            }
+            
+            if (chartData.length === 0) {
+                return '<p>没有可展示的数据。</p>';
+            }
+            
+            // 生成图表配置
+            const chartId = 'chart_' + Date.now();
+            const colors = ['#4F46E5', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'];
+            const chartTypeLabel = 
+                    chartType === 'pie' ? '饼图' : 
+                    chartType === 'line' ? '折线图' : 
+                    chartType === 'scatter' ? '散点图' : 
+                    chartType === 'doughnut' ? '环形图' : 
+                    chartType === 'area' ? '面积图' : '柱状图';
+            const exportSuffix = xField ? `_${xField}` : '';
+            
+            let chartConfig;
+            if (chartType === 'pie') {
+                chartConfig = {
+                    type: 'pie',
+                    data: {
+                        labels: chartData.map(d => d.label),
+                        datasets: [{
+                            data: chartData.map(d => d.value),
+                            backgroundColor: colors.slice(0, chartData.length),
+                        }]
+                    }
+                };
+            } else if (chartType === 'doughnut') {
+                chartConfig = {
+                    type: 'doughnut',
+                    data: {
+                        labels: chartData.map(d => d.label),
+                        datasets: [{
+                            data: chartData.map(d => d.value),
+                            backgroundColor: colors.slice(0, chartData.length),
+                        }]
+                    }
+                };
+            } else if (chartType === 'line') {
+                chartConfig = {
+                    type: 'line',
+                    data: {
+                        labels: chartData.map(d => d.label),
+                        datasets: [{
+                            label: yField,
+                            data: chartData.map(d => d.value),
+                            borderColor: '#4F46E5',
+                            backgroundColor: 'rgba(79,70,229,0.1)',
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    }
+                };
+            } else if (chartType === 'scatter') {
+                // 散点图：直接使用原始数据点，xField和yField都是数值列
+                const scatterData = filteredData.map(r => ({
+                    x: parseFloat(r[xField]) || 0,
+                    y: parseFloat(r[yField]) || 0
+                })).filter(d => !isNaN(d.x) && !isNaN(d.y));
+                
+                chartConfig = {
+                    type: 'scatter',
+                    data: {
+                        datasets: [{
+                            label: `${xField} vs ${yField}`,
+                            data: scatterData,
+                            backgroundColor: 'rgba(79,70,229,0.6)',
+                            pointRadius: 6,
+                            pointHoverRadius: 8,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            x: { title: { display: true, text: xField }, type: 'linear', position: 'bottom' },
+                            y: { title: { display: true, text: yField }, beginAtZero: true }
+                        }
+                    }
+                };
+            } else if (chartType === 'area') {
+                chartConfig = {
+                    type: 'line',
+                    data: {
+                        labels: chartData.map(d => d.label),
+                        datasets: [{
+                            label: yField,
+                            data: chartData.map(d => d.value),
+                            borderColor: '#4F46E5',
+                            backgroundColor: 'rgba(79,70,229,0.3)',
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: { legend: { display: true } },
+                        scales: {
+                            x: { title: { display: true, text: xField || '类别' } },
+                            y: { beginAtZero: true }
+                        }
+                    }
+                };
+            } else {
+                // 默认柱状图
+                chartConfig = {
+                    type: 'bar',
+                    data: {
+                        labels: chartData.map(d => d.label),
+                        datasets: [{
+                            label: yField,
+                            data: chartData.map(d => d.value),
+                            backgroundColor: colors.slice(0, chartData.length),
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: { legend: { display: true, position: 'top' } },
+                        scales: {
+                            x: { title: { display: true, text: xField || '类别' } },
+                            y: { beginAtZero: true }
+                        }
+                    }
+                };
+            }
+            
+            // 为非散点图设置通用options
+            if (chartType !== 'scatter') {
+                chartConfig.options = {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { display: chartType === 'pie' || chartType === 'line', position: 'top' },
+                        title: { display: true, text: `${selectedRegion ? selectedRegion + ' - ' : ''}${yField} ${chartTypeLabel}` }
+                    },
+                    scales: chartType === 'pie' ? {} : {
+                        y: { beginAtZero: true }
+                    }
+                };
+            }
+            
+            // 将图表配置存储到全局变量，页面加载后渲染
+            if (!window.chartConfigs) window.chartConfigs = {};
+            window.chartConfigs[chartId] = chartConfig;
+            // 同时存储到AppState以确保访问
+            if (!AppState.chartConfigs) AppState.chartConfigs = {};
+            AppState.chartConfigs[chartId] = chartConfig;
+            
+            // 生成导出函数名
+            const exportFuncName = 'exportChart_' + Date.now();
+            
+            // 生成图表标题
+            const chartTitle = `${selectedRegion ? selectedRegion + ' - ' : ''}${yField} ${chartTypeLabel}`;
+            
+            return `
+                <div class="chart-container">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+                        <p><strong>${chartTitle}</strong></p>
+                        <button class="chart-export-btn" onclick="openChartZoom('${chartId}', '${chartTitle}')" title="点击放大查看完整图表">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg>
+                            放大查看
+                        </button>
+                    </div>
+                    <div style="margin: 0.5rem 0; position: relative; height: 350px; background: var(--gray-50); border-radius: 0.5rem; padding: 1rem;" data-chart-id="${chartId}">
+                        <canvas id="${chartId}" data-chart-id="${chartId}"></canvas>
+                    </div>
+                    <div style="margin-top:0.75rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
+                        <button class="chart-export-btn" onclick="exportChartHighQuality('${chartId}', '${yField}${exportSuffix}')" title="高清导出（推荐）">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                            导出图片
+                        </button>
+                        <button class="chart-export-btn" onclick="exportChartAsCSV('${chartId}', '${yField}${exportSuffix}')">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                            导出CSV
+                        </button>
+                    </div>
+                    <p style="margin-top:0.5rem;font-size:0.75rem;color:var(--gray-400);">点击"放大查看"可查看完整图表</p>
+                </div>
+            `;
+        }
+        
+        // 导出图表为PNG - 使用2倍分辨率
+        function exportChartAsPNG(chartId, filename) {
+            const chartConfigs = AppState.chartConfigs || window.chartConfigs || {};
+            const chartConfig = chartConfigs[chartId];
+            if (!chartConfig) {
+                showToast('图表配置不存在', 'error');
+                return;
+            }
+            
+            showToast('正在导出PNG...', 'info');
+            
+            const scale = 2; // 2倍分辨率
+            const hdCanvas = document.createElement('canvas');
+            const width = 900 * scale;
+            const height = 450 * scale;
+            hdCanvas.width = width;
+            hdCanvas.height = height;
+            
+            const config = JSON.parse(JSON.stringify(chartConfig));
+            config.options = config.options || {};
+            config.options.responsive = false;
+            config.options.maintainAspectRatio = false;
+            config.options.animation = false;
+            
+            const tempChart = new Chart(hdCanvas, config);
+            
+            setTimeout(() => {
+                const link = document.createElement('a');
+                link.download = filename + '_图表.png';
+                link.href = hdCanvas.toDataURL('image/png', 1.0);
+                link.click();
+                
+                tempChart.destroy();
+                showToast('PNG导出成功', 'success');
+            }, 100);
+        }
+        
+        // 导出图表数据为CSV
+        function exportChartAsCSV(chartId, filename) {
+            const canvas = document.getElementById(chartId);
+            if (!canvas) {
+                showToast('图表不存在', 'error');
+                return;
+            }
+            
+            const chartInstance = Chart.getChart(canvas);
+            if (!chartInstance) {
+                showToast('无法获取图表数据', 'error');
+                return;
+            }
+            
+            const labels = chartInstance.data.labels || [];
+            const datasets = chartInstance.data.datasets || [];
+            
+            // 构建CSV内容
+            let csvContent = '\uFEFF'; // BOM for UTF-8
+            csvContent += '标签,' + datasets.map(d => d.label || '数值').join(',') + '\n';
+            
+            labels.forEach((label, i) => {
+                const row = [label];
+                datasets.forEach(dataset => {
+                    row.push(dataset.data[i] ?? '');
+                });
+                csvContent += row.join(',') + '\n';
+            });
+            
+            // 下载CSV
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename + '_数据.csv';
+            link.click();
+            URL.revokeObjectURL(link.href);
+            
+            showToast('CSV导出成功', 'success');
+            Logger.success('图表数据导出为CSV: ' + filename);
+        }
+        
+        async function handleFilter(intent, detRegs, vField) {
+            const regions = intent.regions || detRegs;
+            
+            // 核心修复：当用户指定了筛选条件但rField为空时，自动查找对应的列
+            let filterField = intent.rField;
+            let filteredData = AppState.data;
+            
+            if (regions?.length && !filterField) {
+                // 用户指定了筛选条件但没有明确列，查找包含该值的列
+                const targetVal = regions[0];
+                for (const col of AppState.columns) {
+                    if (col.type === 'string') {
+                        const matchFound = AppState.data.some(r => {
+                            const val = r[col.name] || '';
+                            return val === targetVal || val.includes(targetVal);
+                        });
+                        if (matchFound) {
+                            filterField = col.name;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            if (regions?.length && filterField) {
+                const reg = regions[0];
+                filteredData = AppState.data.filter(r => {
+                    const v = r[filterField] || '';
+                    return v === reg || v.includes(reg);
+                });
+                
+                if (filteredData.length) {
+                    let html = `<div class="filter-result">
+                        <p><strong>筛选结果</strong>：找到 <strong>${filteredData.length}</strong> 条"${reg}"相关记录</p>
+                        <p style="font-size:0.8125rem;color:var(--gray-500);margin-top:0.25rem;">筛选字段：${filterField}</p>
+                        <div style="margin-top:0.75rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
+                            <button class="btn btn-secondary" style="padding:0.375rem 0.75rem;font-size:0.75rem;" onclick="exportFilteredData('${filterField}', '${reg}')">导出筛选结果</button>
+                            <button class="btn btn-secondary" style="padding:0.375rem 0.75rem;font-size:0.75rem;" onclick="viewFilteredDetail('${filterField}', '${reg}')">查看明细</button>
+                        </div>
+                    </div>`;
+                    html += renderTable(filteredData.slice(0, 50));
+                    if (filteredData.length > 50) {
+                        html += `<p style="margin-top:0.5rem;font-size:0.8125rem;color:var(--gray-500);">显示前50条，共${filteredData.length}条记录</p>`;
+                    }
+                    Logger.info(`筛选结果: ${filterField}=${reg}, ${filteredData.length}条`);
+                    return html;
+                }
+                return `<p>未找到 "${reg}" 相关数据。</p>`;
+            }
+            return `<p>请指定筛选条件，如"筛选华东地区"</p>`;
+        }
+        
+        // 导出筛选结果
+        function exportFilteredData(field, value) {
+            const filtered = AppState.data.filter(r => {
+                const v = r[field] || '';
+                return v === value || v.includes(value);
+            });
+            
+            if (!filtered.length) {
+                showToast('无数据可导出', 'warning');
+                return;
+            }
+            
+            const cols = Object.keys(filtered[0]);
+            let csvContent = '\uFEFF';
+            csvContent += cols.join(',') + '\n';
+            
+            filtered.forEach(row => {
+                const values = cols.map(c => {
+                    const val = String(row[c] || '');
+                    if (val.includes(',') || val.includes('"') || val.includes('\n')) {
+                        return '"' + val.replace(/"/g, '""') + '"';
+                    }
+                    return val;
+                });
+                csvContent += values.join(',') + '\n';
+            });
+            
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `${value}_筛选数据_${new Date().toISOString().slice(0, 10)}.csv`;
+            link.click();
+            URL.revokeObjectURL(link.href);
+            showToast(`已导出${filtered.length}条记录`, 'success');
+            Logger.success(`导出筛选结果: ${field}=${value}`);
+        }
+        
+        // 查看筛选明细（弹窗显示）
+        function viewFilteredDetail(field, value) {
+            const filtered = AppState.data.filter(r => {
+                const v = r[field] || '';
+                return v === value || v.includes(value);
+            });
+            
+            const html = `
+                <div style="max-height:60vh;overflow:auto;">
+                    <p style="margin-bottom:1rem;"><strong>${value}</strong> 明细数据 - 共 ${filtered.length} 条</p>
+                    ${renderFullTable(filtered)}
+                </div>
+            `;
+            
+            // 创建弹窗显示
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay active';
+            modal.innerHTML = `
+                <div class="modal" style="max-width:900px;">
+                    <div class="modal-header">
+                        <h3 class="card-title">${value} 明细</h3>
+                        <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                        </button>
+                    </div>
+                    <div class="modal-body">${html}</div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+        
+        async function handleGen(intent, vField) { return `<p><strong>数据分析结果</strong></p>` + renderTable(AppState.data.slice(0, 10)); }
+        
+        // 显示全部数据（带分页和筛选功能）
+        async function handleShowAll(intent) {
+            const data = AppState.data;
+            const totalRows = data.length;
+            
+            let html = `<div class="data-table-controls" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+                <p><strong>数据表格</strong> - 共 <strong>${totalRows}</strong> 条记录</p>
+                <div style="display:flex;gap:0.5rem;align-items:center;">
+                    <input type="text" id="tableSearchInput" placeholder="搜索..." style="padding:0.375rem 0.5rem;border:1px solid var(--gray-200);border-radius:0.375rem;font-size:0.8125rem;" onkeyup="filterTable(this.value)">
+                    <select id="columnFilter" style="padding:0.375rem 0.5rem;border:1px solid var(--gray-200);border-radius:0.375rem;font-size:0.8125rem;" onchange="filterByColumn(this.value)">
+                        <option value="">全部列筛选</option>
+                        ${AppState.columns.map(c => `<option value="${c.name}">${c.name}</option>`).join('')}
+                    </select>
+                    <button class="btn btn-secondary" style="padding:0.375rem 0.75rem;font-size:0.75rem;" onclick="exportOriginalData()">导出数据</button>
+                </div>
+            </div>`;
+            
+            html += `<div class="data-table-container" id="dataTableContainer" style="max-height:400px;overflow:auto;">
+                ${renderFullTable(data)}
+            </div>`;
+            
+            return html;
+        }
+        
+        // 渲染完整表格（带表头固定）
+        function renderFullTable(data) {
+            if (!data?.length) return '<p>无数据</p>';
+            const cols = Object.keys(data[0]);
+            
+            let html = `<table class="data-table" id="originalDataTable">
+                <thead style="position:sticky;top:0;background:var(--gray-100);z-index:1;">
+                    <tr>`;
+            cols.forEach(c => html += `<th style="cursor:pointer;" onclick="sortTable('${c}')">${c} ↕</th>`);
+            html += `</tr></thead><tbody>`;
+            data.forEach((row, idx) => {
+                html += `<tr class="table-row" data-index="${idx}">`;
+                cols.forEach(c => html += `<td>${row[c] || '-'}</td>`);
+                html += `</tr>`;
+            });
+            return html + '</tbody></table>';
+        }
+        
+        // 表格搜索功能
+        function filterTable(keyword) {
+            if (!keyword) {
+                document.querySelectorAll('.table-row').forEach(row => row.style.display = '');
+                return;
+            }
+            const kw = keyword.toLowerCase();
+            document.querySelectorAll('.table-row').forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(kw) ? '' : 'none';
+            });
+        }
+        
+        // 按列筛选功能
+        function filterByColumn(colName) {
+            if (!colName) {
+                document.querySelectorAll('.table-row').forEach(row => row.style.display = '');
+                return;
+            }
+            // 弹出列值选择框
+            const colValues = [...new Set(AppState.data.map(r => r[colName]))].sort();
+            const selected = prompt(`筛选 "${colName}" 列的值：\n可选值：\n${colValues.slice(0, 20).join('\n')}${colValues.length > 20 ? '\n...' : ''}\n\n输入要筛选的值：`);
+            if (selected) {
+                document.querySelectorAll('.table-row').forEach(row => {
+                    const cells = row.querySelectorAll('td');
+                    const colIndex = AppState.columns.findIndex(c => c.name === colName);
+                    if (colIndex >= 0 && cells[colIndex]) {
+                        const cellValue = cells[colIndex].textContent;
+                        row.style.display = cellValue.includes(selected) ? '' : 'none';
+                    }
+                });
+            }
+        }
+        
+        // 表格排序功能
+        let sortStates = {};
+        function sortTable(colName) {
+            sortStates[colName] = sortStates[colName] || 'asc';
+            sortStates[colName] = sortStates[colName] === 'asc' ? 'desc' : 'asc';
+            
+            const data = AppState.data;
+            const colType = AppState.columns.find(c => c.name === colName)?.type || 'string';
+            
+            const sorted = [...data].sort((a, b) => {
+                const valA = a[colName] || '';
+                const valB = b[colName] || '';
+                
+                if (colType === 'number') {
+                    return sortStates[colName] === 'asc' ? parseFloat(valA) - parseFloat(valB) : parseFloat(valB) - parseFloat(valA);
+                } else {
+                    return sortStates[colName] === 'asc' ? valA.localeCompare(valB, 'zh-CN') : valB.localeCompare(valA, 'zh-CN');
+                }
+            });
+            
+            const tbody = document.querySelector('#originalDataTable tbody');
+            if (tbody) {
+                tbody.innerHTML = sorted.map((row, idx) => {
+                    const cols = Object.keys(row);
+                    return `<tr class="table-row" data-index="${idx}">${cols.map(c => `<td>${row[c] || '-'}</td>`).join('')}</tr>`;
+                }).join('');
+            }
+        }
+        
+        // 导出原始数据
+        function exportOriginalData() {
+            if (!AppState.data?.length) {
+                showToast('无数据可导出', 'warning');
+                return;
+            }
+            
+            const cols = Object.keys(AppState.data[0]);
+            let csvContent = '\uFEFF'; // BOM for UTF-8
+            csvContent += cols.join(',') + '\n';
+            
+            AppState.data.forEach(row => {
+                const values = cols.map(c => {
+                    const val = String(row[c] || '');
+                    // 如果值包含逗号、引号或换行，用引号包裹
+                    if (val.includes(',') || val.includes('"') || val.includes('\n')) {
+                        return '"' + val.replace(/"/g, '""') + '"';
+                    }
+                    return val;
+                });
+                csvContent += values.join(',') + '\n';
+            });
+            
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = (AppState.currentFile?.name || 'data') + '_导出_' + new Date().toISOString().slice(0, 10) + '.csv';
+            link.click();
+            URL.revokeObjectURL(link.href);
+            showToast('数据导出成功', 'success');
+            Logger.success('原始数据导出');
+        }
+        
+        // 多条件筛选功能
+        function applyMultiConditionFilter() {
+            const conditions = [];
+            const conditionContainer = document.getElementById('filterConditions');
+            if (conditionContainer) {
+                conditionContainer.querySelectorAll('.filter-condition').forEach(cond => {
+                    const col = cond.querySelector('.filter-col').value;
+                    const op = cond.querySelector('.filter-op').value;
+                    const val = cond.querySelector('.filter-val').value;
+                    if (col && val) {
+                        conditions.push({ col, op, val });
+                    }
+                });
+            }
+            
+            if (conditions.length === 0) {
+                document.querySelectorAll('.table-row').forEach(row => row.style.display = '');
+                return;
+            }
+            
+            document.querySelectorAll('.table-row').forEach(row => {
+                const cells = row.querySelectorAll('td');
+                const colIndex = {};
+                AppState.columns.forEach((c, i) => colIndex[c.name] = i);
+                
+                const match = conditions.every(cond => {
+                    const cellIndex = colIndex[cond.col];
+                    if (cellIndex === undefined) return false;
+                    const cellValue = (cells[cellIndex]?.textContent || '').toLowerCase();
+                    const filterVal = cond.val.toLowerCase();
+                    
+                    switch (cond.op) {
+                        case 'eq': return cellValue === filterVal;
+                        case 'ne': return cellValue !== filterVal;
+                        case 'contains': return cellValue.includes(filterVal);
+                        case 'gt': return parseFloat(cellValue) > parseFloat(filterVal);
+                        case 'lt': return parseFloat(cellValue) < parseFloat(filterVal);
+                        case 'gte': return parseFloat(cellValue) >= parseFloat(filterVal);
+                        case 'lte': return parseFloat(cellValue) <= parseFloat(filterVal);
+                        default: return cellValue.includes(filterVal);
+                    }
+                });
+                
+                row.style.display = match ? '' : 'none';
+            });
+        }
+        
+        function addFilterCondition() {
+            const container = document.getElementById('filterConditions');
+            if (!container) return;
+            
+            const condDiv = document.createElement('div');
+            condDiv.className = 'filter-condition';
+            condDiv.style.cssText = 'display:flex;gap:0.5rem;margin-bottom:0.5rem;';
+            
+            condDiv.innerHTML = `
+                <select class="filter-col" style="padding:0.375rem;border:1px solid var(--gray-200);border-radius:0.375rem;font-size:0.8125rem;">
+                    <option value="">选择列</option>
+                    ${AppState.columns.map(c => `<option value="${c.name}">${c.name}</option>`).join('')}
+                </select>
+                <select class="filter-op" style="padding:0.375rem;border:1px solid var(--gray-200);border-radius:0.375rem;font-size:0.8125rem;">
+                    <option value="contains">包含</option>
+                    <option value="eq">等于</option>
+                    <option value="ne">不等于</option>
+                    <option value="gt">大于</option>
+                    <option value="lt">小于</option>
+                    <option value="gte">大于等于</option>
+                    <option value="lte">小于等于</option>
+                </select>
+                <input type="text" class="filter-val" placeholder="值" style="flex:1;padding:0.375rem;border:1px solid var(--gray-200);border-radius:0.375rem;font-size:0.8125rem;">
+                <button onclick="this.parentElement.remove()" style="padding:0.25rem 0.5rem;background:var(--danger);color:white;border:none;border-radius:0.25rem;cursor:pointer;">×</button>
+            `;
+            
+            container.appendChild(condDiv);
+        }
+
+        function renderTable(data) {
+            if (!data?.length) return '<p>无数据</p>';
+            const cols = Object.keys(data[0]);
+            let html = '<div class="data-table-container"><table class="data-table"><thead><tr>';
+            cols.forEach(c => html += `<th>${c}</th>`); html += '</tr></thead><tbody>';
+            data.forEach(row => { html += '<tr>'; cols.forEach(c => html += `<td>${row[c] || '-'}</td>`); html += '</tr>'; });
+            return html + '</tbody></table></div>';
+        }
+
+        function addMsg(role, content) {
+            const div = document.createElement('div');
+            div.className = `message ${role}`;
+            div.innerHTML = `<div class="message-avatar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><div class="message-content">${content}</div>`;
+            $('chatMessages').appendChild(div);
+        }
+
+        function addToHistory(q) { AppState.history.unshift({ query: q, time: new Date().toLocaleTimeString() }); if (AppState.history.length > 20) AppState.history.pop(); renderHistory(); }
+        function renderHistory() {
+            if (!AppState.history.length) { $('historyList').innerHTML = '<div class="empty-state" style="padding:0.75rem;"><p>暂无历史</p></div>'; return; }
+            $('historyList').innerHTML = AppState.history.map(h => `<div class="history-item" onclick="loadHistory('${h.query.replace(/'/g, "\\'")}')"><div class="history-item-query">${h.query}</div><div class="history-item-time">${h.time}</div></div>`).join('');
+        }
+        function loadHistory(q) { $('queryInput').value = q; $('queryInput').focus(); }
+        function scrollChat() { $('chatMessages').scrollTop = $('chatMessages').scrollHeight; }
+
+        function setupEvents() {
+            $('sendBtn').addEventListener('click', () => { const q = $('queryInput').value.trim(); if (q) processQuery(q); });
+            $('queryInput').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); const q = $('queryInput').value.trim(); if (q) processQuery(q); } });
+            $('queryInput').addEventListener('input', function() { this.style.height = 'auto'; this.style.height = Math.min(this.scrollHeight, 150) + 'px'; });
+            
+            // 追问选项点击处理
+            document.addEventListener('click', (e) => {
+                const btn = e.target.closest('.confirm-btn');
+                if (btn && AppState.currentIntent) {
+                    // 移除其他选中状态
+                    document.querySelectorAll('.confirm-btn.selected').forEach(b => b.classList.remove('selected'));
+                    // 设置当前选中
+                    btn.classList.add('selected');
+                    
+                    // 直接调用追问确认处理
+                    handleIntentConfirmation(btn.dataset.value);
+                }
+            });
+            
+            // 日志弹窗
+            $('logBtn').addEventListener('click', () => { $('logModal').classList.add('active'); Logger.info('打开日志'); });
+            $('closeLogModal').addEventListener('click', () => $('logModal').classList.remove('active'));
+            $('logModal').addEventListener('click', e => { if (e.target === $('logModal')) $('logModal').classList.remove('active'); });
+            $('copyLogBtn').addEventListener('click', () => {
+                const logs = Logger.logs.map(l => `[${l.time}]${l.level}: ${l.msg}`).join('\n');
+                navigator.clipboard.writeText(logs).then(() => showToast('日志已复制', 'success')).catch(() => showToast('复制失败', 'error'));
+            });
+            $('clearLogBtn').addEventListener('click', () => Logger.clear());
+            
+            // 设置弹窗
+            $('settingsBtn').addEventListener('click', () => { $('settingsModal').classList.add('active'); });
+            $('closeSettingsModal').addEventListener('click', () => $('settingsModal').classList.remove('active'));
+            $('settingsModal').addEventListener('click', e => { if (e.target === $('settingsModal')) $('settingsModal').classList.remove('active'); });
+            
+            // 清空会话
+            $('clearBtn').addEventListener('click', () => { $('chatMessages').innerHTML = ''; $('chatMessages').appendChild($('emptyState')); $('emptyState').style.display = 'flex'; AppState.history = []; renderHistory(); Logger.info('会话已清空'); showToast('会话已清空'); });
+            
+            // 快捷提示
+            document.querySelectorAll('.quick-tip').forEach(btn => { btn.addEventListener('click', () => { if (AppState.currentFile) processQuery(btn.dataset.query); else showToast('请先上传数据', 'error'); }); });
+        }
+
+        // 渲染待处理的图表
+        function renderPendingCharts() {
+            const configs = window.chartConfigs || {};
+            Object.keys(configs).forEach(chartId => {
+                const canvas = document.getElementById(chartId);
+                if (canvas && window.Chart) {
+                    try {
+                        new Chart(canvas, configs[chartId]);
+                        delete configs[chartId];
+                    } catch (e) {
+                        console.error('Chart render error:', e);
+                    }
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            Logger.info('智能数据分析助手初始化...');
+            setupFileUpload();
+            setupEvents();
+            setupLLMSettings();
+            // 延迟渲染图表，等待Chart.js加载
+            setTimeout(renderPendingCharts, 500);
+            // 启动MutationObserver监听图表容器
+            const chatContainer = $('chatMessages');
+            if (chatContainer) {
+                chartObserver.observe(chatContainer, { childList: true, subtree: true });
+            }
+            Logger.success('系统就绪');
+        });
+        
+        // 大模型设置
+        // 硅基流动API配置
+        const SILICONFLOW_API = {
+            endpoint: 'https://api.siliconflow.cn/v1',
+            defaultModel: 'deepseek-ai/DeepSeek-V3'
+        };
+        
+        const LLMState = {
+            provider: localStorage.getItem('llm_provider') || 'siliconflow',
+            apiKey: localStorage.getItem('llm_apikey') || 'sk-liemzhunrqbbxxuusedmvzbganqylupyfvcntgrtxvljwibf',
+            endpoint: localStorage.getItem('llm_endpoint') || SILICONFLOW_API.endpoint,
+            model: localStorage.getItem('llm_model') || SILICONFLOW_API.defaultModel,
+            connected: false
+        };
+        
+        function setupLLMSettings() {
+            // 加载保存的配置
+            $('llmProvider').value = LLMState.provider;
+            $('llmApiKey').value = LLMState.apiKey;
+            $('llmEndpoint').value = LLMState.endpoint;
+            $('llmModel').value = LLMState.model;
+            
+            // 保存配置
+            $('llmProvider').addEventListener('change', () => {
+                LLMState.provider = $('llmProvider').value;
+                localStorage.setItem('llm_provider', LLMState.provider);
+                // 硅基流动使用默认endpoint
+                if (LLMState.provider === 'siliconflow') {
+                    $('llmEndpoint').value = SILICONFLOW_API.endpoint;
+                    $('llmModel').value = SILICONFLOW_API.defaultModel;
+                    LLMState.endpoint = SILICONFLOW_API.endpoint;
+                    LLMState.model = SILICONFLOW_API.defaultModel;
+                }
+                updateLLMStatus();
+            });
+            
+            $('llmApiKey').addEventListener('input', () => {
+                LLMState.apiKey = $('llmApiKey').value;
+                localStorage.setItem('llm_apikey', LLMState.apiKey);
+                updateLLMStatus();
+            });
+            
+            $('llmEndpoint').addEventListener('input', () => {
+                LLMState.endpoint = $('llmEndpoint').value;
+                localStorage.setItem('llm_endpoint', LLMState.endpoint);
+            });
+            
+            $('llmModel').addEventListener('input', () => {
+                LLMState.model = $('llmModel').value;
+                localStorage.setItem('llm_model', LLMState.model);
+            });
+            
+            // 测试连接
+            $('testLlmBtn').addEventListener('click', async () => {
+                const apiKey = $('llmApiKey').value.trim();
+                const endpoint = $('llmEndpoint').value.trim() || getDefaultEndpoint($('llmProvider').value);
+                
+                if (!apiKey) {
+                    showToast('请先输入API密钥', 'warning');
+                    return;
+                }
+                
+                $('testLlmBtn').textContent = '测试中...';
+                $('testLlmBtn').disabled = true;
+                
+                try {
+                    const success = await testLLMConnection($('llmProvider').value, apiKey, endpoint);
+                    if (success) {
+                        showToast('连接成功!', 'success');
+                        LLMState.connected = true;
+                    } else {
+                        showToast('连接失败，请检查配置', 'error');
+                        LLMState.connected = false;
+                    }
+                } catch (e) {
+                    showToast('连接失败: ' + e.message, 'error');
+                    LLMState.connected = false;
+                }
+                
+                $('testLlmBtn').textContent = '测试';
+                $('testLlmBtn').disabled = false;
+                updateLLMStatus();
+            });
+            
+            updateLLMStatus();
+        }
+        
+        function getDefaultEndpoint(provider) {
+            const endpoints = {
+                'openai': 'https://api.openai.com/v1',
+                'anthropic': 'https://api.anthropic.com/v1',
+                'azure': '',
+                'zhipu': 'https://open.bigmodel.cn/api/paas/v4',
+                'qwen': 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+                'doubao': 'https://ark.cn-beijing.volces.com/api/v3',
+                'siliconflow': 'https://api.siliconflow.cn/v1'
+            };
+            return endpoints[provider] || '';
+        }
+        
+        function updateLLMStatus() {
+            const indicator = $('llmIndicator');
+            const statusText = $('llmStatusText');
+            const apiKey = $('llmApiKey')?.value?.trim();
+            
+            if (LLMState.connected) {
+                indicator.className = 'vector-indicator active';
+                statusText.textContent = '已连接';
+            } else if (apiKey && apiKey.length > 10) {
+                // 有API Key但未测试连接，显示绿色待测试状态
+                indicator.className = 'vector-indicator';
+                indicator.style.background = 'var(--success)';
+                statusText.textContent = '待测试';
+            } else if (apiKey) {
+                indicator.className = 'vector-indicator';
+                indicator.style.background = 'var(--warning)';
+                statusText.textContent = '配置中';
+            } else {
+                indicator.className = 'vector-indicator';
+                indicator.style.background = 'var(--gray-500)';
+                statusText.textContent = '未配置';
+            }
+        }
+        
+        async function testLLMConnection(provider, apiKey, endpoint) {
+            // 简单的连接测试
+            if (provider === 'openai') {
+                try {
+                    const response = await fetch(endpoint + '/models', {
+                        headers: { 'Authorization': 'Bearer ' + apiKey }
+                    });
+                    return response.ok;
+                } catch (e) {
+                    return false;
+                }
+            } else if (provider === 'siliconflow') {
+                // 硅基流动API测试
+                try {
+                    const response = await fetch(endpoint + '/models', {
+                        headers: { 'Authorization': 'Bearer ' + apiKey }
+                    });
+                    return response.ok;
+                } catch (e) {
+                    return false;
+                }
+            }
+            // 其他provider的简化测试
+            return !!apiKey;
+        }
+        
+        // MutationObserver监听新添加的canvas，渲染图表
+        const chartObserver = new MutationObserver(() => {
+            renderPendingCharts();
+        });
     </script>
+    <!-- Chart Zoom Modal -->
+    <div id="chartZoomModal" class="chart-zoom-modal">
+        <div class="chart-zoom-content">
+            <div class="chart-zoom-header">
+                <h3 id="chartZoomTitle">图表详情</h3>
+                <div class="chart-zoom-actions">
+                    <button class="btn btn-primary" onclick="exportZoomChartPNG()">导出图片</button>
+                    <button class="btn btn-secondary" onclick="closeChartZoom()">关闭</button>
+                </div>
+            </div>
+            <div class="chart-zoom-body">
+                <canvas id="zoomChartCanvas"></canvas>
+            </div>
+            <div class="chart-zoom-footer">
+                <span>点击空白区域或按ESC键关闭</span>
+                <span>支持查看完整图表和高清导出</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentZoomChartId = null;
+        let zoomChartInstance = null;
+
+        function openChartZoom(chartId, title) {
+            currentZoomChartId = chartId;
+            const originalCanvas = document.getElementById(chartId);
+            if (!originalCanvas) { showToast('图表不存在', 'error'); return; }
+
+            // 优先从AppState获取，其次从window.chartConfigs获取
+            const chartConfigs = AppState.chartConfigs || window.chartConfigs || {};
+            const chartConfig = chartConfigs[chartId];
+            if (!chartConfig) { showToast('图表配置不存在', 'error'); console.error('可用配置:', Object.keys(chartConfigs)); return; }
+
+            document.getElementById('chartZoomTitle').textContent = title || '图表详情';
+            document.getElementById('chartZoomModal').classList.add('active');
+
+            setTimeout(() => {
+                const zoomCanvas = document.getElementById('zoomChartCanvas');
+                const ctx = zoomCanvas.getContext('2d');
+                const dpr = window.devicePixelRatio || 1;
+                zoomCanvas.width = 1000 * dpr;
+                zoomCanvas.height = 550 * dpr;
+                zoomCanvas.style.width = '1000px';
+                zoomCanvas.style.height = '550px';
+                ctx.scale(dpr, dpr);
+
+                if (zoomChartInstance) zoomChartInstance.destroy();
+
+                const config = JSON.parse(JSON.stringify(chartConfig));
+                config.options = config.options || {};
+                config.options.responsive = false;
+                config.options.maintainAspectRatio = false;
+                config.options.animation = { duration: 300 };
+                config.options.plugins = { legend: { display: true, position: 'top' }, title: { display: true, text: title || '', font: { size: 16 } } };
+
+                zoomChartInstance = new Chart(ctx, config);
+            }, 100);
+        }
+
+        function closeChartZoom() {
+            document.getElementById('chartZoomModal').classList.remove('active');
+        }
+
+        // 高清导出图表 - 使用Chart.js原生方法重新渲染大图
+        function exportChartHighQuality(chartId, filename) {
+            const chartConfigs = AppState.chartConfigs || window.chartConfigs || {};
+            const chartConfig = chartConfigs[chartId];
+            if (!chartConfig) {
+                showToast('图表配置不存在', 'error');
+                return;
+            }
+            
+            showToast('正在生成高清图片...', 'info');
+            
+            // 创建大尺寸canvas用于高清导出
+            const scale = 3; // 3倍分辨率
+            const hdCanvas = document.createElement('canvas');
+            const width = 900 * scale;
+            const height = 450 * scale;
+            hdCanvas.width = width;
+            hdCanvas.height = height;
+            
+            // 深拷贝配置，避免修改原配置
+            const config = JSON.parse(JSON.stringify(chartConfig));
+            config.options = config.options || {};
+            config.options.responsive = false;
+            config.options.maintainAspectRatio = false;
+            config.options.animation = false;
+            
+            // 增大字体大小
+            const fontScale = scale;
+            // 图例字体
+            config.options.plugins = config.options.plugins || {};
+            config.options.plugins.legend = config.options.plugins.legend || {};
+            config.options.plugins.legend.labels = config.options.plugins.legend.labels || {};
+            if (config.options.plugins.legend.labels.font) {
+                config.options.plugins.legend.labels.font.size = (config.options.plugins.legend.labels.font.size || 12) * fontScale;
+            } else {
+                config.options.plugins.legend.labels.font = { size: 14 * fontScale };
+            }
+            // 标题字体 - 确保标题有足够大的字体
+            if (!config.options.plugins.title) {
+                config.options.plugins.title = { display: true };
+            }
+            if (!config.options.plugins.title.font) {
+                config.options.plugins.title.font = {};
+            }
+            config.options.plugins.title.font.size = Math.max(config.options.plugins.title.font.size || 16, 16) * fontScale;
+            config.options.plugins.title.font.weight = 'bold';
+            // 坐标轴标签字体
+            if (config.options.scales) {
+                for (const scaleId in config.options.scales) {
+                    if (config.options.scales[scaleId] && config.options.scales[scaleId].ticks) {
+                        config.options.scales[scaleId].ticks.font = {
+                            size: (config.options.scales[scaleId].ticks.font?.size || 11) * fontScale
+                        };
+                    }
+                    if (config.options.scales[scaleId] && config.options.scales[scaleId].title) {
+                        config.options.scales[scaleId].title.font = {
+                            size: (config.options.scales[scaleId].title.font?.size || 12) * fontScale
+                        };
+                    }
+                }
+            }
+            
+            // 使用插件机制添加白色背景（在图表绘制之前）
+            const bgPlugin = {
+                id: 'customCanvasBackgroundColor',
+                beforeDraw: (chart) => {
+                    const ctx = chart.canvas.getContext('2d');
+                    ctx.save();
+                    ctx.globalCompositeOperation = 'destination-over';
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, chart.width, chart.height);
+                    ctx.restore();
+                }
+            };
+            config.plugins = [bgPlugin];
+            
+            // 创建临时Chart实例
+            const tempChart = new Chart(hdCanvas, config);
+            
+            // 等待渲染完成
+            setTimeout(() => {
+                // 导出
+                const link = document.createElement('a');
+                link.download = filename + '_高清.png';
+                link.href = hdCanvas.toDataURL('image/png', 1.0);
+                link.click();
+                
+                tempChart.destroy();
+                showToast('高清导出成功！', 'success');
+            }, 150);
+        }
+        
+        // 放大查看弹窗中的高清导出 - 使用同样的方法
+        function exportZoomChartPNG() {
+            if (!zoomChartInstance || !currentZoomChartId) {
+                showToast('没有可导出的图表', 'error');
+                return;
+            }
+            
+            showToast('正在生成高清图片...', 'info');
+            
+            const chartConfigs = AppState.chartConfigs || window.chartConfigs || {};
+            const chartConfig = chartConfigs[currentZoomChartId];
+            
+            if (!chartConfig) {
+                showToast('图表配置不存在', 'error');
+                return;
+            }
+            
+            const scale = 3;
+            const hdCanvas = document.createElement('canvas');
+            const width = 1100 * scale;
+            const height = 550 * scale;
+            hdCanvas.width = width;
+            hdCanvas.height = height;
+            
+            const config = JSON.parse(JSON.stringify(chartConfig));
+            config.options = config.options || {};
+            config.options.responsive = false;
+            config.options.maintainAspectRatio = false;
+            config.options.animation = false;
+            // 增大字体大小
+            const fontScale = scale;
+            config.options.plugins = config.options.plugins || {};
+            config.options.plugins.legend = config.options.plugins.legend || {};
+            config.options.plugins.legend.labels = config.options.plugins.legend.labels || {};
+            if (config.options.plugins.legend.labels.font) {
+                config.options.plugins.legend.labels.font.size = (config.options.plugins.legend.labels.font.size || 12) * fontScale;
+            } else {
+                config.options.plugins.legend.labels.font = { size: 14 * fontScale };
+            }
+            // 标题字体 - 确保标题有足够大的字体
+            if (!config.options.plugins.title) {
+                config.options.plugins.title = { display: true };
+            }
+            if (!config.options.plugins.title.font) {
+                config.options.plugins.title.font = {};
+            }
+            config.options.plugins.title.font.size = Math.max(config.options.plugins.title.font.size || 16, 16) * fontScale;
+            config.options.plugins.title.font.weight = 'bold';
+            if (config.options.scales) {
+                for (const scaleId in config.options.scales) {
+                    if (config.options.scales[scaleId] && config.options.scales[scaleId].ticks) {
+                        config.options.scales[scaleId].ticks.font = {
+                            size: (config.options.scales[scaleId].ticks.font?.size || 11) * fontScale
+                        };
+                    }
+                    if (config.options.scales[scaleId] && config.options.scales[scaleId].title) {
+                        config.options.scales[scaleId].title.font = {
+                            size: (config.options.scales[scaleId].title.font?.size || 12) * fontScale
+                        };
+                    }
+                }
+            }
+            
+            // 使用插件机制添加白色背景（在图表绘制之后）
+            const bgPlugin = {
+                id: 'customCanvasBackgroundColor',
+                afterDraw: (chart) => {
+                    const ctx = chart.canvas.getContext('2d');
+                    ctx.save();
+                    ctx.globalCompositeOperation = 'destination-over';
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, chart.width, chart.height);
+                    ctx.restore();
+                }
+            };
+            config.plugins = [bgPlugin];
+            
+            const tempChart = new Chart(hdCanvas, config);
+            
+            setTimeout(() => {
+                const link = document.createElement('a');
+                link.download = (document.getElementById('chartZoomTitle').textContent || '图表') + '_高清.png';
+                link.href = hdCanvas.toDataURL('image/png', 1.0);
+                link.click();
+                
+                tempChart.destroy();
+                showToast('高清PNG导出成功', 'success');
+            }, 150);
+        }
+
+        document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeChartZoom(); });
+        document.getElementById('chartZoomModal').addEventListener('click', function(e) { if (e.target === this) closeChartZoom(); });
+    </script>
+
 </body>
 </html>
