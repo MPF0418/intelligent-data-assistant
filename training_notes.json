@@ -1,0 +1,15 @@
+{
+  "total_samples": 1000,
+  "train_samples": 700,
+  "val_samples": 150,
+  "test_samples": 150,
+  "intent_distribution": {
+    "CHART_BAR": 379,
+    "QUERY_FIND": 137,
+    "QUERY_AGGREGATE": 384,
+    "QUERY_SORT": 36,
+    "CHART_LINE": 30,
+    "QUERY_FILTER": 8,
+    "CHART_PIE": 26
+  }
+}

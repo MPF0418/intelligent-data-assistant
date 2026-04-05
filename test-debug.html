@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>V3.0 测试中心 - 调试版本</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 {
+            color: #667eea;
+            text-align: center;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .test-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-btn:hover {
+            background: #764ba2;
+        }
+        .test-result {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            border-radius: 4px;
+        }
+        .test-result.success {
+            border-left-color: #11998e;
+            background: #f0fff4;
+        }
+        .test-result.error {
+            border-left-color: #eb3349;
+            background: #fff5f5;
+        }
+        .log-container {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 4px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 5px;
+        }
+        .log-info { color: #667eea; }
+        .log-success { color: #11998e; }
+        .log-error { color: #eb3349; }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .status.loaded { background: #d4edda; color: #155724; }
+        .status.error { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <h1>🧪 V3.0 测试中心 - 调试版本</h1>
+    
+    <div id="statusContainer"></div>
+    
+    <div class="test-section">
+        <h2>单元测试</h2>
+        <button class="test-btn" onclick="runChartRecommenderTest()">图表推荐器测试</button>
+        <div id="chartRecommenderResult"></div>
+        
+        <button class="test-btn" onclick="runErrorCollectorTest()">错误收集器测试</button>
+        <div id="errorCollectorResult"></div>
+        
+        <button class="test-btn" onclick="runFeedbackManagerTest()">反馈管理器测试</button>
+        <div id="feedbackManagerResult"></div>
+        
+        <button class="test-btn" onclick="runDataPreprocessorTest()">数据预处理器测试</button>
+        <div id="dataPreprocessorResult"></div>
+        
+        <button class="test-btn" onclick="runAutoFixerTest()">自动修复器测试</button>
+        <div id="autoFixerResult"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>UI 测试</h2>
+        <button class="test-btn" onclick="runFeedbackUITest()">反馈组件测试</button>
+        <button class="test-btn" onclick="runErrorGuideUITest()">错误引导测试</button>
+        <button class="test-btn" onclick="runErrorReportUITest()">错误报告测试</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>日志</h2>
+        <div class="log-container" id="logContainer"></div>
+    </div>
+    
+    <script>
+        // 全局变量
+        window.testStats = { total: 0, passed: 0, failed: 0 };
+        
+        // 日志函数
+        window.log = function(message, type = 'info') {
+            const logContainer = document.getElementById('logContainer');
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            const timestamp = new Date().toLocaleTimeString();
+            entry.textContent = `[${timestamp}] ${message}`;
+            logContainer.appendChild(entry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        };
+        
+        // 显示状态
+        function showStatus(message, isError = false) {
+            const container = document.getElementById('statusContainer');
+            container.innerHTML = `<div class="status ${isError ? 'error' : 'loaded'}">${message}</div>`;
+        }
+        
+        // 显示测试结果
+        window.showTestResult = function(elementId, success, message, details = null) {
+            const element = document.getElementById(elementId);
+            element.className = `test-result ${success ? 'success' : 'error'}`;
+            
+            let html = `<strong>${success ? '✅ 通过' : '❌ 失败'}</strong>: ${message}`;
+            
+            if (details) {
+                html += `<pre>${JSON.stringify(details, null, 2)}</pre>`;
+            }
+            
+            element.innerHTML = html;
+        };
+        
+        // 测试函数（全局）
+        window.runChartRecommenderTest = function() {
+            log('[测试] 开始运行图表推荐器测试...', 'info');
+            
+            try {
+                if (!window.chartRecommender) {
+                    throw new Error('图表推荐器模块未加载');
+                }
+                
+                const dataInfo = {
+                    columns: ['省公司', '日期', '金额', '数量'],
+                    sampleData: [],
+                    rowCount: 100
+                };
+                
+                const intentResult = {
+                    intent: 'QUERY_AGGREGATE',
+                    confidence: 0.85
+                };
+                
+                const recommendations = window.chartRecommender.recommend(dataInfo, intentResult, '统计各省公司的平均金额');
+                
+                const success = recommendations && recommendations.length > 0;
+                window.testStats.total++;
+                if (success) window.testStats.passed++;
+                else window.testStats.failed++;
+                
+                showTestResult('chartRecommenderResult', success, 
+                    `推荐了 ${recommendations ? recommendations.length : 0} 种图表类型`, 
+                    recommendations);
+                
+                log(success ? '[测试] 图表推荐器测试通过' : '[测试] 图表推荐器测试失败', success ? 'success' : 'error');
+            } catch (error) {
+                window.testStats.total++;
+                window.testStats.failed++;
+                showTestResult('chartRecommenderResult', false, error.message);
+                log('[测试] 图表推荐器测试异常：' + error.message, 'error');
+            }
+        };
+        
+        window.runErrorCollectorTest = function() {
+            log('[测试] 开始运行错误收集器测试...', 'info');
+            
+            try {
+                if (!window.errorCollector) {
+                    throw new Error('错误收集器模块未加载');
+                }
+                
+                const errorId = window.errorCollector.record(
+                    new Error('测试错误'),
+                    { userInput: '测试', module: 'test' }
+                );
+                
+                const success = errorId && errorId.startsWith('ERR_');
+                window.testStats.total++;
+                if (success) window.testStats.passed++;
+                else window.testStats.failed++;
+                
+                const stats = window.errorCollector.getStatistics();
+                showTestResult('errorCollectorResult', success, 
+                    `成功记录错误，总错误数：${stats.totalErrors}`,
+                    { errorId, stats });
+                
+                log(success ? '[测试] 错误收集器测试通过' : '[测试] 错误收集器测试失败', success ? 'success' : 'error');
+            } catch (error) {
+                window.testStats.total++;
+                window.testStats.failed++;
+                showTestResult('errorCollectorResult', false, error.message);
+                log('[测试] 错误收集器测试异常：' + error.message, 'error');
+            }
+        };
+        
+        window.runFeedbackManagerTest = function() {
+            log('[测试] 开始运行反馈管理器测试...', 'info');
+            
+            try {
+                if (!window.feedbackManager) {
+                    throw new Error('反馈管理器模块未加载');
+                }
+                
+                const feedback = window.feedbackManager.submitRating(5, 'test', '测试评分');
+                
+                const success = feedback && feedback.type === 'rating' && feedback.score === 5;
+                window.testStats.total++;
+                if (success) window.testStats.passed++;
+                else window.testStats.failed++;
+                
+                const stats = window.feedbackManager.generateStatistics();
+                showTestResult('feedbackManagerResult', success, 
+                    `成功提交评分，平均分：${stats.averageRating}`,
+                    { feedback, stats });
+                
+                log(success ? '[测试] 反馈管理器测试通过' : '[测试] 反馈管理器测试失败', success ? 'success' : 'error');
+            } catch (error) {
+                window.testStats.total++;
+                window.testStats.failed++;
+                showTestResult('feedbackManagerResult', false, error.message);
+                log('[测试] 反馈管理器测试异常：' + error.message, 'error');
+            }
+        };
+        
+        window.runDataPreprocessorTest = function() {
+            log('[测试] 开始运行数据预处理器测试...', 'info');
+            
+            try {
+                if (!window.dataPreprocessor) {
+                    throw new Error('数据预处理器模块未加载');
+                }
+                
+                const testData = [
+                    { 省公司：'广东', 金额：1500000 },
+                    { 省公司：'北京', 金额：1300000 }
+                ];
+                
+                const config = {
+                    unitConversion: {
+                        from: '元',
+                        to: '万元',
+                        formula: (v) => v / 10000,
+                        decimalPlaces: 2
+                    }
+                };
+                
+                const result = window.dataPreprocessor.transform(testData, config, ['省公司', '金额']);
+                
+                const success = result && result[0] && result[0].金额 === 150;
+                window.testStats.total++;
+                if (success) window.testStats.passed++;
+                else window.testStats.failed++;
+                
+                showTestResult('dataPreprocessorResult', success, 
+                    `单位转换成功：1500000 元 → ${result[0].金额}万元`,
+                    result);
+                
+                log(success ? '[测试] 数据预处理器测试通过' : '[测试] 数据预处理器测试失败', success ? 'success' : 'error');
+            } catch (error) {
+                window.testStats.total++;
+                window.testStats.failed++;
+                showTestResult('dataPreprocessorResult', false, error.message);
+                log('[测试] 数据预处理器测试异常：' + error.message, 'error');
+            }
+        };
+        
+        window.runAutoFixerTest = function() {
+            log('[测试] 开始运行自动修复器测试...', 'info');
+            
+            try {
+                if (!window.autoFixer) {
+                    throw new Error('自动修复器模块未加载');
+                }
+                
+                const stats = window.autoFixer.getStatistics();
+                const rules = window.autoFixer.getRegisteredRules();
+                
+                const success = rules && rules.length > 0;
+                window.testStats.total++;
+                if (success) window.testStats.passed++;
+                else window.testStats.failed++;
+                
+                showTestResult('autoFixerResult', success, 
+                    `已注册 ${rules ? rules.length : 0} 条修复规则`,
+                    { stats, rules });
+                
+                log(success ? '[测试] 自动修复器测试通过' : '[测试] 自动修复器测试失败', success ? 'success' : 'error');
+            } catch (error) {
+                window.testStats.total++;
+                window.testStats.failed++;
+                showTestResult('autoFixerResult', false, error.message);
+                log('[测试] 自动修复器测试异常：' + error.message, 'error');
+            }
+        };
+        
+        window.runFeedbackUITest = function() {
+            log('[测试] 测试反馈组件...', 'info');
+            if (window.feedbackUI) {
+                window.feedbackUI.setCurrentQuery({
+                    userInput: '测试查询',
+                    intent: { intent: 'QUERY_AGGREGATE' }
+                });
+                window.feedbackUI.showToast('反馈组件测试完成');
+                log('[测试] 反馈组件测试完成', 'success');
+            } else {
+                log('[测试] feedbackUI 未加载', 'error');
+            }
+        };
+        
+        window.runErrorGuideUITest = function() {
+            log('[测试] 测试错误引导弹窗...', 'info');
+            if (window.errorGuideUI) {
+                window.errorGuideUI.showErrorGuide(
+                    new Error('这是一个测试错误'),
+                    { userInput: '测试', module: 'test' }
+                );
+                log('[测试] 错误引导弹窗已显示', 'success');
+            } else {
+                log('[测试] errorGuideUI 未加载', 'error');
+            }
+        };
+        
+        window.runErrorReportUITest = function() {
+            log('[测试] 测试错误报告查看器...', 'info');
+            if (window.feedbackUI && window.feedbackUI.showErrorReport) {
+                window.feedbackUI.showErrorReport();
+                log('[测试] 错误报告查看器已打开', 'success');
+            } else {
+                log('[测试] showErrorReport 方法不存在', 'error');
+            }
+        };
+    </script>
+    
+    <!-- 使用 ES6 模块加载 -->
+    <script type="module">
+        import chartRecommender from './js/chartRecommender.js';
+        import errorCollector from './js/errorCollector.js';
+        import feedbackManager from './js/feedbackManager.js';
+        import dataPreprocessor from './js/dataPreprocessor.js';
+        import autoFixer from './js/autoFixer.js';
+        import feedbackUI from './js/feedbackUI.js';
+        import errorGuideUI from './js/errorGuideUI.js';
+        
+        // 暴露到全局作用域供测试函数调用
+        window.chartRecommender = chartRecommender;
+        window.errorCollector = errorCollector;
+        window.feedbackManager = feedbackManager;
+        window.dataPreprocessor = dataPreprocessor;
+        window.autoFixer = autoFixer;
+        window.feedbackUI = feedbackUI;
+        window.errorGuideUI = errorGuideUI;
+        
+        console.log('[系统] 所有 V3.0 模块已加载到全局作用域');
+    </script>
+    
+    <script>
+        // 模块加载完成后初始化
+        window.addEventListener('load', function() {
+            log('[系统] 页面加载完成', 'info');
+            
+            // 检查模块是否加载
+            const modules = {
+                'chartRecommender': window.chartRecommender,
+                'errorCollector': window.errorCollector,
+                'feedbackManager': window.feedbackManager,
+                'dataPreprocessor': window.dataPreprocessor,
+                'autoFixer': window.autoFixer,
+                'feedbackUI': window.feedbackUI,
+                'errorGuideUI': window.errorGuideUI
+            };
+            
+            let allLoaded = true;
+            let statusMsg = '';
+            
+            for (const [name, module] of Object.entries(modules)) {
+                if (module) {
+                    log(`✅ ${name} 已加载`, 'success');
+                    statusMsg += `✅ ${name} `;
+                } else {
+                    log(`❌ ${name} 未加载`, 'error');
+                    statusMsg += `❌ ${name} `;
+                    allLoaded = false;
+                }
+            }
+            
+            if (allLoaded) {
+                showStatus('✅ 所有模块加载成功，可以开始测试！');
+                log('[系统] 所有模块加载成功，可以开始测试！', 'success');
+            } else {
+                showStatus('❌ 部分模块加载失败，请检查控制台日志', true);
+                log('[系统] 部分模块加载失败，请检查错误信息', 'error');
+            }
+            
+            // 初始化 UI
+            if (window.feedbackUI && window.feedbackUI.init) {
+                window.feedbackUI.init();
+                log('[系统] UI 组件已初始化', 'success');
+            }
+        });
+    </script>
+</body>
+</html>

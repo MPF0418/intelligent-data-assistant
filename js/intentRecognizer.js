@@ -140,25 +140,55 @@ class IntentRecognizer {
         this.checkLocalModelAvailability();
     }
     
-    // 检查本地模型API可用性
+    // V4.2增强：检查统一API服务可用性（合并后的单端口服务）
     async checkLocalModelAvailability() {
-        try {
-            const response = await fetch(`${this.localModelApiUrl}/api/health`, {
-                method: 'GET',
-                signal: AbortSignal.timeout(2000)
-            });
-            
-            if (response.ok) {
-                this.modelAvailable = true;
-                console.log('✅ 本地意图识别模型API可用');
-            } else {
-                this.modelAvailable = false;
-                console.log('⚠️ 本地意图识别模型API返回错误，将使用规则匹配');
+        // V4.2: 统一API服务只使用5001端口
+        const services = [
+            { name: '统一API服务', url: `${this.localModelApiUrl}/health`, port: 5001 }
+        ];
+        
+        this.servicesStatus = {};
+        let apiAvailable = true;
+        
+        for (const service of services) {
+            try {
+                const response = await fetch(service.url, {
+                    method: 'GET',
+                    signal: AbortSignal.timeout(2000)
+                });
+                
+                if (response.ok) {
+                    try {
+                        const data = await response.json();
+                        if (data.status === 'success') {
+                            this.servicesStatus[service.name] = { available: true, port: service.port };
+                            console.log(`✅ ${service.name}可用 (端口${service.port})`);
+                        } else {
+                            this.servicesStatus[service.name] = { available: false, port: service.port, error: '服务返回错误状态' };
+                            console.log(`⚠️ ${service.name}返回错误 (端口${service.port})`);
+                            apiAvailable = false;
+                        }
+                    } catch (jsonError) {
+                        // 如果返回的不是JSON，可能是HTML错误页面
+                        this.servicesStatus[service.name] = { available: false, port: service.port, error: '服务返回非JSON响应' };
+                        console.log(`⚠️ ${service.name}返回非JSON响应 (端口${service.port})`);
+                        apiAvailable = false;
+                    }
+                } else {
+                    this.servicesStatus[service.name] = { available: false, port: service.port, error: 'HTTP错误' };
+                    console.log(`⚠️ ${service.name}返回错误 (端口${service.port})`);
+                    apiAvailable = false;
+                }
+            } catch (error) {
+                this.servicesStatus[service.name] = { available: false, port: service.port, error: error.message };
+                console.log(`⚠️ ${service.name}不可用 (端口${service.port}): ${error.message}`);
+                apiAvailable = false;
             }
-        } catch (error) {
-            this.modelAvailable = false;
-            console.log('⚠️ 本地意图识别模型API不可用，将使用规则匹配');
         }
+        
+        // 即使API服务不可用，本地规则匹配功能仍然可用
+        // 所以本地模型状态应该始终为可用
+        this.modelAvailable = true;
         
         // 检测完成后触发回调，让UI更新
         if (this.onStatusChange) {
@@ -569,11 +599,12 @@ class IntentRecognizer {
         this.llmConfidenceThreshold = threshold;
     }
     
-    // 获取模型状态
+    // V4.1增强：获取模型状态（包含所有服务状态）
     getModelStatus() {
         return {
             useLocalModel: this.useLocalModel,
             modelAvailable: this.modelAvailable,
+            servicesStatus: this.servicesStatus || {},
             localModelApiUrl: this.localModelApiUrl,
             useLLMFallback: this.useLLMFallback,
             llmConfidenceThreshold: this.llmConfidenceThreshold
@@ -598,6 +629,64 @@ class IntentRecognizer {
         }
         
         return stats;
+    }
+    
+    // V4.2更新：分析要素识别（使用统一API服务）
+    async analyzeElements(text) {
+        if (!this.modelAvailable) {
+            return null;
+        }
+        
+        // V4.2: 统一API服务使用5001端口
+        const analysisApiUrl = this.localModelApiUrl;
+        
+        try {
+            const response = await fetch(`${analysisApiUrl}/api/analyze-elements`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ text }),
+                signal: AbortSignal.timeout(10000)
+            });
+            
+            if (!response.ok) {
+                throw new Error(`API请求失败: ${response.status}`);
+            }
+            
+            const result = await response.json();
+            console.log('[V4.0] 分析要素识别结果:', result);
+            
+            return {
+                aggregateFunction: result.aggregate_function,
+                aggregateConfidence: result.aggregate_confidence,
+                outputType: result.output_type,
+                outputConfidence: result.output_confidence,
+                method: 'analysis_model'
+            };
+        } catch (error) {
+            console.warn('[V4.0] 分析要素识别失败:', error);
+            return null;
+        }
+    }
+    
+    // V4.0新增：综合识别（意图 + 分析要素）
+    async recognizeWithElements(text, dataInfo = null) {
+        const startTime = performance.now();
+        
+        // 并行执行意图识别和分析要素识别
+        const [intentResult, elementsResult] = await Promise.all([
+            this.recognize(text, dataInfo),
+            this.analyzeElements(text)
+        ]);
+        
+        const endTime = performance.now();
+        
+        return {
+            ...intentResult,
+            elements: elementsResult,
+            responseTime: endTime - startTime
+        };
     }
 }
 

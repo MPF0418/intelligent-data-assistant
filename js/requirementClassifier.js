@@ -15,8 +15,8 @@ class RequirementClassifier {
         const urlParams = new URLSearchParams(window.location.search);
         const apiBaseUrl = urlParams.get('apiUrl') || 'http://localhost:5001';
         
-        this.bertApiUrl = `${apiBaseUrl}/api/classify-requirement`;
-        this.columnMatchApiUrl = `${apiBaseUrl}/api/match-column`;
+        this.bertApiUrl = `${apiBaseUrl}/api/v1/intent/classify-requirement`;
+        this.columnMatchApiUrl = `${apiBaseUrl}/api/v1/intent/match-column`;
         this.useBertClassification = true;  // 是否使用BERT分类
         this.useColumnMatchApi = true;      // 是否使用列名匹配API
         
@@ -30,40 +30,19 @@ class RequirementClassifier {
      * @param {Array} columns - 数据列名列表
      * @param {Array} sampleData - 样本数据（用于推断字典值）
      * @returns {Object} 分类结果
-     *   - mode: 'precise' | 'intelligent'
+     *   - mode: 'precise' | 'intelligent' | 'multi_intent' | 'rejected'
      *   - confidence: 分类置信度
      *   - reason: 分类理由
      *   - matchedColumns: 匹配到的列名
      *   - ambiguityScore: 模糊度评分
+     *   - detectedIntents: 检测到的意图列表（用于多意图场景）
      */
     async classify(userInput, columns, sampleData = []) {
         console.log('[RequirementClassifier] 开始分类用户需求:', userInput);
         
         const lowerInput = userInput.toLowerCase();
         
-        // V3.0新增：首先使用BERT模型判断是否为数据分析需求
-        if (this.useBertClassification) {
-            const bertResult = await this.classifyWithBERT(userInput);
-            if (bertResult && !bertResult.is_data_analysis) {
-                console.log('[RequirementClassifier] BERT拒识:', bertResult.label);
-                return {
-                    mode: 'rejected',
-                    confidence: bertResult.confidence,
-                    reason: '输入内容与数据分析无关',
-                    suggestion: '本系统专注于数据分析，请输入与数据查询、统计分析、可视化相关的需求。例如："统计各省份的平均值"、"绘制销售额柱状图"',
-                    matchedColumns: [],
-                    ambiguityScore: 1.0,
-                    hasComplexRequirements: false,
-                    columnMatchScore: 0,
-                    requiredSkills: [],
-                    isSimpleQuery: false,
-                    bertClassification: bertResult
-                };
-            }
-        }
-        
-        // BERT判断为数据分析需求，继续后续处理
-        // 兜底：如果BERT调用失败，使用规则检测
+        // 首先检查是否应该拒识（问候语、无关内容等）
         const rejectionCheck = this.checkRejection(userInput);
         if (rejectionCheck.shouldReject) {
             console.log('[RequirementClassifier] 规则拒识:', rejectionCheck.reason);
@@ -77,8 +56,104 @@ class RequirementClassifier {
                 hasComplexRequirements: false,
                 columnMatchScore: 0,
                 requiredSkills: [],
-                isSimpleQuery: false
+                isSimpleQuery: false,
+                detectedIntents: []
             };
+        }
+        
+        // V5.0新增：检测多意图场景
+        // 多意图检测在拒识检查之后、精确模式识别之前执行
+        const multiIntentCheck = this.detectMultiIntent(userInput, columns);
+        if (multiIntentCheck.isMultiIntent) {
+            console.log('[RequirementClassifier] 检测到多意图:', multiIntentCheck.detectedIntents);
+            return {
+                mode: 'multi_intent',
+                confidence: multiIntentCheck.confidence,
+                reason: multiIntentCheck.reason,
+                suggestion: '检测到多个数据分析意图，已转交大模型处理以确保不遗漏任何需求',
+                matchedColumns: [],
+                ambiguityScore: 0.1,
+                hasComplexRequirements: true,  // 多意图视为复杂需求
+                columnMatchScore: 0.5,
+                requiredSkills: [],
+                isSimpleQuery: false,
+                detectedIntents: multiIntentCheck.detectedIntents,
+                intents: multiIntentCheck.detectedIntents  // 兼容性格式
+            };
+        }
+        
+        // V3.0新增：使用BERT模型判断需求类型
+        if (this.useBertClassification) {
+            const bertResult = await this.classifyWithBERT(userInput);
+            // 检查后端API返回的结果格式
+            if (bertResult) {
+                console.log('[RequirementClassifier] BERT分类结果:', bertResult);
+                // 后端API返回的是type字段，不是is_data_analysis字段
+                // 只有当type为unknown且置信度非常高时，才认为不是数据分析需求
+                // 否则继续执行后续规则检查，避免误判常见查询
+                if (bertResult.type === 'unknown' && bertResult.confidence > 0.95) {
+                    console.log('[RequirementClassifier] BERT高置信度拒识:', bertResult.type);
+                    return {
+                        mode: 'rejected',
+                        confidence: bertResult.confidence,
+                        reason: '输入内容与数据分析无关',
+                        suggestion: '本系统专注于数据分析，请输入与数据查询、统计分析、可视化相关的需求。例如："统计各省份的平均值"、"绘制销售额柱状图"',
+                        matchedColumns: [],
+                        ambiguityScore: 1.0,
+                        hasComplexRequirements: false,
+                        columnMatchScore: 0,
+                        requiredSkills: [],
+                        isSimpleQuery: false,
+                        bertClassification: bertResult
+                    };
+                } else if (bertResult.type === 'filter') {
+                    // 特殊处理：filter类型是有效的数据分析需求
+                    console.log('[RequirementClassifier] BERT识别为筛选查询:', bertResult.type);
+                } else if (bertResult.type === 'unknown') {
+                    // BERT识别为unknown但置信度不高，继续执行后续规则检查
+                    console.log('[RequirementClassifier] BERT识别为unknown，继续规则检查:', bertResult.confidence);
+                }
+            } else {
+                console.log('[RequirementClassifier] BERT API调用失败，使用规则匹配');
+            }
+        }
+        
+        // BERT判断为数据分析需求，继续后续处理
+        
+        // 特殊处理：对于"XX的YY是多少"这样的查询，直接识别为filter类型
+        if (/(.*的.*是多少|.*的.*多少|.*的.*多少钱)/.test(userInput)) {
+            console.log('[RequirementClassifier] 识别为查询类需求:', userInput);
+            return {
+                mode: 'precise',
+                confidence: 0.9,
+                reason: '识别为查询类需求',
+                matchedColumns: this.extractMentionedColumns(lowerInput, columns),
+                ambiguityScore: 0.2,
+                hasComplexRequirements: false,
+                columnMatchScore: 0.8,
+                requiredSkills: [],
+                isSimpleQuery: true
+            };
+        }
+        
+        // 额外处理：对于"XX的YY"这样的查询，也应该识别为有效的数据分析需求
+        if (/(.*的.*)/.test(userInput) && columns.length > 0) {
+            // 检查是否包含列名
+            const mentionedColumns = this.extractMentionedColumns(lowerInput, columns);
+            if (mentionedColumns.length > 0) {
+                console.log('[RequirementClassifier] 识别为列查询需求:', userInput);
+                return {
+                    mode: 'precise',
+                    confidence: 0.85,
+                    reason: '识别为列查询需求',
+                    matchedColumns: mentionedColumns,
+                    ambiguityScore: 0.3,
+                    hasComplexRequirements: false,
+                    columnMatchScore: 0.7,
+                    requiredSkills: [],
+                    isSimpleQuery: true
+                };
+            }
         }
         
         // V3.0新增：使用分层策略匹配列名
@@ -501,6 +576,155 @@ class RequirementClassifier {
         }
         
         return Math.min(score, 1.0);
+    }
+    
+    /**
+     * V5.0新增：检测多意图场景
+     * 产品意义：本地模型在处理复杂多意图场景时表现不稳定，
+     * 为了保障不漏掉用户需求中的复杂意图，多意图场景统一交给大模型处理
+     * 
+     * @param {string} userInput - 用户输入
+     * @param {Array} columns - 数据列名列表
+     * @returns {Object} 检测结果
+     *   - isMultiIntent: 是否为多意图
+     *   - detectedIntents: 检测到的意图列表
+     *   - confidence: 置信度
+     *   - reason: 判断理由
+     */
+    detectMultiIntent(userInput, columns = []) {
+        console.log('[RequirementClassifier] detectMultiIntent 开始检测:', userInput);
+        
+        const text = userInput.toLowerCase();
+        const detectedIntents = [];
+        
+        // 意图关键词定义
+        const intentKeywords = {
+            // 图表类意图
+            CHART_BAR: ['柱状图', '条形图', '柱图', '条图', '对比图', '比较图', '排名图'],
+            CHART_LINE: ['折线图', '线图', '曲线图', '趋势图', '走势图', '面积图'],
+            CHART_PIE: ['饼图', '环形图', '圆图', '占比图', '比例图', '构成图', '份额'],
+            CHART_SCATTER: ['散点图', '散点', '点图', '气泡图', '分布图'],
+            CHART_GENERAL: ['图表', '可视化', '画图', '绘图', '图形'],
+            
+            // 查询类意图
+            QUERY_FIND: ['哪个', '谁', '最大', '最小', '最高', '最低', '第一名', '排名', '找出', '查找'],
+            QUERY_AGGREGATE: ['统计', '汇总', '合计', '总计', '平均', '求和', '计数', '多少', '求平均值'],
+            QUERY_FILTER: ['筛选', '过滤', '只要', '只看', '符合', '条件'],
+            QUERY_SORT: ['排序', '排列', '从小到大', '从大到小', '升序', '降序', '正序', '倒序'],
+            
+            // 分析类意图
+            COMPARE: ['对比', '比较', '差异', '区别', '不同'],
+            RANK: ['排名', '名次', '排序', '先后']
+        };
+        
+        // 检测每个意图类型
+        for (const [intent, keywords] of Object.entries(intentKeywords)) {
+            for (const keyword of keywords) {
+                if (text.includes(keyword)) {  // 关键词已经是中文，不需要再转小写
+                    // 检查是否已经添加过这个意图
+                    if (!detectedIntents.includes(intent)) {
+                        detectedIntents.push(intent);
+                        console.log(`[RequirementClassifier] 检测到意图关键词: ${keyword} -> ${intent}`);
+                    }
+                    break;
+                }
+            }
+        }
+        
+        console.log('[RequirementClassifier] 关键词检测后的意图列表:', detectedIntents);
+        
+        // 组合意图检测（两个操作组合在一起）
+        // 例如："绘制柱状图并排序"、"筛选后统计"、"筛选男性并计算总和"
+        const combinationPatterns = [
+            // 操作+图表组合
+            { pattern: /(统计|汇总|求和|计算).*?(柱状图|条形图|折线图|饼图)/i, intents: ['QUERY_AGGREGATE', 'CHART'] },
+            { pattern: /(排序|排列).*?(柱状图|条形图|图表)/i, intents: ['QUERY_SORT', 'CHART'] },
+            { pattern: /(筛选|过滤).*?(柱状图|条形图|折线图|图表)/i, intents: ['QUERY_FILTER', 'CHART'] },
+            
+            // 操作组合
+            { pattern: /(筛选|过滤).*?(排序|排列)/i, intents: ['QUERY_FILTER', 'QUERY_SORT'] },
+            { pattern: /(筛选|过滤).*?(统计|汇总|求和|计算)/i, intents: ['QUERY_FILTER', 'QUERY_AGGREGATE'] },
+            { pattern: /(排序|排列).*?(统计|汇总|求和)/i, intents: ['QUERY_SORT', 'QUERY_AGGREGATE'] },
+            { pattern: /(筛选|过滤).*?(排序|排列).*?(统计|汇总)/i, intents: ['QUERY_FILTER', 'QUERY_SORT', 'QUERY_AGGREGATE'] },
+            
+            // 并列连接词检测（使用更宽松的匹配）
+            { pattern: /.+[,，].+/i, intents: ['MULTI_CLAUSE'] },  // 包含逗号的多个分句
+            { pattern: /(并且|而且|同时|以及|并且|并且).{1,}/i, intents: ['MULTI_CLAUSE'] },  // 并列结构关键词
+            { pattern: /(先|然后|再|接着).{1,}/i, intents: ['MULTI_CLAUSE'] },  // 顺序结构
+        ];
+        
+        for (const combo of combinationPatterns) {
+            const match = combo.pattern.test(userInput);
+            console.log(`[RequirementClassifier] 组合模式检测: ${combo.pattern} -> ${match}`);
+            if (match) {
+                // 添加检测到的意图
+                for (const intent of combo.intents) {
+                    if (!detectedIntents.includes(intent)) {
+                        detectedIntents.push(intent);
+                    }
+                }
+            }
+        }
+        
+        console.log('[RequirementClassifier] 组合模式检测后的意图列表:', detectedIntents);
+        
+        // 计算置信度：检测到的意图越多，置信度越高
+        // 但如果检测到超过3个意图，可能是误判（降权）
+        let confidence = Math.min(0.9, 0.5 + detectedIntents.length * 0.15);
+        if (detectedIntents.length > 3) {
+            confidence *= 0.8;  // 超过3个意图降权
+        }
+        
+        // 判断是否为多意图（检测到2个及以上不同类别的意图）
+        // 不同类别指：CHART类、QUERY类、COMPARE类等
+        const chartIntents = detectedIntents.filter(i => i.startsWith('CHART'));
+        const queryIntents = detectedIntents.filter(i => i.startsWith('QUERY'));
+        const otherIntents = detectedIntents.filter(i => 
+            !i.startsWith('CHART') && !i.startsWith('QUERY')
+        );
+        
+        const categoryCount = (chartIntents.length > 0 ? 1 : 0) + 
+                             (queryIntents.length > 0 ? 1 : 0) + 
+                             (otherIntents.length > 0 ? 1 : 0);
+        
+        // 多意图判断：categoryCount >= 2，或者有并列连接词
+        const hasConnectorWord = /(并且|而且|同时|以及|并且|并且|,|，)/.test(userInput);
+        const isMultiIntent = categoryCount >= 2 || 
+                             (detectedIntents.length >= 2 && hasConnectorWord);
+        
+        console.log('[RequirementClassifier] 多意图判断:', {
+            categoryCount,
+            chartIntents,
+            queryIntents,
+            otherIntents,
+            hasConnectorWord,
+            isMultiIntent
+        });
+        
+        let reason = '';
+        if (isMultiIntent) {
+            reason = `检测到${detectedIntents.length}个意图（图表类:${chartIntents.join(',')}, 查询类:${queryIntents.join(',')}），多意图场景转大模型处理`;
+        }
+        
+        console.log('[RequirementClassifier] 多意图检测最终结果:', {
+            isMultiIntent,
+            detectedIntents,
+            confidence,
+            categoryCount,
+            reason
+        });
+        
+        return {
+            isMultiIntent,
+            detectedIntents,
+            confidence,
+            reason,
+            categoryBreakdown: {
+                chart: chartIntents,
+                query: queryIntents,
+                other: otherIntents
+            }
+        };
     }
     
     /**

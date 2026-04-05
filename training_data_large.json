@@ -1,0 +1,5035 @@
+{
+  "description": "智能数据洞察助手V3.0 - 大规模训练数据集（1000条）",
+  "version": "3.0.0",
+  "total_samples": 1000,
+  "intents": {
+    "CHART_BAR": {
+      "samples": [
+        {
+          "text": "画直方图属于省公司的费用",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "可视化条形图属于金额的市公司",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "展示直方图属于日期的省公司",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现柱形图属于状态的数量",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "展示长条图属于处理时长的市公司",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "可视化直方图的状态的日期",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "可视化bar关于进度的处理时长",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "可视化个数的响应时长条形图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "生成柱状图展示处理人的次数",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "绘制柱状图展示险情确认时长的成本",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "生成柱状图的时间的个数",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "画长条图的状态的处理时长",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "创建柱图展示险情确认时长的阶段",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现条形图之个数的经办人",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "画柱形图属于金额的县公司",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "生成柱形图展示日期的进度",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "绘制直方图展示负责人的个数",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "创建条形图关于个数的县公司",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "可视化金额的处理人bar",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "绘制柱图展示省公司的响应时长",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "创建柱状图之时间的进度",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "制作条形图之状态的省公司",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "做bar关于个数的月份",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "展示金额的负责人柱形图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现处理人的金额bar",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "制作柱图的数量的金额",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现条形图展示数量的日期",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "制作柱形图关于险情确认时长的经办人",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "做柱图的日期的险情确认时长",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "展示柱形图展示处理时长的次数",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "生成长条图之进度的成本",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "画直方图之时间的县公司",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "画直方图属于市公司的处理人",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "做bar属于费用的经办人",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "做数量的费用条形图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "画bar的个数的负责人",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "展示长条图关于处理时长的数量",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "制作时间的个数条形图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "创建直方图展示日期的数量",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "生成长条图的日期的费用",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现柱形图展示负责人的响应时长",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "绘制直方图的处理时长的费用",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "展示直方图属于个数的省公司",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "画柱图之市公司的月份",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "可视化柱形图之市公司的费用",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "创建柱状图展示金额的个数",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "制作时间的数量柱图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现条形图的时间的负责人",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "创建柱图之负责人的县公司",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "画处理时长的状态直方图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "创建柱状图的处理人的阶段",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "制作处理人的进度柱图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现柱形图的处理人的时间",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现柱图属于个数的险情确认时长",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "创建柱形图属于日期的经办人",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "生成条形图之日期的次数",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "创建长条图属于个数的成本",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "画直方图展示费用的日期",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "创建柱形图之险情确认时长的月份",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "创建柱形图属于进度的费用",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "做长条图的数量的市公司",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "绘制柱形图的状态的市公司",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现bar展示个数的处理时长",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现长条图的险情确认时长的时间",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现数量的处理时长长条图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现柱状图的险情确认时长的县公司",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "展示长条图关于时间的处理人",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "绘制长条图关于负责人的金额",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现长条图的险情确认时长的进度",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "可视化长条图的负责人的数量",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "画柱图之时间的处理时长",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "展示时间的处理时长柱形图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "生成柱图的时间的处理人",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "可视化柱图之负责人的数量",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "展示柱形图的险情确认时长的省公司",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "展示柱图属于处理人的数量",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "制作直方图关于费用的日期",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "做长条图属于负责人的市公司",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现长条图关于负责人的县公司",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "创建直方图属于市公司的费用",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "画柱形图关于处理时长的省公司",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "绘制直方图之进度的经办人",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "展示bar展示时间的次数",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "生成条形图的数量的县公司",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "做直方图的负责人的时间",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "制作柱形图关于省公司的经办人",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现柱形图关于进度的金额",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "画日期的负责人柱图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "可视化bar展示省公司的费用",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "负责人的响应时长柱形图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现柱图属于数量的县公司",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "展示柱图的费用的状态",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "绘制柱图属于个数的月份",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "生成直方图属于金额的月份",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "生成费用的响应时长条形图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现柱状图属于负责人的月份",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "展示长条图属于时间的经办人",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "创建费用的负责人长条图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现长条图之日期的进度",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "做条形图的时间的经办人",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "展示长条图展示个数的险情确认时长",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "绘制直方图的进度的省公司",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "可视化个数的阶段柱状图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "展示条形图关于费用的县公司",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "展示状态的县公司直方图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "绘制长条图之状态的成本",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现bar的市公司的经办人",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "展示bar展示状态的响应时长",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "可视化直方图关于进度的月份",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "生成长条图关于时间的市公司",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "制作状态的省公司bar",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "制作柱形图之费用的个数",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "制作直方图属于状态的次数",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "可视化长条图属于金额的数量",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "绘制险情确认时长的成本柱状图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "生成柱状图关于金额的时间",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "制作柱状图的状态的处理时长",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "画柱形图属于状态的处理时长",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "生成bar之费用的次数",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "创建柱形图属于时间的金额",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "绘制柱状图的省公司的时间",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现长条图的日期的处理人",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "绘制柱状图展示处理时长的数量",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "画柱状图关于金额的省公司",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "画条形图属于金额的日期",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "生成条形图展示状态的险情确认时长",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "可视化处理人的险情确认时长长条图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "生成长条图的市公司的状态",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "生成条形图展示时间的进度",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "做柱形图属于状态的成本",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现处理时长的经办人柱图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "创建直方图展示个数的省公司",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "可视化直方图属于费用的数量",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "绘制bar之数量的成本",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "做bar之处理人的费用",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "做条形图展示个数的省公司",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "做省公司的进度柱图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "创建柱形图展示险情确认时长的经办人",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "制作直方图的状态的经办人",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "绘制柱形图展示省公司的月份",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现柱图的时间的进度",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "可视化直方图之时间的处理人",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "生成条形图之状态的处理人",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现bar展示处理时长的成本",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "生成省公司的负责人长条图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现柱形图之状态的月份",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "画柱图关于日期的市公司",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "制作条形图属于费用的处理人",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "展示柱形图的金额的经办人",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现费用的时间直方图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "制作条形图的状态的月份",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "制作条形图之市公司的状态",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "制作柱状图关于负责人的状态",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "展示长条图的进度的个数",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "生成直方图属于状态的省公司",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "生成直方图的省公司的状态",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "画柱形图之负责人的成本",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "制作柱图关于日期的次数",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "绘制直方图展示时间的险情确认时长",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "生成日期的省公司bar",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "制作状态的市公司长条图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现柱形图关于个数的处理时长",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "制作bar的费用的月份",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现柱状图展示省公司的处理人",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "生成个数的处理人柱形图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "制作柱图之日期的处理时长",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "展示柱形图关于市公司的数量",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "画条形图之险情确认时长的经办人",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现柱图关于市公司的日期",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "展示条形图属于市公司的险情确认时长",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现柱图展示时间的险情确认时长",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "画条形图展示日期的处理时长",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "展示柱形图的个数的金额",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "展示柱状图属于市公司的成本",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "创建数量的处理时长直方图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "创建条形图关于数量的险情确认时长",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "制作bar之处理时长的数量",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "绘制柱形图属于处理人的次数",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "可视化长条图关于金额的数量",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "画柱状图展示处理人的费用",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "创建负责人的月份柱状图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "绘制bar关于处理人的市公司",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "画省公司的金额bar",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "可视化金额的险情确认时长长条图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "可视化柱形图属于处理时长的日期",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "做险情确认时长的日期柱形图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "做柱形图展示个数的负责人",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现bar的险情确认时长的次数",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "可视化直方图之处理人的响应时长",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "做柱状图展示时间的进度",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "创建长条图关于数量的成本",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "展示柱形图属于险情确认时长的数量",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "绘制直方图展示个数的阶段",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "创建直方图属于处理人的月份",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "做柱形图属于处理人的成本",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "可视化时间的经办人条形图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "画条形图的市公司的日期",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "绘制柱状图属于费用的市公司",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "生成条形图属于市公司的响应时长",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现柱状图属于日期的次数",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "生成柱图关于处理时长的个数",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "创建处理时长的费用条形图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "展示柱形图之省公司的处理人",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "制作直方图展示个数的时间",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "绘制直方图展示市公司的时间",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "生成柱图之处理时长的处理人",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "展示处理时长的费用条形图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "做柱形图属于金额的负责人",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "可视化bar的日期的县公司",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "画条形图之个数的费用",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "做柱形图关于金额的市公司",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "可视化直方图展示处理时长的次数",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "制作长条图关于金额的日期",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "绘制柱状图关于省公司的个数",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "可视化直方图的数量的时间",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "做长条图关于个数的负责人",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "可视化柱状图展示数量的处理时长",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "生成柱图属于处理时长的时间",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "绘制柱图展示费用的进度",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现bar关于时间的处理人",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "处理时长的时间柱图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "做直方图关于处理人的数量",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "生成柱图属于时间的成本",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "展示柱图关于数量的状态",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "创建bar关于费用的日期",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "制作柱状图属于进度的经办人",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "展示柱状图关于省公司的金额",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "展示长条图属于进度的市公司",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "可视化长条图属于市公司的月份",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "制作负责人的月份柱图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "创建金额的经办人柱形图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "绘制柱形图的省公司的进度",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现bar关于处理时长的阶段",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "制作处理时长的日期柱图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "画柱状图之时间的省公司",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现直方图关于省公司的月份",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "制作省公司的状态柱形图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "处理人的月份条形图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "画长条图属于市公司的进度",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "创建柱图展示处理时长的数量",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "可视化长条图的处理时长的经办人",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "绘制柱状图的日期的省公司",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现bar的处理时长的阶段",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "做处理人的状态柱图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "绘制柱状图的时间的个数",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "创建条形图之市公司的经办人",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现柱状图展示日期的处理人",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "制作bar展示个数的阶段",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "绘制直方图关于金额的月份",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "做柱形图属于负责人的阶段",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "做费用的进度柱状图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "创建长条图展示省公司的经办人",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "做直方图属于状态的成本",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "生成金额的经办人柱状图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "做柱状图之险情确认时长的状态",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "绘制条形图的状态的费用",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "生成柱形图之负责人的数量",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "制作直方图属于时间的负责人",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "展示柱图之日期的经办人",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现长条图的金额的处理时长",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "可视化柱图之时间的处理时长",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "可视化bar属于个数的省公司",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现直方图属于负责人的状态",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "可视化柱形图的状态的响应时长",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现处理时长的时间直方图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "展示柱状图展示日期的险情确认时长",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现柱状图的省公司的次数",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "绘制长条图展示市公司的月份",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "制作柱图的日期的进度",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "生成柱形图展示处理时长的个数",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "创建条形图属于时间的次数",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现柱图属于金额的市公司",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "创建条形图的时间的省公司",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "可视化柱状图展示金额的数量",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "创建长条图的处理人的成本",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "画bar展示数量的月份",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "制作长条图关于市公司的金额",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "做直方图之金额的处理人",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "绘制柱图之时间的次数",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "做条形图展示金额的时间",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "绘制柱图关于时间的成本",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "制作柱形图之负责人的个数",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "展示柱形图关于日期的成本",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现状态的数量柱图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "生成直方图关于状态的市公司",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "创建柱形图关于数量的时间",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "生成柱图的险情确认时长的金额",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "市公司的险情确认时长柱状图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "生成柱形图之个数的负责人",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "制作bar关于负责人的状态",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "可视化条形图的金额的处理时长",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "状态的响应时长柱图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "个数的成本条形图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "展示bar属于市公司的数量",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "展示直方图的处理时长的进度",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现费用的时间柱状图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "制作bar展示费用的进度",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "生成柱图属于日期的省公司",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现柱状图的状态的成本",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "制作bar属于处理人的成本",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "生成bar之险情确认时长的费用",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "绘制柱形图属于个数的金额",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "做长条图的省公司的阶段",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "制作直方图关于负责人的市公司",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "生成费用的数量柱图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现柱图展示日期的进度",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "绘制处理人的响应时长长条图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "制作柱状图展示数量的处理人",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "做长条图的负责人的县公司",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "绘制直方图属于数量的日期",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "画条形图展示日期的金额",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "生成bar关于处理人的险情确认时长",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "做日期的次数柱图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "创建柱图关于进度的个数",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "创建省公司的成本柱形图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "可视化柱图展示处理时长的个数",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "画条形图之进度的日期",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现长条图展示负责人的市公司",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "制作条形图之时间的处理人",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "展示长条图关于处理人的县公司",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "可视化条形图的数量的日期",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "展示费用的状态bar",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "画柱状图的处理人的进度",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "做条形图关于进度的个数",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "做柱形图关于金额的月份",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "可视化柱状图展示费用的处理人",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "生成柱形图之市公司的进度",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "做柱状图展示险情确认时长的数量",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "制作直方图之日期的处理时长",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "生成时间的市公司长条图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "生成bar之状态的日期",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "制作柱图展示日期的响应时长",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "绘制bar之数量的阶段",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现柱形图的时间的次数",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "画直方图的状态的日期",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "生成柱状图的费用的负责人",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现直方图之省公司的时间",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现条形图属于险情确认时长的时间",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "可视化长条图关于费用的市公司",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "制作柱状图属于险情确认时长的经办人",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "展示处理人的市公司条形图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "创建条形图关于进度的负责人",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现个数的费用柱图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "制作直方图展示状态的县公司",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "画柱状图的费用的状态",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现柱形图的负责人的金额",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "创建进度的次数条形图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "可视化bar展示进度的日期",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "绘制柱状图之状态的个数",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "创建bar之金额的次数",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "生成柱图属于数量的负责人",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "画柱图关于个数的时间",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "制作处理人的县公司柱图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "做柱形图之个数的处理时长",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "制作进度的个数柱状图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "可视化长条图之状态的处理人",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "可视化柱状图属于处理时长的日期",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "制作长条图的状态的县公司",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "做bar属于处理人的险情确认时长",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现bar的日期的市公司",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "生成柱图之省公司的处理人",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "生成柱图关于状态的日期",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现bar之省公司的负责人",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "做bar展示状态的市公司",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "可视化柱图关于处理人的省公司",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "可视化省公司的进度柱状图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "呈现省公司的响应时长柱形图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "展示长条图之险情确认时长的时间",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "制作直方图的险情确认时长的数量",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "创建直方图展示进度的数量",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "展示数量的进度直方图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "画柱图展示金额的省公司",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "制作长条图展示进度的负责人",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "生成柱图属于费用的月份",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "做市公司的金额柱形图",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "画柱状图之市公司的时间",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "制作bar关于负责人的处理时长",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "制作长条图的费用的险情确认时长",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        },
+        {
+          "text": "制作直方图的负责人的成本",
+          "label": "CHART_BAR",
+          "sub_type": "bar_groupby"
+        }
+      ]
+    },
+    "QUERY_FIND": {
+      "samples": [
+        {
+          "text": "找一下最后的经办人",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "谁的费用最佳",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "搜一下首位的等级",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "搜一下进度首位的",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "搜索收入最高",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "搜索支出首位",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "找出最差情况",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "谁的成本最高",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "瞅瞅响应时长首位",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "查找top等级",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "查找最低的情况",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "查找最多类型",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "搜一下数量最小的",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "找出日期最差的",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "看看第一的城市",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "查找最少县公司",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "查看最佳的个数",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "谁的城市最低",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "谁的类别bottom",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "哪个区域最强",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "瞅瞅总量最强",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "查看收入第一的",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "搜一下市公司首位的",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "搜一下阶段末尾",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "搜一下个数最差",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "瞅瞅经办人最高",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "查看首位省公司",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "搜索top耗时",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "搜一下最差联系人",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "找出经办人末尾的",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "搜索处理时长最高的",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "查看负责人末尾的",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "瞅瞅第一险情确认时长",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "找一下首位间隔",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "查询最差经办人",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "找一下最多的合计",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "查询第一城市",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "查看末尾状态",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "瞅瞅县公司最佳",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "查询月份首位",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "看看首位季度",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "找出最佳的申请人",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "找一下最佳的省公司",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "查找间隔最差的",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "查询最低响应时长",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "搜索区域第一的",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "查找最小合计",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "搜一下bottom的市公司",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "查找支出最差的",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "查看区域最多的",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "查询末尾的年份",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "查询结果第一的",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "搜索第一类型",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "找出最后的计数",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "类型bottom的是哪个",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "搜索第一总计",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "查询最差的处理人",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "找出最弱地区",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "找一下类型最小的",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "瞅瞅首位频次",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "搜一下最佳的时间",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "搜索bottom的情况",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "搜索合计最优的",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "哪个险情确认时长末尾",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "搜索合计最强",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "看看总计首位",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "找一下末尾总量",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "找一下最多的频次",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "搜一下总量最后的",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "找出最后的城市",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "找出县公司top的",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "查看县公司最大",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "找一下申请人最大",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "看看资金最多的",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "搜索分公司最优",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "搜一下top的年份",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "看看bottom的区域",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "找出最优持续时间",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "搜索最强类别",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "查询最高的地区",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "找出年份最弱的",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "查找最强县公司",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "搜索响应时长末尾的",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "查找等级bottom的",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "找出时段最低",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "看看操作人首位的",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "看看处理人最高的",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "谁的频次最优",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "查找情况最优",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "哪个数量末尾",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "搜索第一处理时长",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "查看top年份",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "查看持续时间最小的",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "查询经办人最差",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "查询末尾的地区",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "查询最后的预算",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "搜索最差月份",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "查询最差资金",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "看看资金第一的",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "找一下等级最优的",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "看看最强费用",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "看看最佳的处理人",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "搜一下花费最后",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "找出金额最差",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "县公司最低的是谁",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "查找成本最佳",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "谁的操作人首位",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "搜一下最小的花费",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "看看最低处理人",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "查找操作人最优",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "查找数量最差",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "查找险情确认时长最少",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "瞅瞅县公司bottom",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "搜一下末尾日期",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "查询月份最弱",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "看看险情确认时长最多的",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "搜一下最佳的状态",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "找出末尾的情况",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "找出费用top的",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "查找个数最少的",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "搜索区域最弱",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "查看最差处理时长",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "瞅瞅最弱负责人",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "查询第一的频次",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "查看最低申请人",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "查找时段top的",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "搜一下省份最少",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "找出城市最弱的",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "哪个省公司最低",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "找出总计末尾的",
+          "label": "QUERY_FIND",
+          "sub_type": "find_min"
+        },
+        {
+          "text": "找出最强的间隔",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "找一下最高响应时长",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "搜索最大的支出",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "看看最大的季度",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "搜一下第一成本",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "找一下top的成本",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        },
+        {
+          "text": "查询状态第一的",
+          "label": "QUERY_FIND",
+          "sub_type": "find_max"
+        }
+      ]
+    },
+    "QUERY_AGGREGATE": {
+      "samples": [
+        {
+          "text": "统计省公司统计次数的个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "算一算市公司花费的平均",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "统计进度支出的平均",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "县公司的险情确认时长个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "求日期统计类型的均值",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "支出的均值是多少",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg"
+        },
+        {
+          "text": "求日期收入的平均",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "算一下状态统计月份的数量",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "求次数金额的总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "计算次数类型的数量",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "求响应时长统计支出的总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "求个数统计处理人的平均",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "算一下日期次数的总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "统计一下费用统计持续时间的数量",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "统计一下月份统计类型的平均",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "算一下区域的总共",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum"
+        },
+        {
+          "text": "求经办人统计次数的合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "依据阶段统计响应时长",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "汇总状态统计成本的平均",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "算一下状态统计县公司的合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "算一下金额状态的个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "汇总次数省份的数量",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "根据状态统计区域",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "算一算个数的累计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum"
+        },
+        {
+          "text": "算一算阶段经办人的均值",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "求险情确认时长状态的平均",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "依据日期统计计数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "统计时间统计省份的平均",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "县公司的间隔均值",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "求响应时长收入的平均",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "计算费用统计计数的数量",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "统计一下日期收入的总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "统计一下费用统计状态的总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "计算经办人次数的个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "算一下经办人的一般",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg"
+        },
+        {
+          "text": "依据费用统计城市",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "算一算状态统计持续时间的个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "统计分公司的普通",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg"
+        },
+        {
+          "text": "统计一下省份的总计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum"
+        },
+        {
+          "text": "求处理人费用的个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "算一算成本个数的总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "算一下负责人耗时的总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "算一算省公司花费的个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "按负责人统计持续时间",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "汇总处理时长联系人的总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "统计一下响应时长状态的合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "算一下处理人个数的合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "统计一下险情确认时长支出的平均",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "统计一下月份统计省公司的均值",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "汇总次数收入的均值",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "汇总处理人统计总计的个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "算一下情况的次数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count"
+        },
+        {
+          "text": "求市公司统计个数的合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "算一下月份费用的个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "求阶段总计的数量",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "求处理时长成本的数量",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "计算处理时长时间的数量",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "统计一下成本阶段的总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "统计一下状态统计经办人的数量",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "统计一下月份统计险情确认时长的个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "统计一下个数的笔数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count"
+        },
+        {
+          "text": "汇总状态统计险情确认时长的平均",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "算一下阶段花费的个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "算一下经办人统计数量的合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "计算负责人统计类别的总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "算一下日期阶段的数量",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "算一算时间省份的个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "计算个数支出",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count"
+        },
+        {
+          "text": "计算次数统计险情确认时长的合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "算一算金额统计季度的总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "汇总费用日期的平均",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "统计数量响应时长的个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "统计成本统计持续时间的数量",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "算一下日期统计类型的个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "算一下月份状态的平均",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "计算次数状态的合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "计算月份统计联系人的均值",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "算一算状态统计时段的合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "算一算个数统计资金的均值",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "计算成本个数的平均",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "汇总区域的累计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum"
+        },
+        {
+          "text": "算一下日期计数的个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "省公司的等级平均",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "计算持续时间的中等",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg"
+        },
+        {
+          "text": "统计一下经办人的累计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum"
+        },
+        {
+          "text": "统计时间数量的总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "求笔数月份",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count"
+        },
+        {
+          "text": "统计一下负责人统计时间的均值",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "统计一下合计季度",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum"
+        },
+        {
+          "text": "算一下县公司统计总量的数量",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "求季度的合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum"
+        },
+        {
+          "text": "统计一下次数金额的合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "统计数量统计响应时长的个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "算一算次数统计分公司的平均",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "统计一下省公司持续时间的个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "根据处理人统计时段",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "算一算时间省公司的个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "统计县公司申请人的总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "统计一共城市",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum"
+        },
+        {
+          "text": "计算负责人统计合计的个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "按处理人统计预算",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "汇总时间预算的个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "费用的申请人均值",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "统计一下时间统计操作人的均值",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "汇总时间统计持续时间的数量",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "汇总险情确认时长个数的均值",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "计算次数时段的数量",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "算一下一般类别",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg"
+        },
+        {
+          "text": "统计条数成本",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count"
+        },
+        {
+          "text": "求阶段金额的数量",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "统计金额统计总计的数量",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "算一算经办人阶段的合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "统计数量统计分公司的个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "统计一下平均负责人",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg"
+        },
+        {
+          "text": "算一算费用统计年份的数量",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "算一算进度统计处理人的均值",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "汇总日期花费的总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "以经办人统计支出",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "统计处理人县公司的数量",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "算一算县公司统计收入的平均",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "算一算处理时长支出的数量",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "算一算个数收入的个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "求处理人统计市公司的总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "求处理人季度的平均",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "以状态统计预算",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "计算时间次数的均值",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "算一算响应时长统计申请人的合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "算一下省公司成本的平均",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "算一算省公司统计操作人的平均",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "按照响应时长统计花费",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "市公司的操作人平均",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "按照时间统计情况",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "计算数量间隔的平均",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "计算总共等级",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum"
+        },
+        {
+          "text": "算一下时间统计地区的合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "算一算类别的一共",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum"
+        },
+        {
+          "text": "计算数量统计结果的总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "求阶段统计联系人的总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "求金额统计情况的个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "按月份统计县公司",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "统计一下月份统计花费的总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "统计一下省公司统计间隔的均值",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "计算成本统计间隔的合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "算一算成本统计处理人的总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "求进度险情确认时长的合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "统计一下日期统计类型的平均",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "计算个数统计周期的个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "汇总时间次数的总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "求响应时长统计联系人的总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "统计一下次数资金",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count"
+        },
+        {
+          "text": "算一算县公司负责人的平均",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "算一下个数预算的合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "统计一下数量耗时",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count"
+        },
+        {
+          "text": "汇总经办人情况的均值",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "汇总金额申请人的均值",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "计算状态审核人的均值",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "算一算个数成本的数量",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "算一下情况的条数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count"
+        },
+        {
+          "text": "日期的持续时间总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "统计一下处理时长状态的均值",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "算一下县公司统计进度的个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "算一算险情确认时长个数的合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "求响应时长经办人的均值",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "通过经办人统计频次",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "求类别的均值",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg"
+        },
+        {
+          "text": "计算数量统计申请人的平均",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "算一算状态统计响应时长的平均",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "费用的间隔数量",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "按照费用统计总量",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "算一下日期统计成本的合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "统计县公司统计总计的个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "算一下笔数审核人",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count"
+        },
+        {
+          "text": "算一下成本月份的个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "时间的响应时长总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "计算季度的总共",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum"
+        },
+        {
+          "text": "计算阶段统计周期的均值",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "汇总处理时长统计预算的总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "以个数统计情况",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "算一算进度统计花费的数量",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "求个数类型的个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "按照处理时长统计周期",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "时间的总计总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "统计状态数量的均值",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "求条数费用",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count"
+        },
+        {
+          "text": "汇总进度统计总计的总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "算一下进度统计预算的个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "统计一下处理时长统计个数的数量",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "求成本统计阶段的个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "按处理人统计总量",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "算一算次数统计经办人的均值",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "日期的总计个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "计算县公司统计经办人的均值",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "统计数量统计成本的均值",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "统计阶段月份的均值",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "算一算险情确认时长统计个数的合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "统计一下响应时长地区的平均",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "次数的花费合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "计算时间城市的个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "算一算处理人频次的均值",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "计算月份统计响应时长的均值",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "负责人的中等",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg"
+        },
+        {
+          "text": "汇总数量合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count"
+        },
+        {
+          "text": "统计一下状态时段的平均",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "统计一下阶段统计总量的均值",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "统计个数的累计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum"
+        },
+        {
+          "text": "统计一下进度响应时长的个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "次数的条数是多少",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count"
+        },
+        {
+          "text": "统计费用频次的合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "算一算时间费用的个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "汇总数量区域的平均",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "算一下中等费用",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg"
+        },
+        {
+          "text": "统计平均个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg"
+        },
+        {
+          "text": "求状态月份的个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "统计一下县公司统计申请人的平均",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "数量的资金合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "统计一下一共类别",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum"
+        },
+        {
+          "text": "算一算阶段统计次数的均值",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "算一下处理时长县公司的均值",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "算一下负责人数量的总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "根据市公司统计持续时间",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "算一算个数统计负责人的合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "算一算市公司类别的均值",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "统计一下经办人统计处理时长的平均",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "时间的城市平均",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "阶段的处理时长合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "计算时间类别的平均",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "求经办人统计合计的个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "计算金额城市的合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "成本的省份合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "算一下日期费用的总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "计算资金的数量",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count"
+        },
+        {
+          "text": "算一下经办人统计地区的个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "统计一下经办人统计情况的平均",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "统计县公司统计响应时长的合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "求次数预算的合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "计算状态统计持续时间的合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "统计一下市公司时间的个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "算一算省公司统计结果的合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "汇总经办人统计时间的均值",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "求县公司的均值",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg"
+        },
+        {
+          "text": "通过次数统计结果",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "算一下时间统计花费的平均",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "根据成本统计个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "统计金额持续时间的合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "计算县公司统计状态的平均",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "算一下金额操作人的数量",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "计算市公司支出的个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "求市公司金额的总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "求时间统计经办人的数量",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "统计一下金额统计地区的个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "统计省公司统计合计的合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "算一下处理时长统计收入的均值",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "统计状态支出的均值",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "统计进度统计间隔的合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "处理人的阶段均值",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "统计个数统计市公司的合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "求时间统计次数的合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "频次的平均是多少",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg"
+        },
+        {
+          "text": "按次数统计地区",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "统计一下金额统计季度的平均",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "时间的阶段合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "计算日期市公司的总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "求进度统计数量的总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "计算负责人时间的平均",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "处理时长的个数总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "算一下次数等级的总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "算一下处理人统计区域的数量",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "按照状态统计总计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "算一下处理人等级的总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "统计次数统计季度的数量",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "统计进度的中等",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg"
+        },
+        {
+          "text": "算一算成本间隔的平均",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "统计处理人资金的总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "负责人的等级合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "统计县公司统计年份的均值",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "统计险情确认时长统计金额的合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "响应时长的城市总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "汇总等级的条数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count"
+        },
+        {
+          "text": "算一算负责人统计市公司的数量",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "统计状态总计的数量",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "汇总处理人总量的个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "求经办人月份的合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "计算月份统计合计的数量",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "统计一共结果",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum"
+        },
+        {
+          "text": "统计处理时长市公司的个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "算一下金额统计情况的均值",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "算一下处理时长总量的平均",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "统计市公司间隔的平均",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "计算县公司类型的均值",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "统计一下处理时长状态的数量",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "计算时间的笔数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count"
+        },
+        {
+          "text": "算一下日期统计总量的合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "算一算处理人统计情况的均值",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "算一下响应时长统计合计的个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "统计一下计数的一般",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg"
+        },
+        {
+          "text": "求日期费用的数量",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "统计时间统计类别的总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "算一下阶段统计省公司的数量",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "计算次数联系人的个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "统计个数统计负责人的合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "次数的负责人合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "个数的成本数量",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "统计次数季度的平均",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "求市公司统计操作人的合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "统计县公司统计耗时的合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "通过进度统计频次",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "年份的一共是多少",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum"
+        },
+        {
+          "text": "算一下成本统计县公司的数量",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "算一算险情确认时长统计预算的总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "求险情确认时长总计的平均",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "求处理人统计支出的个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "计算省公司统计金额的均值",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "统计状态统计处理时长的合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "通过市公司统计花费",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "算一下日期统计操作人的个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "计算金额经办人的总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "统计日期统计结果的合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "计算经办人间隔的平均",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "统计日期状态的平均",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "算一下数量日期的总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "算一下时间阶段的总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "汇总个数统计花费的数量",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "汇总进度处理时长的平均",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "汇总金额统计类别的总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "汇总普通支出",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg"
+        },
+        {
+          "text": "算一下个数统计时间的数量",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "成本的年份个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "统计个数统计联系人的数量",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "统计一下总和资金",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum"
+        },
+        {
+          "text": "汇总数量统计经办人的均值",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "算一下个数联系人的个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "求总和省公司",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum"
+        },
+        {
+          "text": "算一算省公司负责人的合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "算一算县公司月份的平均",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "算一下个数统计类别的数量",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "统计一下普通处理人",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg"
+        },
+        {
+          "text": "汇总金额持续时间的总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "算一算阶段操作人的合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "统计一下省公司统计处理人的总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "求费用数量的个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "算一下处理人统计花费的合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "以处理人统计次数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "算一算阶段年份的个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "汇总险情确认时长申请人的总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "求负责人预算的总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "算一算成本统计次数的合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "求响应时长负责人的均值",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "统计日期频次的总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "算一算个数预算",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count"
+        },
+        {
+          "text": "统计一下次数的中等",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg"
+        },
+        {
+          "text": "汇总个数统计县公司的合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "统计费用统计省公司的个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "算一算次数险情确认时长的合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "响应时长的合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum"
+        },
+        {
+          "text": "算一下阶段收入的均值",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "汇总负责人状态的总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "汇总数量响应时长的数量",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "次数的成本总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "统计时间结果的数量",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "算一算月份统计情况的总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "统计经办人统计市公司的数量",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "求县公司统计联系人的总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "统计类型的总计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum"
+        },
+        {
+          "text": "算一下省公司统计费用的合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "汇总市公司类型的总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "算一算省公司进度的均值",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "统计一下成本状态的平均",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "求险情确认时长审核人的均值",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "统计状态地区的数量",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "状态的总量均值",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "汇总市公司进度的数量",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "算一算个数类型的均值",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "响应时长的支出数量",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "算一算市公司统计申请人的均值",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "统计支出的笔数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count"
+        },
+        {
+          "text": "汇总处理时长次数的平均",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "算一下县公司等级的个数",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "count_groupby"
+        },
+        {
+          "text": "求金额统计申请人的均值",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "算一算个数统计进度的合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "算一算次数统计县公司的均值",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        },
+        {
+          "text": "次数的情况合计",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "算一算时间统计持续时间的总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "求日期统计联系人的总和",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "sum_groupby"
+        },
+        {
+          "text": "计算处理时长阶段的平均",
+          "label": "QUERY_AGGREGATE",
+          "sub_type": "avg_groupby"
+        }
+      ]
+    },
+    "QUERY_SORT": {
+      "samples": [
+        {
+          "text": "通过次数从低到高",
+          "label": "QUERY_SORT",
+          "sub_type": "sort_asc"
+        },
+        {
+          "text": "按从远到近年份",
+          "label": "QUERY_SORT",
+          "sub_type": "sort_asc"
+        },
+        {
+          "text": "排列个数从大到小",
+          "label": "QUERY_SORT",
+          "sub_type": "sort_desc"
+        },
+        {
+          "text": "依据降序排列状态",
+          "label": "QUERY_SORT",
+          "sub_type": "sort_desc"
+        },
+        {
+          "text": "根据经办人升序排列",
+          "label": "QUERY_SORT",
+          "sub_type": "sort_asc"
+        },
+        {
+          "text": "按升序排列时段",
+          "label": "QUERY_SORT",
+          "sub_type": "sort_asc"
+        },
+        {
+          "text": "根据从高到低时间",
+          "label": "QUERY_SORT",
+          "sub_type": "sort_desc"
+        },
+        {
+          "text": "按照阶段从大到小",
+          "label": "QUERY_SORT",
+          "sub_type": "sort_desc"
+        },
+        {
+          "text": "以升序排列处理时长",
+          "label": "QUERY_SORT",
+          "sub_type": "sort_asc"
+        },
+        {
+          "text": "依据周期升序排列",
+          "label": "QUERY_SORT",
+          "sub_type": "sort_asc"
+        },
+        {
+          "text": "区域从大到小",
+          "label": "QUERY_SORT",
+          "sub_type": "sort_desc"
+        },
+        {
+          "text": "排序降序排列周期",
+          "label": "QUERY_SORT",
+          "sub_type": "sort_desc"
+        },
+        {
+          "text": "按从远到近情况",
+          "label": "QUERY_SORT",
+          "sub_type": "sort_asc"
+        },
+        {
+          "text": "排序时间从远到近",
+          "label": "QUERY_SORT",
+          "sub_type": "sort_asc"
+        },
+        {
+          "text": "按照从大到小地区",
+          "label": "QUERY_SORT",
+          "sub_type": "sort_desc"
+        },
+        {
+          "text": "金额从小到大",
+          "label": "QUERY_SORT",
+          "sub_type": "sort_asc"
+        },
+        {
+          "text": "以从小到大等级",
+          "label": "QUERY_SORT",
+          "sub_type": "sort_asc"
+        },
+        {
+          "text": "排列支出从远到近",
+          "label": "QUERY_SORT",
+          "sub_type": "sort_asc"
+        },
+        {
+          "text": "根据从大到小响应时长",
+          "label": "QUERY_SORT",
+          "sub_type": "sort_desc"
+        },
+        {
+          "text": "根据花费降序排列",
+          "label": "QUERY_SORT",
+          "sub_type": "sort_desc"
+        },
+        {
+          "text": "根据从高到低类型",
+          "label": "QUERY_SORT",
+          "sub_type": "sort_desc"
+        },
+        {
+          "text": "以从高到低分公司",
+          "label": "QUERY_SORT",
+          "sub_type": "sort_desc"
+        },
+        {
+          "text": "按年份从高到低",
+          "label": "QUERY_SORT",
+          "sub_type": "sort_desc"
+        },
+        {
+          "text": "次数从远到近",
+          "label": "QUERY_SORT",
+          "sub_type": "sort_asc"
+        },
+        {
+          "text": "根据降序排列进度",
+          "label": "QUERY_SORT",
+          "sub_type": "sort_desc"
+        },
+        {
+          "text": "依据月份升序排列",
+          "label": "QUERY_SORT",
+          "sub_type": "sort_asc"
+        },
+        {
+          "text": "耗时从高到低",
+          "label": "QUERY_SORT",
+          "sub_type": "sort_desc"
+        },
+        {
+          "text": "按从远到近结果",
+          "label": "QUERY_SORT",
+          "sub_type": "sort_asc"
+        },
+        {
+          "text": "排列从小到大总计",
+          "label": "QUERY_SORT",
+          "sub_type": "sort_asc"
+        },
+        {
+          "text": "按照降序排列联系人",
+          "label": "QUERY_SORT",
+          "sub_type": "sort_desc"
+        },
+        {
+          "text": "排列升序排列申请人",
+          "label": "QUERY_SORT",
+          "sub_type": "sort_asc"
+        },
+        {
+          "text": "排列总计从大到小",
+          "label": "QUERY_SORT",
+          "sub_type": "sort_desc"
+        },
+        {
+          "text": "排序从近到远间隔",
+          "label": "QUERY_SORT",
+          "sub_type": "sort_desc"
+        },
+        {
+          "text": "依据收入从近到远",
+          "label": "QUERY_SORT",
+          "sub_type": "sort_desc"
+        },
+        {
+          "text": "以持续时间从近到远",
+          "label": "QUERY_SORT",
+          "sub_type": "sort_desc"
+        },
+        {
+          "text": "排序降序排列计数",
+          "label": "QUERY_SORT",
+          "sub_type": "sort_desc"
+        }
+      ]
+    },
+    "CHART_LINE": {
+      "samples": [
+        {
+          "text": "呈现线图属于经办人",
+          "label": "CHART_LINE",
+          "sub_type": "line_trend"
+        },
+        {
+          "text": "呈现线图关于金额",
+          "label": "CHART_LINE",
+          "sub_type": "line_trend"
+        },
+        {
+          "text": "展示个数的line",
+          "label": "CHART_LINE",
+          "sub_type": "line_trend"
+        },
+        {
+          "text": "做线图之个数",
+          "label": "CHART_LINE",
+          "sub_type": "line_trend"
+        },
+        {
+          "text": "展示变化图的阶段",
+          "label": "CHART_LINE",
+          "sub_type": "line_trend"
+        },
+        {
+          "text": "画走势图展示阶段的趋势",
+          "label": "CHART_LINE",
+          "sub_type": "line_trend"
+        },
+        {
+          "text": "可视化线图之市公司",
+          "label": "CHART_LINE",
+          "sub_type": "line_trend"
+        },
+        {
+          "text": "创建线图的市公司",
+          "label": "CHART_LINE",
+          "sub_type": "line_trend"
+        },
+        {
+          "text": "做line关于响应时长",
+          "label": "CHART_LINE",
+          "sub_type": "line_trend"
+        },
+        {
+          "text": "做经办人的趋势图",
+          "label": "CHART_LINE",
+          "sub_type": "line_trend"
+        },
+        {
+          "text": "呈现曲线图属于时间",
+          "label": "CHART_LINE",
+          "sub_type": "line_trend"
+        },
+        {
+          "text": "做曲线图属于数量",
+          "label": "CHART_LINE",
+          "sub_type": "line_trend"
+        },
+        {
+          "text": "制作处理时长的变化图",
+          "label": "CHART_LINE",
+          "sub_type": "line_trend"
+        },
+        {
+          "text": "创建曲线图展示响应时长的趋势",
+          "label": "CHART_LINE",
+          "sub_type": "line_trend"
+        },
+        {
+          "text": "展示险情确认时长的变化图",
+          "label": "CHART_LINE",
+          "sub_type": "line_trend"
+        },
+        {
+          "text": "展示走势图展示费用的趋势",
+          "label": "CHART_LINE",
+          "sub_type": "line_trend"
+        },
+        {
+          "text": "可视化变化图的次数",
+          "label": "CHART_LINE",
+          "sub_type": "line_trend"
+        },
+        {
+          "text": "呈现走势图关于险情确认时长",
+          "label": "CHART_LINE",
+          "sub_type": "line_trend"
+        },
+        {
+          "text": "画折线图之成本",
+          "label": "CHART_LINE",
+          "sub_type": "line_trend"
+        },
+        {
+          "text": "画变化图关于月份",
+          "label": "CHART_LINE",
+          "sub_type": "line_trend"
+        },
+        {
+          "text": "绘制走势图之成本",
+          "label": "CHART_LINE",
+          "sub_type": "line_trend"
+        },
+        {
+          "text": "绘制曲线图关于县公司",
+          "label": "CHART_LINE",
+          "sub_type": "line_trend"
+        },
+        {
+          "text": "创建走势图关于成本",
+          "label": "CHART_LINE",
+          "sub_type": "line_trend"
+        },
+        {
+          "text": "做折线图的时间",
+          "label": "CHART_LINE",
+          "sub_type": "line_trend"
+        },
+        {
+          "text": "绘制走势图的进度",
+          "label": "CHART_LINE",
+          "sub_type": "line_trend"
+        },
+        {
+          "text": "创建走势图的经办人",
+          "label": "CHART_LINE",
+          "sub_type": "line_trend"
+        },
+        {
+          "text": "展示趋势图的状态",
+          "label": "CHART_LINE",
+          "sub_type": "line_trend"
+        },
+        {
+          "text": "展示曲线图展示省公司的趋势",
+          "label": "CHART_LINE",
+          "sub_type": "line_trend"
+        },
+        {
+          "text": "可视化趋势图的个数",
+          "label": "CHART_LINE",
+          "sub_type": "line_trend"
+        },
+        {
+          "text": "呈现曲线图之阶段",
+          "label": "CHART_LINE",
+          "sub_type": "line_trend"
+        }
+      ]
+    },
+    "QUERY_FILTER": {
+      "samples": [
+        {
+          "text": "选出月份小于100的",
+          "label": "QUERY_FILTER",
+          "sub_type": "filter_condition"
+        },
+        {
+          "text": "过滤次数在100到200之间的",
+          "label": "QUERY_FILTER",
+          "sub_type": "filter_condition"
+        },
+        {
+          "text": "过滤处理时长大于1000的",
+          "label": "QUERY_FILTER",
+          "sub_type": "filter_condition"
+        },
+        {
+          "text": "选出月份超过10000的",
+          "label": "QUERY_FILTER",
+          "sub_type": "filter_condition"
+        },
+        {
+          "text": "排除广东的",
+          "label": "QUERY_FILTER",
+          "sub_type": "filter"
+        },
+        {
+          "text": "过滤月份小于100的",
+          "label": "QUERY_FILTER",
+          "sub_type": "filter_condition"
+        },
+        {
+          "text": "剔除广东的",
+          "label": "QUERY_FILTER",
+          "sub_type": "filter"
+        },
+        {
+          "text": "挑出次数低于50的",
+          "label": "QUERY_FILTER",
+          "sub_type": "filter_condition"
+        }
+      ]
+    },
+    "CHART_PIE": {
+      "samples": [
+        {
+          "text": "制作饼图关于个数的分布",
+          "label": "CHART_PIE",
+          "sub_type": "pie_distribution"
+        },
+        {
+          "text": "做pie的负责人的分布",
+          "label": "CHART_PIE",
+          "sub_type": "pie_distribution"
+        },
+        {
+          "text": "呈现占比图属于日期的分布",
+          "label": "CHART_PIE",
+          "sub_type": "pie_distribution"
+        },
+        {
+          "text": "可视化扇形图之成本的分布",
+          "label": "CHART_PIE",
+          "sub_type": "pie_distribution"
+        },
+        {
+          "text": "呈现数量的占比图",
+          "label": "CHART_PIE",
+          "sub_type": "pie_distribution"
+        },
+        {
+          "text": "呈现pie之负责人的分布",
+          "label": "CHART_PIE",
+          "sub_type": "pie_distribution"
+        },
+        {
+          "text": "呈现pie属于市公司的分布",
+          "label": "CHART_PIE",
+          "sub_type": "pie_distribution"
+        },
+        {
+          "text": "可视化饼图展示处理时长的占比",
+          "label": "CHART_PIE",
+          "sub_type": "pie_distribution"
+        },
+        {
+          "text": "生成扇形图关于阶段的分布",
+          "label": "CHART_PIE",
+          "sub_type": "pie_distribution"
+        },
+        {
+          "text": "绘制费用的pie",
+          "label": "CHART_PIE",
+          "sub_type": "pie_distribution"
+        },
+        {
+          "text": "展示pie关于负责人的分布",
+          "label": "CHART_PIE",
+          "sub_type": "pie_distribution"
+        },
+        {
+          "text": "制作饼图关于费用的分布",
+          "label": "CHART_PIE",
+          "sub_type": "pie_distribution"
+        },
+        {
+          "text": "呈现pie之阶段的分布",
+          "label": "CHART_PIE",
+          "sub_type": "pie_distribution"
+        },
+        {
+          "text": "可视化扇形图之处理人的分布",
+          "label": "CHART_PIE",
+          "sub_type": "pie_distribution"
+        },
+        {
+          "text": "创建扇形图之县公司的分布",
+          "label": "CHART_PIE",
+          "sub_type": "pie_distribution"
+        },
+        {
+          "text": "生成圆形图展示数量的占比",
+          "label": "CHART_PIE",
+          "sub_type": "pie_distribution"
+        },
+        {
+          "text": "绘制扇形图属于个数的分布",
+          "label": "CHART_PIE",
+          "sub_type": "pie_distribution"
+        },
+        {
+          "text": "做占比图展示省公司的占比",
+          "label": "CHART_PIE",
+          "sub_type": "pie_distribution"
+        },
+        {
+          "text": "可视化分布图关于响应时长的分布",
+          "label": "CHART_PIE",
+          "sub_type": "pie_distribution"
+        },
+        {
+          "text": "可视化圆形图之状态的分布",
+          "label": "CHART_PIE",
+          "sub_type": "pie_distribution"
+        },
+        {
+          "text": "展示占比图展示成本的占比",
+          "label": "CHART_PIE",
+          "sub_type": "pie_distribution"
+        },
+        {
+          "text": "做占比图展示阶段的占比",
+          "label": "CHART_PIE",
+          "sub_type": "pie_distribution"
+        },
+        {
+          "text": "制作扇形图关于阶段的分布",
+          "label": "CHART_PIE",
+          "sub_type": "pie_distribution"
+        },
+        {
+          "text": "画圆形图关于阶段的分布",
+          "label": "CHART_PIE",
+          "sub_type": "pie_distribution"
+        },
+        {
+          "text": "绘制占比图属于经办人的分布",
+          "label": "CHART_PIE",
+          "sub_type": "pie_distribution"
+        },
+        {
+          "text": "可视化状态的占比图",
+          "label": "CHART_PIE",
+          "sub_type": "pie_distribution"
+        }
+      ]
+    }
+  }
+}

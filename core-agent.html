@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>核心Agent交互界面</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #2c3e50;
+        }
+        
+        .input-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .input-section textarea {
+            width: 100%;
+            height: 100px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            resize: vertical;
+            font-size: 16px;
+            font-family: inherit;
+        }
+        
+        .input-section button {
+            margin-top: 10px;
+            padding: 10px 20px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        
+        .input-section button:hover {
+            background-color: #2980b9;
+        }
+        
+        .input-section button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+        
+        .status-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .status-section h2 {
+            margin-bottom: 15px;
+            color: #2c3e50;
+            font-size: 18px;
+        }
+        
+        .decision-path {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+        
+        .result-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .result-section h2 {
+            margin-bottom: 15px;
+            color: #2c3e50;
+            font-size: 18px;
+        }
+        
+        .result-content {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .skill-info {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e8f4f8;
+            border-radius: 4px;
+        }
+        
+        .skill-info h3 {
+            margin-bottom: 10px;
+            color: #2c3e50;
+            font-size: 16px;
+        }
+        
+        .skill-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+        }
+        
+        .skill-item {
+            padding: 10px;
+            background: white;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .skill-item h4 {
+            font-size: 14px;
+            margin-bottom: 5px;
+            color: #3498db;
+        }
+        
+        .skill-item p {
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .model-info {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f3e5f5;
+            border-radius: 4px;
+        }
+        
+        .model-info h3 {
+            margin-bottom: 10px;
+            color: #2c3e50;
+            font-size: 16px;
+        }
+        
+        .model-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 10px;
+        }
+        
+        .model-item {
+            padding: 10px;
+            background: white;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .model-item h4 {
+            font-size: 14px;
+            margin-bottom: 5px;
+            color: #9b59b6;
+        }
+        
+        .model-item p {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>核心Agent交互界面</h1>
+        
+        <!-- 输入区域 -->
+        <div class="input-section">
+            <h2>输入您的查询</h2>
+            <textarea id="user-query" placeholder="请输入您的数据分析需求，例如：统计各省份的销售额平均值"></textarea>
+            <button id="submit-btn" onclick="runCoreAgent()">提交查询</button>
+        </div>
+        
+        <!-- 状态区域 -->
+        <div class="status-section">
+            <h2>决策路径</h2>
+            <div id="decision-path" class="decision-path">
+                <p>等待查询...</p>
+            </div>
+        </div>
+        
+        <!-- 结果区域 -->
+        <div class="result-section">
+            <h2>执行结果</h2>
+            <div id="result-content" class="result-content">
+                <p>等待结果...</p>
+            </div>
+        </div>
+        
+        <!-- Skill信息 -->
+        <div class="skill-info">
+            <h3>可用技能</h3>
+            <div id="skill-list" class="skill-list">
+                <p>加载中...</p>
+            </div>
+        </div>
+        
+        <!-- 模型信息 -->
+        <div class="model-info">
+            <h3>可用模型</h3>
+            <div id="model-list" class="model-list">
+                <p>加载中...</p>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // API基础URL
+        const API_BASE_URL = 'http://localhost:5001';
+        
+        // 页面加载时获取Skill和模型信息
+        window.onload = function() {
+            loadSkills();
+            loadModels();
+        };
+        
+        // 加载Skill信息
+        async function loadSkills() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/v1/core-agent/skills`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const skillList = document.getElementById('skill-list');
+                    skillList.innerHTML = '';
+                    
+                    data.skills.forEach(skill => {
+                        const skillItem = document.createElement('div');
+                        skillItem.className = 'skill-item';
+                        skillItem.innerHTML = `
+                            <h4>${skill.name}</h4>
+                            <p>${skill.description}</p>
+                        `;
+                        skillList.appendChild(skillItem);
+                    });
+                }
+            } catch (error) {
+                console.error('加载Skill失败:', error);
+                document.getElementById('skill-list').innerHTML = '<p>加载失败</p>';
+            }
+        }
+        
+        // 加载模型信息
+        async function loadModels() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/v1/core-agent/models`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const modelList = document.getElementById('model-list');
+                    modelList.innerHTML = '';
+                    
+                    data.models.forEach(model => {
+                        const modelItem = document.createElement('div');
+                        modelItem.className = 'model-item';
+                        modelItem.innerHTML = `
+                            <h4>${model.name}</h4>
+                            <p>描述: ${model.description}</p>
+                            <p>响应时间: ${model.response_time}</p>
+                            <p>准确率: ${model.accuracy}</p>
+                            <p>成本: ${model.cost}</p>
+                        `;
+                        modelList.appendChild(modelItem);
+                    });
+                }
+            } catch (error) {
+                console.error('加载模型失败:', error);
+                document.getElementById('model-list').innerHTML = '<p>加载失败</p>';
+            }
+        }
+        
+        // 运行核心Agent
+        async function runCoreAgent() {
+            const userQuery = document.getElementById('user-query').value.trim();
+            const submitBtn = document.getElementById('submit-btn');
+            const decisionPath = document.getElementById('decision-path');
+            const resultContent = document.getElementById('result-content');
+            
+            if (!userQuery) {
+                alert('请输入查询内容');
+                return;
+            }
+            
+            // 显示加载状态
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<div class="loading"></div>处理中...';
+            decisionPath.innerHTML = '<p>正在分析任务...</p>';
+            resultContent.innerHTML = '<p>等待结果...</p>';
+            
+            try {
+                // 调用核心Agent API
+                const response = await fetch(`${API_BASE_URL}/api/v1/core-agent/run`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        user_query: userQuery
+                    })
+                });
+                
+                const result = await response.json();
+                
+                // 显示决策路径（简化版）
+                decisionPath.innerHTML = `
+                    <p>✓ 任务分析完成</p>
+                    <p>✓ 模型选择完成</p>
+                    <p>✓ Skill执行完成</p>
+                    <p>✓ 结果整合完成</p>
+                `;
+                
+                // 显示结果
+                resultContent.innerHTML = JSON.stringify(result, null, 2);
+                
+            } catch (error) {
+                console.error('执行失败:', error);
+                decisionPath.innerHTML = '<p>执行过程中出现错误</p>';
+                resultContent.innerHTML = `<p>错误: ${error.message}</p>`;
+            } finally {
+                // 恢复按钮状态
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '提交查询';
+            }
+        }
+    </script>
+</body>
+</html>

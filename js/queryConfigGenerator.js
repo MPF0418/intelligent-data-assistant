@@ -98,1078 +98,428 @@ class QueryConfigGenerator {
                             limit: parseInt(match[3]),
                             order: match[2] === '前' ? 'desc' : 'asc'
                         })
-                    },
-                    {
-                        // X排名第一/最后
-                        regex: /(.+?)排名(第一|最后|第\d+)/,
-                        extract: (match, columns) => ({
-                            valueCol: this.findColumn(match[1], columns),
-                            queryType: match[2] === '第一' ? 'find_max' : 
-                                      match[2] === '最后' ? 'find_min' : 'find_rank',
-                            rank: match[2].startsWith('第') ? parseInt(match[2].replace(/[^\d]/g, '')) : null
-                        })
                     }
-                ]
+                ],
+                default: (intentText, columns) => ({
+                    valueCol: this.findColumn(intentText, columns),
+                    queryType: 'find_value'
+                })
             },
             
-            // 统计汇总（求和、计数、平均值等）
+            // 聚合统计（求和、平均、计数等）
             'QUERY_AGGREGATE': {
                 patterns: [
                     {
-                        // 复合查询：统计XX为YY的ZZ数量（筛选+统计）
-                        regex: /统计(.+?)(为|是|等于)(.+?)的(.+?)数量/,
+                        // 计算/统计/求和X总和（如"统计销售额总和"）
+                        regex: /(统计|计算|求和)(.+?)(总和|总数|合计|合计)/,
                         extract: (match, columns) => ({
-                            filterColumn: this.findColumn(match[1], columns),
-                            filterValue: match[3].trim(),
-                            valueCol: this.findColumn(match[4], columns),
-                            aggregateFunction: 'count',
-                            hasFilter: true
-                        })
-                    },
-                    {
-                        // 复合查询：XX为YY的ZZ数量
-                        regex: /(.+?)(为|是|等于)(.+?)的(.+?)数量/,
-                        extract: (match, columns) => ({
-                            filterColumn: this.findColumn(match[1], columns),
-                            filterValue: match[3].trim(),
-                            valueCol: this.findColumn(match[4], columns),
-                            aggregateFunction: 'count',
-                            hasFilter: true
-                        })
-                    },
-                    {
-                        // 复合查询：统计XX区域的YY数量（区域筛选+统计）
-                        regex: /统计(.+?)(区域|地区|省|市)?的(.+?)数量/,
-                        extract: (match, columns) => {
-                            const regionValue = match[1].trim();
-                            const regionCol = this.findRegionColumn(columns);
-                            return {
-                                filterColumn: regionCol,
-                                filterValue: regionValue,
-                                valueCol: this.findColumn(match[3], columns),
-                                aggregateFunction: 'count',
-                                hasFilter: true
-                            };
-                        }
-                    },
-                    {
-                        // 统计所有X的平均值/总和
-                        regex: /统计所有(.+?)的(平均值|平均|均值|总和|合计|总计)/,
-                        extract: (match, columns) => ({
-                            valueCol: this.findColumn(match[1], columns),
-                            aggregateFunction: match[2].includes('平均') ? 'avg' : 'sum',
-                            isOverall: true
-                        })
-                    },
-                    {
-                        // 统计X的平均值/总和
-                        regex: /统计(.+?)的(平均值|平均|均值|总和|合计|总计)/,
-                        extract: (match, columns) => ({
-                            valueCol: this.findColumn(match[1], columns),
-                            aggregateFunction: match[2].includes('平均') ? 'avg' : 'sum',
-                            isOverall: true
-                        })
-                    },
-                    {
-                        // 所有X的平均值/总和
-                        regex: /所有(.+?)的(平均值|平均|均值|总和|合计|总计)/,
-                        extract: (match, columns) => ({
-                            valueCol: this.findColumn(match[1], columns),
-                            aggregateFunction: match[2].includes('平均') ? 'avg' : 'sum',
-                            isOverall: true
-                        })
-                    },
-                    {
-                        // 计算X的平均值/总和
-                        regex: /计算(.+?)的(平均值|平均|均值|总和|合计|总计)/,
-                        extract: (match, columns) => ({
-                            valueCol: this.findColumn(match[1], columns),
-                            aggregateFunction: match[2].includes('平均') ? 'avg' : 'sum',
-                            isOverall: true
-                        })
-                    },
-                    {
-                        // 按照 Y 的 X 平均值/总和（新增：支持"按照省公司的险情确认时长平均值"）
-                        regex: /按 [照]?(.+?) 的 (.+?)(平均值|平均|均值|总和|合计|总计)/,
-                        extract: (match, columns) => ({
-                            groupCol: this.findColumn(match[1], columns),
                             valueCol: this.findColumn(match[2], columns),
-                            aggregateFunction: match[3].includes('平均') ? 'avg' : 'sum'
+                            aggregateFunction: 'sum'
                         })
                     },
                     {
-                        // 按照 Y 统计 X 的平均值/总和
-                        regex: /按 [照]?(.+?) 统计 (.+?) 的 (平均值|平均|均值|总和|合计|总计)/,
+                        // 平均值/平均数/平均/平均X
+                        regex: /(平均|平均值|平均数)(.+?)/,
                         extract: (match, columns) => ({
-                            groupCol: this.findColumn(match[1], columns),
                             valueCol: this.findColumn(match[2], columns),
-                            aggregateFunction: match[3].includes('平均') ? 'avg' : 'sum'
+                            aggregateFunction: 'avg'
                         })
                     },
                     {
-                        // 各 Y 的 X 平均值/总和
-                        regex: /各 (.+?) 的 (.+?)(平均值|平均|均值|总和|合计|总计)/,
+                        // 计算X的平均值
+                        regex: /计算(.+?)的平均值/,
                         extract: (match, columns) => ({
-                            groupCol: this.findColumn(match[1], columns),
-                            valueCol: this.findColumn(match[2], columns),
-                            aggregateFunction: match[3].includes('平均') ? 'avg' : 'sum'
+                            valueCol: this.findColumn(match[1], columns),
+                            aggregateFunction: 'avg'
                         })
                     },
                     {
-                        // 统计Y的X数量
-                        regex: /按[照]?(.+?)统计(.+?)数量/,
+                        // 中位数
+                        regex: /(.+?)(中位数|中点)/,
                         extract: (match, columns) => ({
-                            groupCol: this.findColumn(match[1], columns),
+                            valueCol: this.findColumn(match[1], columns),
+                            aggregateFunction: 'median'
+                        })
+                    },
+                    {
+                        // 统计/计数/计算X的数量/个数
+                        regex: /(统计|计数|计算)(.+?)(数量|个数|数目)/,
+                        extract: (match, columns) => ({
                             valueCol: this.findColumn(match[2], columns),
                             aggregateFunction: 'count'
                         })
                     },
                     {
-                        // 各Y的X数量
-                        regex: /各(.+?)的(.+?)数量/,
+                        // 最大值/最小值
+                        regex: /(.+?)(最大值|最小值)/,
                         extract: (match, columns) => ({
-                            groupCol: this.findColumn(match[1], columns),
-                            valueCol: this.findColumn(match[2], columns),
-                            aggregateFunction: 'count'
+                            valueCol: this.findColumn(match[1], columns),
+                            aggregateFunction: match[2].includes('大') ? 'max' : 'min'
                         })
                     },
                     {
-                        // 统计数量/总数/合计
-                        regex: /统计(数量|总数|合计|总计|个数)/,
+                        // 标准差/方差/波动程度
+                        regex: /(.+?)(标准差|方差|波动程度)/,
                         extract: (match, columns) => ({
-                            aggregateFunction: 'count',
-                            isOverall: true
+                            valueCol: this.findColumn(match[1], columns),
+                            aggregateFunction: match[1].includes('差') ? 'std' : 'var'
+                        })
+                    },
+                    {
+                        // 第X百分位数
+                        regex: /第(\d+)(.+)百分位数/,
+                        extract: (match, columns) => ({
+                            valueCol: this.findColumn(match[2], columns),
+                            aggregateFunction: 'percentile',
+                            percentile: parseInt(match[1])
                         })
                     }
-                ]
+                ],
+                default: (intentText, columns) => {
+                    // 如果没有匹配特定模式，尝试推断聚合函数
+                    if (intentText.includes('总和') || intentText.includes('合计')) {
+                        return { valueCol: this.findColumn(intentText, columns), aggregateFunction: 'sum' };
+                    } else if (intentText.includes('平均')) {
+                        return { valueCol: this.findColumn(intentText, columns), aggregateFunction: 'avg' };
+                    } else if (intentText.includes('数量') || intentText.includes('个数')) {
+                        return { valueCol: this.findColumn(intentText, columns), aggregateFunction: 'count' };
+                    } else {
+                        return { valueCol: this.findColumn(intentText, columns), aggregateFunction: 'sum' };
+                    }
+                }
             },
             
-            // 筛选过滤（按条件筛选数据）
+            // 数据筛选
             'QUERY_FILTER': {
                 patterns: [
                     {
-                        // 谁是XX人（如"谁是广东人"）
-                        regex: /谁(是|在|来自)?(.+?)(人|的)/,
+                        // 筛选/选择大于/小于/等于某个值的
+                        regex: /(筛选|选择)(.+?)(大于|小于|等于)(.+?)/,
                         extract: (match, columns) => {
-                            const regionValue = match[2].trim();
-                            const regionCol = this.findRegionColumn(columns);
                             return {
-                                filterColumn: regionCol,
-                                filterValue: regionValue,
-                                operator: 'contains',
-                                isPeopleQuery: true
+                                filterColumn: this.findColumn(match[2], columns),
+                                operator: match[3],
+                                filterValue: match[4].trim()
                             };
                         }
                     },
                     {
-                        // XX人在哪里（如"广东人在哪里"）
-                        regex: /(.+?人)(在哪里|有哪些|是谁)/,
+                        // 所有X的Y（如"所有广东省的数据"）
+                        regex: /所有(.+?)的(.+)/,
                         extract: (match, columns) => {
-                            const regionValue = match[1].replace(/人$/, '').trim();
-                            const regionCol = this.findRegionColumn(columns);
                             return {
-                                filterColumn: regionCol,
-                                filterValue: regionValue,
-                                operator: 'contains',
-                                isPeopleQuery: true
+                                filterColumn: this.findColumn(match[1], columns),
+                                filterValue: match[2].replace(/的/g, '').trim()
                             };
                         }
                     },
                     {
-                        // X大于/小于/等于Y的
-                        regex: /(.+?)(大于|小于|等于|超过|不足|至少|最多)(.+?)的/,
+                        // X包含/不包含Y
+                        regex: /(.+?)(包含|不包含)(.+)/,
                         extract: (match, columns) => ({
                             filterColumn: this.findColumn(match[1], columns),
-                            operator: this.mapOperator(match[2]),
+                            operator: match[2] === '包含' ? 'contain' : 'not_contain',
                             filterValue: match[3].trim()
                         })
                     },
                     {
-                        // 只要/只看X为Y的
-                        regex: /(只要|只看|只显示|筛选出|过滤出)(.+?)(为|是|等于)(.+?)的/,
-                        extract: (match, columns) => ({
-                            filterColumn: this.findColumn(match[2], columns),
-                            operator: '=',
-                            filterValue: match[4].trim()
-                        })
-                    },
-                    {
-                        // X在Y范围内的
-                        regex: /(.+?)在(.+?)(范围|区间|之间)内/,
-                        extract: (match, columns) => ({
-                            filterColumn: this.findColumn(match[1], columns),
-                            operator: 'between',
-                            filterValue: match[2].trim()
-                        })
-                    },
-                    {
-                        // 排除/去除X为Y的
-                        regex: /(排除|去除|删除|不要)(.+?)(为|是|等于)(.+?)的/,
-                        extract: (match, columns) => ({
-                            filterColumn: this.findColumn(match[2], columns),
-                            operator: '!=',
-                            filterValue: match[4].trim()
-                        })
+                        // 找出X（简单的筛选）
+                        regex: /找出(.+?)/,
+                        extract: (match, columns) => {
+                            // 尝试提取列名和值
+                            const input = match[1].trim();
+                            const parts = input.split('的');
+                            if (parts.length >= 2) {
+                                return {
+                                    filterColumn: this.findColumn(parts[0], columns),
+                                    filterValue: parts.slice(1).join('的')
+                                };
+                            } else {
+                                return {
+                                    filterColumn: this.findColumn(input, columns),
+                                    filterValue: input
+                                };
+                            }
+                        }
                     }
-                ]
+                ],
+                default: (intentText, columns) => {
+                    // 简单的列名筛选
+                    return {
+                        filterColumn: this.findColumn(intentText, columns),
+                        filterValue: intentText
+                    };
+                }
             },
             
-            // 排序（升序、降序排列）
+            // 数据排序
             'QUERY_SORT': {
                 patterns: [
                     {
+                        // 按X从大到小/从小到大排序
+                        regex: /按(.+?)(从大到小|从小到大)(排序|排列)/,
+                        extract: (match, columns) => ({
+                            sortColumn: this.findColumn(match[1], columns),
+                            direction: match[2].includes('大') ? 'desc' : 'asc'
+                        })
+                    },
+                    {
+                        // X从小到大排序/从新到旧排序
+                        regex: /(.+?)(从小到大|从新到旧)(排序|排列)/,
+                        extract: (match, columns) => ({
+                            sortColumn: this.findColumn(match[1], columns),
+                            direction: match[2].includes('小') || match[2].includes('新') ? 'asc' : 'desc'
+                        })
+                    },
+                    {
                         // 按X排序
-                        regex: /按[照]?(.+?)(排序|排列)/,
+                        regex: /按(.+?)排序/,
                         extract: (match, columns) => ({
                             sortColumn: this.findColumn(match[1], columns),
-                            sortOrder: 'asc'
-                        })
-                    },
-                    {
-                        // 按X升序/降序
-                        regex: /按[照]?(.+?)(升序|降序|从小到大|从大到小|从低到高|从高到低)/,
-                        extract: (match, columns) => ({
-                            sortColumn: this.findColumn(match[1], columns),
-                            sortOrder: match[2].includes('升') || match[2].includes('小') || match[2].includes('低') ? 'asc' : 'desc'
-                        })
-                    },
-                    {
-                        // X从高到低/从低到高
-                        regex: /(.+?)(从高到低|从低到高|从大到小|从小到大)/,
-                        extract: (match, columns) => ({
-                            sortColumn: this.findColumn(match[1], columns),
-                            sortOrder: match[2].includes('高') || match[2].includes('大') ? 'desc' : 'asc'
+                            direction: 'desc'
                         })
                     }
-                ]
+                ],
+                default: (intentText, columns) => ({
+                    sortColumn: this.findColumn(intentText, columns),
+                    direction: 'desc'
+                })
             },
             
-            // 柱状图可视化
-            'CHART_BAR': {
+            // 图表生成
+            'CHART': {
                 patterns: [
                     {
-                        // 按照 X/Y 绘制柱状图（新增：支持斜杠分隔 X 轴和 Y 轴）
-                        regex: /按 [照]?(.+?)[/／](.+?)(绘制 | 画|生成|做).*柱状图/,
+                        // 画一个X（柱状|条形|饼|折线）图
+                        regex: /画一个(.+?)(柱状|条形|饼|折线)图/,
                         extract: (match, columns) => ({
-                            chartType: 'bar',
-                            xAxisColumn: this.findColumn(match[1].trim(), columns),
-                            yAxisColumn: this.findColumn(match[2].trim(), columns),
-                            aggregateFunction: 'sum'
+                            chartType: this.mapChartType(match[2]),
+                            dimension: this.findColumn(match[1], columns)
                         })
                     },
                     {
-                        // 按照 Y 统计 X 并绘制柱状图
-                        regex: /按 [照]?(.+?) 统计 (.+?).*柱状图/,
+                        // 用柱状图展示X
+                        regex: /用(.+?)展示(.+)/,
                         extract: (match, columns) => ({
-                            chartType: 'bar',
-                            xAxisColumn: this.findColumn(match[1], columns),
-                            yAxisColumn: this.findColumn(match[2], columns),
-                            aggregateFunction: 'sum'
+                            chartType: this.mapChartType(match[1]),
+                            dimension: this.findColumn(match[2], columns)
                         })
                     },
                     {
-                        // 按照X绘制Y的柱状图（明确指定分组列和数值列）
-                        // 如"按照省份绘制销售额的柱状图" → X轴=省份, Y轴=销售额
-                        // V4.0修复：使用更精确的正则，确保正确提取X和Y
-                        regex: /按[照]?(.+?)(绘制|画|生成|做)(.+?)的柱状图$/,
-                        extract: (match, columns, userInput) => {
-                            const xDesc = match[1].trim();
-                            const yDesc = match[3].trim();
-                            console.log(`[CHART_BAR] 匹配"按照X绘制Y的柱状图": X=${xDesc}, Y=${yDesc}`);
-                            
-                            const xAxisColumn = this.findColumn(xDesc, columns);
-                            const yAxisColumn = this.findColumn(yDesc, columns);
-                            
-                            console.log(`[CHART_BAR] 匹配结果: X=${xAxisColumn}, Y=${yAxisColumn}`);
-                            
-                            // V4.0修复：智能选择聚合函数
-                            const aggregateFunction = this.determineAggregateFunction(userInput, yAxisColumn);
-                            
-                            return {
-                                chartType: 'bar',
-                                xAxisColumn: xAxisColumn,
-                                yAxisColumn: yAxisColumn,
-                                aggregateFunction: aggregateFunction
-                            };
-                        }
-                    },
-                    {
-                        // 按照X绘制柱状图（只指定分组列）
-                        // V4.0修复：排除包含"的"字的情况，避免与上面的模式冲突
-                        regex: /按[照]?([^的]+?)(绘制|画|生成|做)柱状图$/,
-                        extract: (match, columns, userInput) => ({
-                            chartType: 'bar',
-                            xAxisColumn: this.findColumn(match[1], columns),
-                            aggregateFunction: this.determineAggregateFunction(userInput, null)
-                        })
-                    },
-                    {
-                        // 各Y的X柱状图
-                        regex: /各(.+?)的(.+?).*柱状图/,
+                        // 绘制X（趋势|分布|对比）图
+                        regex: /绘制(.+?)(趋势|分布|对比)图/,
                         extract: (match, columns) => ({
-                            chartType: 'bar',
-                            xAxisColumn: this.findColumn(match[1], columns),
-                            yAxisColumn: this.findColumn(match[2], columns),
-                            aggregateFunction: 'sum'
-                        })
-                    },
-                    {
-                        // 绘制XX和YY的柱状图（明确指定X轴和Y轴）
-                        // 如"绘制省份和销售额的柱状图" → X轴=省份, Y轴=销售额
-                        regex: /(绘制|画|生成|做)(.+?)(和|与|及)(.+?)的柱状图/,
-                        extract: (match, columns) => {
-                            const xDesc = match[2].trim();
-                            const yDesc = match[4].trim();
-                            console.log(`[CHART_BAR] 匹配"XX和YY的柱状图": X=${xDesc}, Y=${yDesc}`);
-                            
-                            const xAxisColumn = this.findColumn(xDesc, columns);
-                            const yAxisColumn = this.findColumn(yDesc, columns);
-                            
-                            console.log(`[CHART_BAR] 匹配结果: X=${xAxisColumn}, Y=${yAxisColumn}`);
-                            
-                            return {
-                                chartType: 'bar',
-                                xAxisColumn: xAxisColumn,
-                                yAxisColumn: yAxisColumn,
-                                aggregateFunction: 'sum'
-                            };
-                        }
-                    },
-                    {
-                        // 绘制X的柱状图（只指定分组列，默认计数）
-                        // 注意：此模式不能包含"和"字，避免与上面的模式冲突
-                        regex: /(绘制|画|生成|做)([^和]+?)的柱状图/,
-                        extract: (match, columns) => ({
-                            chartType: 'bar',
-                            xAxisColumn: this.findColumn(match[2], columns),
-                            aggregateFunction: 'count'
-                        })
-                    },
-                    {
-                        // X的柱状图（最简形式）
-                        // 注意：此模式不能包含"和"字
-                        regex: /([^和]+?)的柱状图/,
-                        extract: (match, columns) => ({
-                            chartType: 'bar',
-                            xAxisColumn: this.findColumn(match[1], columns),
-                            aggregateFunction: 'count'
+                            chartType: match[1] === '趋势' ? 'line' : match[1] === '分布' ? 'pie' : 'bar',
+                            dimension: this.findColumn(match[2], columns)
                         })
                     }
-                ]
-            },
-            
-            // 折线图可视化
-            'CHART_LINE': {
-                patterns: [
-                    {
-                        // 按照 X/Y 绘制折线图（新增：支持斜杠分隔 X 轴和 Y 轴）
-                        regex: /按 [照]?(.+?)[/／](.+?)(绘制 | 画|生成|做).*折线图/,
-                        extract: (match, columns) => ({
-                            chartType: 'line',
-                            xAxisColumn: this.findColumn(match[1].trim(), columns),
-                            yAxisColumn: this.findColumn(match[2].trim(), columns),
-                            aggregateFunction: 'sum'
-                        })
-                    },
-                    {
-                        // 按照 Y 统计 X 并绘制折线图
-                        regex: /按 [照]?(.+?) 统计 (.+?).*折线图/,
-                        extract: (match, columns) => ({
-                            chartType: 'line',
-                            xAxisColumn: this.findColumn(match[1], columns),
-                            yAxisColumn: this.findColumn(match[2], columns),
-                            aggregateFunction: 'sum'
-                        })
-                    },
-                    {
-                        // 按照X绘制Y的折线图（明确指定分组列和数值列）
-                        // 如"按照月份绘制销售额的折线图" → X轴=月份, Y轴=销售额
-                        regex: /按[照]?(.+?)(绘制|画|生成|做)(.+?)的折线图/,
-                        extract: (match, columns) => {
-                            const xDesc = match[1].trim();
-                            const yDesc = match[3].trim();
-                            console.log(`[CHART_LINE] 匹配"按照X绘制Y的折线图": X=${xDesc}, Y=${yDesc}`);
-                            
-                            const xAxisColumn = this.findColumn(xDesc, columns);
-                            const yAxisColumn = this.findColumn(yDesc, columns);
-                            
-                            console.log(`[CHART_LINE] 匹配结果: X=${xAxisColumn}, Y=${yAxisColumn}`);
-                            
-                            // 如果成功匹配到Y轴列，使用sum聚合；否则使用count
-                            const aggregateFunction = yAxisColumn ? 'sum' : 'count';
-                            
-                            return {
-                                chartType: 'line',
-                                xAxisColumn: xAxisColumn,
-                                yAxisColumn: yAxisColumn,
-                                aggregateFunction: aggregateFunction
-                            };
-                        }
-                    },
-                    {
-                        // 按照X绘制折线图（只指定分组列，默认计数）
-                        regex: /按[照]?(.+?)(绘制|画|生成|做).*折线图/,
-                        extract: (match, columns) => ({
-                            chartType: 'line',
-                            xAxisColumn: this.findColumn(match[1], columns),
-                            aggregateFunction: 'count'
-                        })
-                    },
-                    {
-                        // X的趋势折线图
-                        regex: /(.+?)的(趋势|走势|变化).*折线图/,
-                        extract: (match, columns) => ({
-                            chartType: 'line',
-                            xAxisColumn: this.findColumn(match[1], columns),
-                            aggregateFunction: 'sum'
-                        })
-                    },
-                    {
-                        // 绘制X的折线图
-                        regex: /(绘制|画|生成|做)(.+?)的折线图/,
-                        extract: (match, columns) => ({
-                            chartType: 'line',
-                            xAxisColumn: this.findColumn(match[2], columns),
-                            aggregateFunction: 'count'
-                        })
-                    },
-                    {
-                        // X的折线图（最简形式）
-                        regex: /(.+?)的折线图/,
-                        extract: (match, columns) => ({
-                            chartType: 'line',
-                            xAxisColumn: this.findColumn(match[1], columns),
-                            aggregateFunction: 'count'
-                        })
+                ],
+                default: (intentText, columns) => {
+                    // 推断图表类型
+                    let chartType = 'bar';
+                    if (intentText.includes('趋势') || intentText.includes('时间')) {
+                        chartType = 'line';
+                    } else if (intentText.includes('占比') || intentText.includes('比例')) {
+                        chartType = 'pie';
                     }
-                ]
-            },
-            
-            // 散点图可视化
-            'CHART_SCATTER': {
-                patterns: [
-                    {
-                        // 按照X绘制散点图
-                        regex: /按[照]?(.+?)(绘制|画|生成|做).*散点图/,
-                        extract: (match, columns) => ({
-                            chartType: 'scatter',
-                            xAxisColumn: this.findColumn(match[1], columns),
-                            aggregateFunction: 'count'
-                        })
-                    },
-                    {
-                        // X和Y的散点图
-                        regex: /(.+?)和(.+?)的散点图/,
-                        extract: (match, columns) => ({
-                            chartType: 'scatter',
-                            xAxisColumn: this.findColumn(match[1], columns),
-                            yAxisColumn: this.findColumn(match[2], columns),
-                            aggregateFunction: 'count'
-                        })
-                    },
-                    {
-                        // 绘制X的散点图
-                        regex: /(绘制|画|生成|做)(.+?)的散点图/,
-                        extract: (match, columns) => ({
-                            chartType: 'scatter',
-                            xAxisColumn: this.findColumn(match[2], columns),
-                            aggregateFunction: 'count'
-                        })
-                    },
-                    {
-                        // X的散点图
-                        regex: /(.+?)的散点图/,
-                        extract: (match, columns) => ({
-                            chartType: 'scatter',
-                            xAxisColumn: this.findColumn(match[1], columns),
-                            aggregateFunction: 'count'
-                        })
-                    }
-                ]
-            },
-            
-            // 饼图可视化
-            'CHART_PIE': {
-                patterns: [
-                    {
-                        // 按照 X/Y 绘制饼图（新增：支持斜杠分隔标签列和数值列）
-                        regex: /按 [照]?(.+?)[/／](.+?)(绘制 | 画|生成|做).*饼图/,
-                        extract: (match, columns) => ({
-                            chartType: 'pie',
-                            labelColumn: this.findColumn(match[1].trim(), columns),
-                            valueColumn: this.findColumn(match[2].trim(), columns),
-                            aggregateFunction: 'sum'
-                        })
-                    },
-                    {
-                        // 按X的Y绘制饼图（如"按各省销售额绘制饼图"）
-                        regex: /按[照]?(.+?)的(.+?)(绘制|画|生成|做).*饼图/,
-                        extract: (match, columns) => {
-                            const labelDesc = match[1].trim();  // 标签列描述，如"各省"
-                            const valueDesc = match[2].trim();  // 数值列描述，如"销售额"
-                            console.log(`[CHART_PIE] 匹配"按X的Y绘制饼图": 标签=${labelDesc}, 数值=${valueDesc}`);
-                            
-                            const labelCol = this.findColumn(labelDesc, columns);
-                            const valueCol = this.findColumn(valueDesc, columns);
-                            
-                            console.log(`[CHART_PIE] 匹配结果: 标签列=${labelCol}, 数值列=${valueCol}`);
-                            
-                            return {
-                                chartType: 'pie',
-                                labelColumn: labelCol,
-                                valueColumn: valueCol,
-                                aggregateFunction: 'sum'
-                            };
-                        }
-                    },
-                    {
-                        // 按照X绘制Y的饼图（明确指定标签列和数值列）
-                        // 如"按照省份绘制销售额的饼图" → 标签=省份, 数值=销售额
-                        regex: /按[照]?(.+?)(绘制|画|生成|做)(.+?)的饼图/,
-                        extract: (match, columns) => {
-                            const labelDesc = match[1].trim();
-                            const valueDesc = match[3].trim();
-                            console.log(`[CHART_PIE] 匹配"按照X绘制Y的饼图": 标签=${labelDesc}, 数值=${valueDesc}`);
-                            
-                            const labelCol = this.findColumn(labelDesc, columns);
-                            const valueCol = this.findColumn(valueDesc, columns);
-                            
-                            console.log(`[CHART_PIE] 匹配结果: 标签列=${labelCol}, 数值列=${valueCol}`);
-                            
-                            // 如果成功匹配到数值列，使用sum聚合；否则使用count
-                            const aggregateFunction = valueCol ? 'sum' : 'count';
-                            
-                            return {
-                                chartType: 'pie',
-                                labelColumn: labelCol,
-                                valueColumn: valueCol,
-                                aggregateFunction: aggregateFunction
-                            };
-                        }
-                    },
-                    {
-                        // 按照 X 绘制饼图（只指定分组列，默认计数）
-                        // 注意：此模式不能包含"的"字，避免与上面的"按X的Y"模式冲突
-                        regex: /按[照]?([^的]+?)(绘制|画|生成|做).*饼图/,
-                        extract: (match, columns) => ({
-                            chartType: 'pie',
-                            labelColumn: this.findColumn(match[1], columns),
-                            aggregateFunction: 'count'
-                        })
-                    },
-                    {
-                        // X的占比饼图
-                        regex: /(.+?)的(占比|分布).*饼图/,
-                        extract: (match, columns) => ({
-                            chartType: 'pie',
-                            labelColumn: this.findColumn(match[1], columns),
-                            aggregateFunction: 'count'
-                        })
-                    },
-                    {
-                        // 统计X的占比并绘制饼图
-                        regex: /统计(.+?)的(占比|分布).*饼图/,
-                        extract: (match, columns) => ({
-                            chartType: 'pie',
-                            labelColumn: this.findColumn(match[1], columns),
-                            aggregateFunction: 'count'
-                        })
-                    },
-                    {
-                        // 绘制X的饼图
-                        regex: /(绘制|画|生成|做)(.+?)的饼图/,
-                        extract: (match, columns) => ({
-                            chartType: 'pie',
-                            labelColumn: this.findColumn(match[2], columns),
-                            aggregateFunction: 'count'
-                        })
-                    },
-                    {
-                        // X的饼图
-                        regex: /(.+?)的饼图/,
-                        extract: (match, columns) => ({
-                            chartType: 'pie',
-                            labelColumn: this.findColumn(match[1], columns),
-                            aggregateFunction: 'count'
-                        })
-                    },
-                    {
-                        // X饼图（最简形式）
-                        regex: /(.+?)饼图/,
-                        extract: (match, columns) => ({
-                            chartType: 'pie',
-                            labelColumn: this.findColumn(match[1], columns),
-                            aggregateFunction: 'count'
-                        })
-                    }
-                ]
-            },
-            
-            // 通用图表可视化
-            'CHART_GENERAL': {
-                patterns: [
-                    {
-                        // 按照Y统计X并绘制图表
-                        regex: /按[照]?(.+?)统计(.+?).*图表/,
-                        extract: (match, columns) => ({
-                            chartType: 'bar',
-                            xAxisColumn: this.findColumn(match[1], columns),
-                            yAxisColumn: this.findColumn(match[2], columns),
-                            aggregateFunction: 'sum'
-                        })
-                    },
-                    {
-                        // 按照X绘制图表（只指定分组列，默认计数）
-                        regex: /按[照]?(.+?)(绘制|画|生成|做).*图表/,
-                        extract: (match, columns) => ({
-                            chartType: 'bar',
-                            xAxisColumn: this.findColumn(match[1], columns),
-                            aggregateFunction: 'count'
-                        })
-                    },
-                    {
-                        // 各Y的X图表
-                        regex: /各(.+?)的(.+?).*图表/,
-                        extract: (match, columns) => ({
-                            chartType: 'bar',
-                            xAxisColumn: this.findColumn(match[1], columns),
-                            yAxisColumn: this.findColumn(match[2], columns),
-                            aggregateFunction: 'sum'
-                        })
-                    },
-                    {
-                        // 绘制X的图表
-                        regex: /(绘制|画|生成|做)(.+?)的图表/,
-                        extract: (match, columns) => ({
-                            chartType: 'bar',
-                            xAxisColumn: this.findColumn(match[2], columns),
-                            aggregateFunction: 'count'
-                        })
-                    },
-                    {
-                        // X的图表（最简形式）
-                        regex: /(.+?)的图表/,
-                        extract: (match, columns) => ({
-                            chartType: 'bar',
-                            xAxisColumn: this.findColumn(match[1], columns),
-                            aggregateFunction: 'count'
-                        })
-                    },
-                    {
-                        // 绘制X的图表
-                        regex: /绘制(.+?)的图表/,
-                        extract: (match, columns) => ({
-                            chartType: 'bar',
-                            xAxisColumn: this.findColumn(match[1], columns),
-                            aggregateFunction: 'count'
-                        })
-                    }
-                ]
-            }
-        };
-        
-        // 语义映射表（用于列名匹配）
-        this.semanticMappings = {
-            '年龄': ['年龄', '岁数', '年纪', '年限'],
-            '工资': ['工资', '收入', '薪资', '薪酬', '薪水', '月薪', '年薪'],
-            '金额': ['金额', '费用', '成本', '价格', '价值', '钱'],
-            '数量': ['数量', '个数', '次数', '频次', '量'],
-            '时间': ['时间', '时长', '日期', '时刻', '周期'],
-            '姓名': ['姓名', '名字', '名称', '谁'],
-            '省': ['省', '省份', '省级', '省公司'],
-            '市': ['市', '城市', '市级'],
-            '部门': ['部门', '单位', '机构', '组织']
-        };
-    }
-    
-    // 查找列名（支持语义匹配）
-    findColumn(description, columns) {
-        // 检查参数有效性
-        if (!description || !columns || !Array.isArray(columns) || columns.length === 0) {
-            console.warn('findColumn: 参数无效', { description, columnsCount: columns?.length });
-            return null;
-        }
-        
-        const lowerDesc = description.toLowerCase().trim();
-        
-        // 1. 直接匹配
-        for (const col of columns) {
-            if (col.toLowerCase().includes(lowerDesc) || lowerDesc.includes(col.toLowerCase())) {
-                return col;
-            }
-        }
-        
-        // 2. 语义映射匹配
-        for (const [concept, synonyms] of Object.entries(this.semanticMappings)) {
-            if (synonyms.some(s => lowerDesc.includes(s.toLowerCase()))) {
-                // 找到包含该概念的列
-                for (const col of columns) {
-                    if (synonyms.some(s => col.toLowerCase().includes(s.toLowerCase()))) {
-                        return col;
-                    }
+                    
+                    return {
+                        chartType: chartType,
+                        dimension: this.findColumn(intentText, columns)
+                    };
                 }
+            },
+            
+            // 数据透视表
+            'PIVOT_TABLE': {
+                patterns: [
+                    {
+                        // 按X和Y交叉统计
+                        regex: /按(.+?)和(.+?)交叉统计/,
+                        extract: (match, columns) => ({
+                            rowDimension: this.findColumn(match[1], columns),
+                            columnDimension: this.findColumn(match[2], columns)
+                        })
+                    },
+                    {
+                        // X和Y的透视表
+                        regex: /(.+?)和(.+?)的透视表/,
+                        extract: (match, columns) => ({
+                            rowDimension: this.findColumn(match[1], columns),
+                            columnDimension: this.findColumn(match[2], columns)
+                        })
+                    }
+                ],
+                default: (intentText, columns) => ({
+                    rowDimension: this.findColumn(intentText, columns),
+                    columnDimension: null
+                })
             }
-        }
-        
-        // 3. 部分匹配（找包含关键词的列）
-        for (const col of columns) {
-            const lowerCol = col.toLowerCase();
-            // 检查描述中的每个字是否在列名中
-            const chars = lowerDesc.split('');
-            const matchCount = chars.filter(c => lowerCol.includes(c)).length;
-            if (matchCount >= chars.length * 0.5) {  // 50%的字匹配
-                return col;
-            }
-        }
-        
-        // 4. 返回第一个列作为默认值
-        return columns[0] || null;
-    }
-    
-    // 查找区域/省公司列（用于区域筛选）
-    findRegionColumn(columns) {
-        // 检查参数有效性
-        if (!columns || !Array.isArray(columns) || columns.length === 0) {
-            console.warn('findRegionColumn: 参数无效', { columnsCount: columns?.length });
-            return null;
-        }
-        
-        // 优先查找包含"省"、"区域"、"地区"的列
-        const regionKeywords = ['省', '区域', '地区', '省份', '省公司'];
-        for (const col of columns) {
-            const lowerCol = col.toLowerCase();
-            if (regionKeywords.some(kw => lowerCol.includes(kw))) {
-                return col;
-            }
-        }
-        // 如果没有找到，返回第一个列
-        return columns[0] || null;
-    }
-    
-    // 映射操作符
-    mapOperator(op) {
-        const operatorMap = {
-            '大于': '>',
-            '小于': '<',
-            '等于': '=',
-            '超过': '>',
-            '不足': '<',
-            '至少': '>=',
-            '最多': '<='
         };
-        return operatorMap[op] || '=';
     }
-    
+
     // 生成查询配置
-    generateConfig(intentType, userInput, columns, entityExtractionResult = null) {
-        console.log(`[QueryConfigGenerator] 生成查询配置: ${intentType}, 输入: "${userInput}"`);
-        console.log(`[QueryConfigGenerator] 可用列:`, columns);
-        
-        // 检查columns是否有效
-        if (!columns || !Array.isArray(columns) || columns.length === 0) {
-            console.warn('[QueryConfigGenerator] 列信息无效或为空');
-            return null;
-        }
-        
-        // V4.0新增：如果有高置信度的实体提取结果，生成带筛选条件的配置
-        if (entityExtractionResult && entityExtractionResult.filters) {
-            const highConfidenceFilters = entityExtractionResult.filters.filter(
-                f => f.linkedColumn && f.matchCount > 0
-            );
-            
-            if (highConfidenceFilters.length > 0) {
-                console.log('[QueryConfigGenerator] 检测到高置信度筛选条件，生成筛选聚合配置');
-                
-                // V4.0修复：提取数值列
-                // 优先从entityExtractionResult.columns中获取，如果没有则从用户输入中查找
-                let valueColumn = null;
-                if (entityExtractionResult.columns && entityExtractionResult.columns.length > 0) {
-                    valueColumn = entityExtractionResult.columns[entityExtractionResult.columns.length - 1].matchedColumn;
-                } else {
-                    // 从用户输入中查找数值列（如"销售额"、"金额"等）
-                    const numericKeywords = ['销售额', '金额', '数量', '数值', '价格', '成本', '利润', '收入'];
-                    for (const keyword of numericKeywords) {
-                        if (userInput.includes(keyword)) {
-                            valueColumn = this.findColumn(keyword, columns);
-                            if (valueColumn) break;
-                        }
-                    }
-                    // 如果没找到，尝试查找包含这些关键词的列
-                    if (!valueColumn) {
-                        valueColumn = columns.find(col => 
-                            numericKeywords.some(kw => col.includes(kw))
-                        );
-                    }
-                }
-                
-                console.log('[QueryConfigGenerator] 数值列:', valueColumn);
-                
-                if (valueColumn && highConfidenceFilters.length === 1) {
-                    // 单个筛选值
-                    const filter = highConfidenceFilters[0];
-                    return {
-                        intentType: intentType,
-                        userInput: userInput,
-                        queryType: 'filter_aggregate',
-                        filterColumn: filter.linkedColumn,
-                        filterValue: filter.linkedValue,
-                        valueColumn: valueColumn,
-                        aggregateFunction: 'sum',
-                        title: `${filter.linkedValue}的${valueColumn}`,
-                        description: `筛选${filter.linkedColumn}=${filter.linkedValue}的数据，计算${valueColumn}总和`
-                    };
-                } else if (valueColumn && highConfidenceFilters.length > 1) {
-                    // 多个筛选值
-                    const filterValues = highConfidenceFilters.map(f => f.linkedValue);
-                    const firstFilter = highConfidenceFilters[0];
-                    return {
-                        intentType: intentType,
-                        userInput: userInput,
-                        queryType: 'filter_aggregate',
-                        filterColumn: firstFilter.linkedColumn,
-                        filterValues: filterValues,
-                        valueColumn: valueColumn,
-                        aggregateFunction: 'sum',
-                        title: `${filterValues.join('和')}的${valueColumn}`,
-                        description: `筛选${firstFilter.linkedColumn}=${filterValues.join('或')}的数据，计算${valueColumn}总和`
-                    };
-                }
-            }
-        }
+    generateConfig(intentType, intentText, columns, data) {
+        console.log(`[QueryConfigGenerator] 生成配置: intentType=${intentType}, intentText=${intentText}, columns=${columns.length}个`);
         
         const generator = this.configGenerators[intentType];
         if (!generator) {
-            console.warn(`[QueryConfigGenerator] 未知的意图类型: ${intentType}`);
-            return null;
+            console.warn(`[QueryConfigGenerator] 未知意图类型: ${intentType}`);
+            return this.generateDefaultConfig(intentType, intentText, columns, data);
         }
         
-        console.log(`[QueryConfigGenerator] 尝试匹配 ${generator.patterns.length} 个模式`);
-        
-        for (let i = 0; i < generator.patterns.length; i++) {
-            const pattern = generator.patterns[i];
-            const match = userInput.match(pattern.regex);
-            console.log(`[QueryConfigGenerator] 模式 ${i}: ${pattern.regex}, 匹配结果:`, match ? '成功' : '失败');
-            
+        // 尝试匹配模式
+        for (const pattern of generator.patterns || []) {
+            const match = intentText.match(pattern.regex);
             if (match) {
-                console.log('[QueryConfigGenerator] 匹配成功，match数组:', match);
-                const params = pattern.extract(match, columns);
-                console.log('[QueryConfigGenerator] 提取的参数:', params);
-                
-                const isValid = this.validateParams(params, intentType);
-                console.log('[QueryConfigGenerator] 参数验证结果:', isValid ? '通过' : '失败');
-                
-                if (isValid) {
-                    // 构建配置
-                    const config = this.buildConfig(intentType, params, userInput);
-                    console.log('[QueryConfigGenerator] 生成配置:', config);
+                console.log(`[QueryConfigGenerator] 匹配模式: ${pattern.regex}`);
+                try {
+                    const config = pattern.extract(match, columns, data);
+                    console.log(`[QueryConfigGenerator] 提取配置:`, config);
                     return config;
+                } catch (error) {
+                    console.error(`[QueryConfigGenerator] 提取配置时出错:`, error);
+                    continue;
                 }
             }
         }
         
-        console.log('[QueryConfigGenerator] 未匹配到任何有效模式');
-        return null;
+        // 如果没有匹配模式，使用默认生成器
+        console.log(`[QueryConfigGenerator] 使用默认配置生成器`);
+        if (generator.default) {
+            try {
+                const config = generator.default(intentText, columns, data);
+                console.log(`[QueryConfigGenerator] 默认配置:`, config);
+                return config;
+            } catch (error) {
+                console.error(`[QueryConfigGenerator] 默认配置生成失败:`, error);
+            }
+        }
+        
+        // 最终兜底
+        return this.generateDefaultConfig(intentType, intentText, columns, data);
     }
     
-    // 验证参数
-    validateParams(params, intentType) {
-        // 根据意图类型验证必需参数
-        if (intentType.startsWith('CHART_')) {
-            // 图表需要至少一个列
-            if (!params.xAxisColumn && !params.labelColumn) {
-                console.warn('图表配置缺少X轴列或标签列');
-                return false;
-            }
-        }
+    // 生成默认配置
+    generateDefaultConfig(intentType, intentText, columns, data) {
+        console.log(`[QueryConfigGenerator] 生成兜底配置 for ${intentType}`);
         
-        if (intentType === 'QUERY_FIND') {
-            if (!params.valueCol) {
-                console.warn('查找配置缺少数值列');
-                return false;
-            }
+        switch (intentType) {
+            case 'QUERY_FIND':
+                return {
+                    valueCol: columns[0] || 'column1',
+                    queryType: 'find_value'
+                };
+            case 'QUERY_AGGREGATE':
+                return {
+                    valueCol: columns[0] || 'column1',
+                    aggregateFunction: 'sum'
+                };
+            case 'QUERY_FILTER':
+                return {
+                    filterColumn: columns[0] || 'column1',
+                    filterValue: intentText || 'value'
+                };
+            case 'QUERY_SORT':
+                return {
+                    sortColumn: columns[0] || 'column1',
+                    direction: 'desc'
+                };
+            case 'CHART':
+                return {
+                    chartType: 'bar',
+                    dimension: columns[0] || 'column1',
+                    measure: columns[1] || 'column2'
+                };
+            default:
+                return {
+                    type: intentType,
+                    query: intentText
+                };
         }
-        
-        if (intentType === 'QUERY_AGGREGATE') {
-            // 检查是否有数值列（count除外）
-            if (params.aggregateFunction !== 'count' && !params.valueCol) {
-                console.warn('聚合配置缺少数值列');
-                return false;
-            }
-            // 非整体统计需要分组列
-            if (!params.isOverall && !params.groupCol) {
-                console.warn('聚合配置缺少分组列');
-                return false;
-            }
-        }
-        
-        if (intentType === 'QUERY_FILTER') {
-            if (!params.filterColumn) {
-                console.warn('筛选配置缺少筛选列');
-                return false;
-            }
-        }
-        
-        if (intentType === 'QUERY_SORT') {
-            if (!params.sortColumn) {
-                console.warn('排序配置缺少排序列');
-                return false;
-            }
-        }
-        
-        return true;
     }
     
-    // 构建配置
-    buildConfig(intentType, params, userInput) {
-        const baseConfig = {
-            intentType: intentType,
-            userInput: userInput
+    // 查找列名
+    findColumn(input, columns) {
+        if (!input || !columns) {
+            console.log(`[findColumn] 输入或列为空: input=${input}, columns=${columns}`);
+            return null;
+        }
+        
+        const normalizedInput = input.toLowerCase().trim();
+        console.log(`[findColumn] 查找列: "${normalizedInput}" 从 ${columns.length} 个列中`);
+        
+        // 1. 精确匹配（忽略大小写）
+        for (const col of columns) {
+            if (col.toLowerCase() === normalizedInput) {
+                console.log(`[findColumn] 精确匹配: ${col}`);
+                return col;
+            }
+        }
+        
+        // 2. 包含匹配
+        for (const col of columns) {
+            if (col.toLowerCase().includes(normalizedInput) || normalizedInput.includes(col.toLowerCase())) {
+                console.log(`[findColumn] 包含匹配: ${col}`);
+                return col;
+            }
+        }
+        
+        // 3. 语义相似度匹配（简单版本）
+        for (const col of columns) {
+            if (this.calculateSimilarity(col, input) > 0.6) {
+                console.log(`[findColumn] 语义相似匹配: ${col} (相似度>0.6)`);
+                return col;
+            }
+        }
+        
+        console.log(`[findColumn] 未找到匹配列，返回第一个列: ${columns[0]}`);
+        return columns[0] || 'column1';
+    }
+    
+    // 计算字符串相似度（简单实现）
+    calculateSimilarity(str1, str2) {
+        if (!str1 || !str2) return 0;
+        
+        const s1 = str1.toLowerCase();
+        const s2 = str2.toLowerCase();
+        
+        // 完全相同
+        if (s1 === s2) return 1.0;
+        
+        // 包含关系
+        if (s1.includes(s2) || s2.includes(s1)) return 0.8;
+        
+        // 计算共同字符比例
+        const set1 = new Set(s1);
+        const set2 = new Set(s2);
+        let common = 0;
+        for (const char of set1) {
+            if (set2.has(char)) common++;
+        }
+        
+        const total = set1.size + set2.size;
+        return total > 0 ? (2 * common) / total : 0;
+    }
+    
+    // 映射图表类型
+    mapChartType(typeName) {
+        const mapping = {
+            '柱状': 'bar',
+            '条形': 'bar',
+            '条状': 'bar',
+            '饼': 'pie',
+            '折线': 'line',
+            '趋势': 'line',
+            '分布': 'pie',
+            '对比': 'bar'
         };
         
-        // 根据意图类型构建具体配置
-        if (intentType === 'QUERY_FIND') {
-            // 处理复合查询：哪个X的Y最高（需要先按X分组，再求Y的最大值）
-            if (params.isCompoundQuery && params.groupCol) {
-                console.log(`[buildConfig] 构建复合查询配置: 按${params.groupCol}分组求${params.valueCol}的极值`);
-                return {
-                    ...baseConfig,
-                    intentType: 'QUERY_AGGREGATE',  // 重要：将意图改为聚合查询，以便正确路由
-                    queryType: 'group_aggregate_find',
-                    groupColumn: params.groupCol,
-                    valueColumn: params.valueCol,
-                    aggregateFunction: 'sum',  // 默认求和，也可以根据语义判断
-                    order: params.queryType === 'find_max' ? 'desc' : 'asc',
-                    limit: 1,
-                    title: `${params.groupCol}的${params.valueCol}${params.queryType === 'find_max' ? '最高' : '最低'}`,
-                    description: `按${params.groupCol}分组，求${params.valueCol}的${params.queryType === 'find_max' ? '最大值' : '最小值'}`
-                };
-            }
-            
-            // 处理查找前几名/后几名
-            if (params.queryType === 'find_top') {
-                return {
-                    ...baseConfig,
-                    queryType: 'find_top',
-                    valueColumn: params.valueCol,
-                    limit: params.limit || 5,
-                    order: params.order || 'desc',
-                    title: `${params.valueCol}${params.order === 'desc' ? '前' : '后'}${params.limit || 5}名`,
-                    description: `查找${params.valueCol}${params.order === 'desc' ? '最大' : '最小'}的前${params.limit || 5}条记录`
-                };
-            }
-            
-            // 处理查找排名
-            if (params.queryType === 'find_rank') {
-                return {
-                    ...baseConfig,
-                    queryType: 'find_rank',
-                    valueColumn: params.valueCol,
-                    rank: params.rank || 1,
-                    title: `${params.valueCol}排名第${params.rank || 1}`,
-                    description: `查找${params.valueCol}排名第${params.rank || 1}的记录`
-                };
-            }
-            
-            // 处理查找最大/最小值
-            return {
-                ...baseConfig,
-                queryType: params.queryType,
-                valueColumn: params.valueCol,
-                title: `${params.valueCol}${params.queryType === 'find_max' ? '最大值' : '最小值'}查询`,
-                description: `查找${params.valueCol}${params.queryType === 'find_max' ? '最大' : '最小'}的记录`
-            };
-        }
-        
-        if (intentType === 'QUERY_AGGREGATE') {
-            // 处理带筛选条件的聚合查询
-            if (params.hasFilter) {
-                return {
-                    ...baseConfig,
-                    queryType: 'aggregate_filter',
-                    filterColumn: params.filterColumn,
-                    filterValue: params.filterValue,
-                    valueColumn: params.valueCol,
-                    aggregateFunction: params.aggregateFunction,
-                    title: `${params.filterColumn}为${params.filterValue}的${params.valueCol}数量`,
-                    description: `筛选${params.filterColumn}为${params.filterValue}的记录，统计${params.valueCol}数量`
-                };
-            }
-            
-            if (params.isOverall) {
-                return {
-                    ...baseConfig,
-                    queryType: 'aggregate_overall',
-                    valueColumn: params.valueCol,
-                    aggregateFunction: params.aggregateFunction,
-                    isOverall: true,
-                    title: `${params.valueCol}${params.aggregateFunction === 'avg' ? '平均值' : '总和'}`,
-                    description: `统计所有${params.valueCol}的${params.aggregateFunction === 'avg' ? '平均值' : '总和'}`
-                };
-            } else {
-                return {
-                    ...baseConfig,
-                    queryType: 'aggregate_groupby',
-                    groupColumn: params.groupCol,
-                    valueColumn: params.valueCol,
-                    aggregateFunction: params.aggregateFunction,
-                    title: `各${params.groupCol}${params.valueCol}${params.aggregateFunction === 'avg' ? '平均值' : params.aggregateFunction === 'count' ? '数量' : '总和'}`,
-                    description: `按照${params.groupCol}统计${params.valueCol}的${params.aggregateFunction === 'avg' ? '平均值' : params.aggregateFunction === 'count' ? '数量' : '总和'}`
-                };
-            }
-        }
-        
-        if (intentType === 'QUERY_FILTER') {
-            // 处理人员筛选查询（如"谁是广东人"）
-            if (params.isPeopleQuery) {
-                return {
-                    ...baseConfig,
-                    queryType: 'filter_people',
-                    filterColumn: params.filterColumn,
-                    filterValue: params.filterValue,
-                    operator: params.operator,
-                    title: `${params.filterValue}人查询`,
-                    description: `查找${params.filterColumn}包含${params.filterValue}的人`
-                };
-            }
-            return {
-                ...baseConfig,
-                queryType: 'filter',
-                filterColumn: params.filterColumn,
-                operator: params.operator,
-                filterValue: params.filterValue,
-                title: '数据筛选',
-                description: `筛选${params.filterColumn}${params.operator}${params.filterValue}的数据`
-            };
-        }
-        
-        if (intentType === 'QUERY_SORT') {
-            return {
-                ...baseConfig,
-                queryType: 'sort',
-                sortColumn: params.sortColumn,
-                sortOrder: params.sortOrder,
-                title: '数据排序',
-                description: `按${params.sortColumn}${params.sortOrder === 'asc' ? '升序' : '降序'}排列`
-            };
-        }
-        
-        if (intentType.startsWith('CHART_')) {
-            return {
-                ...baseConfig,
-                chartType: params.chartType,
-                xAxisColumn: params.xAxisColumn,
-                yAxisColumn: params.yAxisColumn,
-                labelColumn: params.labelColumn,
-                aggregateFunction: params.aggregateFunction || 'sum',
-                title: params.title || '数据图表',
-                description: params.description || '数据可视化'
-            };
-        }
-        
-        return baseConfig;
+        return mapping[typeName] || 'bar';
     }
 }
 
-// 导出单例
-const queryConfigGenerator = new QueryConfigGenerator();
-export default queryConfigGenerator;
+// 导出模块
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = QueryConfigGenerator;
+}

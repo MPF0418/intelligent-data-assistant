@@ -3,6 +3,7 @@
  * 产品意义：将用户输入中的实体（如"广东省"）与数据表中的具体值关联
  * 解决痛点：本地模型无法理解"广东省"是"省份"列的一个筛选值
  */
+import { isNumericColumn, deduplicateAndSort } from './utils.js';
 
 class EntityExtractor {
     constructor() {
@@ -94,7 +95,7 @@ class EntityExtractor {
         });
         
         // 去重并排序
-        return this.deduplicateAndSort(candidates);
+        return deduplicateAndSort(candidates);
     }
 
     /**
@@ -154,8 +155,15 @@ class EntityExtractor {
 
     /**
      * 判断是否是可能的筛选值
+     * V5.0修复：排除排序相关词汇，避免将"高"、"低"等排序词误识别为筛选值
      */
     isPotentialFilterValue(text) {
+        // V5.0：排除排序相关词汇
+        const sortKeywords = ['高', '低', '大', '小', '多', '少', '升', '降'];
+        if (sortKeywords.includes(text)) {
+            return false;
+        }
+        
         // 地点特征
         if (this.provinceNames.some(p => text.includes(p) || p.includes(text))) {
             return true;
@@ -192,7 +200,7 @@ class EntityExtractor {
             // 在每个列中查找该值
             headers.forEach(header => {
                 // 跳过数值列（筛选值通常不在数值列中）
-                if (this.isNumericColumn(header, data)) {
+                if (isNumericColumn(header, data)) {
                     return;
                 }
                 
@@ -204,8 +212,9 @@ class EntityExtractor {
                 }).length;
                 
                 if (matchCount > 0) {
-                    // 计算置信度：匹配行数占比
-                    const confidence = matchCount / data.length;
+                    // 根据PRD要求：matchCount > 0 即为有效链接
+                    // 小数据集时使用固定置信度，避免因数据量小导致置信度过低
+                    const confidence = data.length <= 5 ? 0.8 : matchCount / data.length;
                     links.push({
                         column: header,
                         value: text,
@@ -238,33 +247,6 @@ class EntityExtractor {
         });
         
         return result;
-    }
-
-    /**
-     * 判断是否是数值列
-     */
-    isNumericColumn(header, data) {
-        const sample = data.slice(0, 10).map(row => row[header]);
-        const numericCount = sample.filter(v => {
-            if (v === null || v === undefined || v === '') return false;
-            const num = parseFloat(String(v).replace(/,/g, ''));
-            return !isNaN(num);
-        }).length;
-        return numericCount > sample.length * 0.7;
-    }
-
-    /**
-     * 去重并排序候选实体
-     */
-    deduplicateAndSort(candidates) {
-        const seen = new Set();
-        return candidates
-            .filter(c => {
-                if (seen.has(c.text)) return false;
-                seen.add(c.text);
-                return true;
-            })
-            .sort((a, b) => a.position - b.position);
     }
 
     /**

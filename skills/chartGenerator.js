@@ -1,6 +1,8 @@
 // 图表生成技能
 // 负责根据数据生成各种类型的图表
 
+import chartRecommendationEngine from '../js/chartRecommendationEngine.js';
+
 const chartGeneratorSkill = {
     info: {
         name: 'chartGenerator',
@@ -88,43 +90,15 @@ const chartGeneratorSkill = {
     
     // 推荐图表类型
     recommendCharts(dataFeatures) {
-        const recommendations = [];
+        // 调用统一的图表推荐引擎
+        const engineRecommendations = chartRecommendationEngine.recommendCharts(dataFeatures);
         
-        // 基于数据特征推荐图表
-        if (dataFeatures.numericColumns.length > 0) {
-            if (dataFeatures.numericColumns.length === 1) {
-                recommendations.push({
-                    chartType: 'bar',
-                    reason: '单个数值列适合使用柱状图展示数据分布',
-                    priority: 'high'
-                });
-            } else if (dataFeatures.numericColumns.length > 1) {
-                recommendations.push({
-                    chartType: 'bar',
-                    reason: '多个数值列适合使用柱状图进行比较',
-                    priority: 'high'
-                });
-            }
-        }
-        
-        if (dataFeatures.categoricalColumns.length > 0) {
-            const catColumn = dataFeatures.categoricalColumns[0];
-            recommendations.push({
-                chartType: 'pie',
-                reason: '分类列适合使用饼图展示各分类的占比',
-                priority: 'medium'
-            });
-        }
-        
-        if (dataFeatures.dateColumns.length > 0 && dataFeatures.numericColumns.length > 0) {
-            recommendations.push({
-                chartType: 'line',
-                reason: '日期列和数值列适合使用折线图展示趋势',
-                priority: 'high'
-            });
-        }
-        
-        return recommendations;
+        // 转换格式以保持兼容性
+        return engineRecommendations.map(rec => ({
+            chartType: rec.type,
+            reason: rec.reason,
+            priority: rec.priority === 1 ? 'high' : rec.priority === 2 ? 'medium' : 'low'
+        }));
     },
     
     // 生成图表配置

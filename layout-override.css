@@ -1,0 +1,423 @@
+/* 完全重写的布局系统 - 解决所有对齐和显示问题 */
+
+/* 主布局 - 使用 Grid 确保完美对齐 */
+.main-content-layout {
+    display: grid;
+    grid-template-columns: 400px 1fr;
+    grid-template-rows: 1fr;
+    gap: 15px;
+    margin-top: 15px;
+    height: calc(100vh - 340px);
+    min-height: 600px;
+}
+
+/* 左侧面板 */
+.left-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-width: 0;
+}
+
+.left-panel .conversation-section {
+    display: flex;
+    flex-direction: column;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    border: 1px solid #e8e8e8;
+    padding: 15px;
+    height: 100%;
+    overflow: hidden;
+}
+
+.conversation-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f5f5f5;
+}
+
+.conversation-header h3 {
+    margin: 0;
+    font-size: 1.05em;
+    color: #333;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.conversation-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8em;
+    color: #666;
+}
+
+.conversation-status .status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #28a745;
+    flex-shrink: 0;
+}
+
+/* 对话消息区域 */
+.conversation-messages {
+    flex: 1;
+    overflow-y: auto;
+    margin-bottom: 12px;
+    min-height: 0;
+    padding: 12px;
+    background: #fafafa;
+    border-radius: 8px;
+}
+
+.message {
+    margin-bottom: 12px;
+    display: flex;
+    flex-direction: column;
+}
+
+.message.system {
+    align-items: flex-start;
+}
+
+.message.user {
+    align-items: flex-end;
+}
+
+.message-content {
+    max-width: 85%;
+    padding: 10px 14px;
+    border-radius: 16px;
+    line-height: 1.5;
+}
+
+.message.system .message-content {
+    background: #e3f2fd;
+    color: #1565c0;
+    border-bottom-left-radius: 4px;
+}
+
+.message.user .message-content {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-bottom-right-radius: 4px;
+}
+
+.message-time {
+    font-size: 0.7em;
+    color: #999;
+    margin-top: 4px;
+}
+
+/* 输入表单 */
+.conversation-form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.input-wrapper {
+    position: relative;
+}
+
+#conversation-input {
+    width: 100%;
+    padding: 10px 32px 10px 14px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 0.9em;
+    font-family: inherit;
+    line-height: 1.5;
+    resize: none;
+    box-sizing: border-box;
+    min-height: 60px;
+    max-height: 80px;
+}
+
+#conversation-input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.08);
+}
+
+#clear-conversation {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #999;
+    font-size: 1.2em;
+    cursor: pointer;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+
+#clear-conversation:hover {
+    background: #f0f0f0;
+    color: #666;
+}
+
+#send-message {
+    width: 100%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 9px 18px;
+    border-radius: 8px;
+    font-size: 0.85em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 36px;
+    flex-shrink: 0;
+}
+
+#send-message:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(102, 126, 234, 0.35);
+}
+
+#send-message:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* 右侧面板 */
+.right-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    height: 100%;
+    min-width: 0;
+}
+
+/* 右侧通用卡片样式 */
+.right-panel .preview-controls,
+.right-panel .conversation-result,
+.right-panel .preview-container {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    border: 1px solid #e8e8e8;
+}
+
+/* 数据筛选区域 */
+.right-panel .preview-controls {
+    padding: 12px 15px;
+    flex-shrink: 0;
+}
+
+.filter-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.filter-header h3 {
+    margin: 0;
+    font-size: 1em;
+    color: #667eea;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* 结果展示区域 */
+.right-panel .conversation-result {
+    padding: 12px 15px;
+    flex-shrink: 0;
+    max-height: 80px;
+    overflow-y: auto;
+}
+
+.right-panel .conversation-result.hidden {
+    display: none;
+}
+
+/* 数据表格区域 */
+.right-panel .preview-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.right-panel .table-scroll-wrapper {
+    flex: 1;
+    overflow: auto;
+    min-height: 0;
+    max-height: 480px;
+}
+
+/* 表格样式 - 固定表头 */
+#data-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+#data-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+#data-table th {
+    background: #667eea;
+    color: white;
+    font-weight: 600;
+    padding: 11px 12px;
+    text-align: left;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+#data-table td {
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 1px solid #f0f0f0;
+    white-space: nowrap;
+}
+
+#data-table tr:hover {
+    background: rgba(102, 126, 234, 0.04);
+}
+
+/* 分页 */
+.table-pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    padding: 10px 0;
+    margin-top: 8px;
+    border-top: 1px solid #f0f0f0;
+    flex-shrink: 0;
+}
+
+.page-btn {
+    padding: 6px 12px;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85em;
+    transition: all 0.2s ease;
+}
+
+.page-btn:hover:not(:disabled) {
+    border-color: #667eea;
+    color: #667eea;
+}
+
+.page-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.page-info {
+    color: #666;
+    font-size: 0.85em;
+}
+
+/* 数据可视化区域 */
+#data-visualization {
+    margin-top: 20px;
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    border: 1px solid #e8e8e8;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #f5f5f5;
+}
+
+.section-header h2 {
+    margin: 0;
+    font-size: 1.3em;
+    color: #667eea;
+}
+
+.charts-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 20px;
+}
+
+.chart-wrapper {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    min-height: 350px;
+}
+
+/* 滚动条美化 */
+.conversation-messages::-webkit-scrollbar,
+.right-panel .table-scroll-wrapper::-webkit-scrollbar,
+.right-panel .conversation-result::-webkit-scrollbar {
+    width: 6px;
+}
+
+.conversation-messages::-webkit-scrollbar-track,
+.right-panel .table-scroll-wrapper::-webkit-scrollbar-track,
+.right-panel .conversation-result::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.conversation-messages::-webkit-scrollbar-thumb,
+.right-panel .table-scroll-wrapper::-webkit-scrollbar-thumb,
+.right-panel .conversation-result::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.conversation-messages::-webkit-scrollbar-thumb:hover,
+.right-panel .table-scroll-wrapper::-webkit-scrollbar-thumb:hover,
+.right-panel .conversation-result::-webkit-scrollbar-thumb:hover {
+    background: #a1a1a1;
+}
+
+/* 响应式 */
+@media (max-width: 992px) {
+    .main-content-layout {
+        grid-template-columns: 1fr;
+        height: auto;
+    }
+    
+    .left-panel .conversation-section {
+        min-height: 350px;
+    }
+}

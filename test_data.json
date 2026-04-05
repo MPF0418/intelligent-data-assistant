@@ -1,0 +1,942 @@
+[
+  {
+    "text": "算一下负责人数量的总和",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "sum_groupby"
+  },
+  {
+    "text": "创建柱图之负责人的县公司",
+    "intent": "CHART_BAR",
+    "sub_type": "bar_groupby"
+  },
+  {
+    "text": "计算次数联系人的个数",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "count_groupby"
+  },
+  {
+    "text": "创建负责人的月份柱状图",
+    "intent": "CHART_BAR",
+    "sub_type": "bar_groupby"
+  },
+  {
+    "text": "做险情确认时长的日期柱形图",
+    "intent": "CHART_BAR",
+    "sub_type": "bar_groupby"
+  },
+  {
+    "text": "算一下日期统计操作人的个数",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "count_groupby"
+  },
+  {
+    "text": "搜索区域第一的",
+    "intent": "QUERY_FIND",
+    "sub_type": "find_max"
+  },
+  {
+    "text": "算一下日期统计类型的个数",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "count_groupby"
+  },
+  {
+    "text": "双轴图表显示数量和金额",
+    "intent": "CHART_COMBO",
+    "sub_type": "combo"
+  },
+  {
+    "text": "做长条图关于个数的负责人",
+    "intent": "CHART_BAR",
+    "sub_type": "bar_groupby"
+  },
+  {
+    "text": "展示柱状图属于市公司的成本",
+    "intent": "CHART_BAR",
+    "sub_type": "bar_groupby"
+  },
+  {
+    "text": "搜一下最佳的状态",
+    "intent": "QUERY_FIND",
+    "sub_type": "find_max"
+  },
+  {
+    "text": "统计一下个数的笔数",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "count"
+  },
+  {
+    "text": "清洗数据",
+    "intent": "DATA_CLEAN",
+    "sub_type": "data_cleaning"
+  },
+  {
+    "text": "找一下等级最优的",
+    "intent": "QUERY_FIND",
+    "sub_type": "find_max"
+  },
+  {
+    "text": "查看首位省公司",
+    "intent": "QUERY_FIND",
+    "sub_type": "find_max"
+  },
+  {
+    "text": "找一下最多的合计",
+    "intent": "QUERY_FIND",
+    "sub_type": "find_max"
+  },
+  {
+    "text": "计算费用统计计数的数量",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "count_groupby"
+  },
+  {
+    "text": "呈现状态的数量柱图",
+    "intent": "CHART_BAR",
+    "sub_type": "bar_groupby"
+  },
+  {
+    "text": "算一算市公司花费的平均",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "avg_groupby"
+  },
+  {
+    "text": "画柱状图对比各地区",
+    "intent": "CHART_BAR",
+    "sub_type": "bar"
+  },
+  {
+    "text": "画日期的负责人柱图",
+    "intent": "CHART_BAR",
+    "sub_type": "bar_groupby"
+  },
+  {
+    "text": "按地区计算标准差",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "stdDev"
+  },
+  {
+    "text": "呈现处理时长的时间直方图",
+    "intent": "CHART_BAR",
+    "sub_type": "bar_groupby"
+  },
+  {
+    "text": "生成条形图的数量的县公司",
+    "intent": "CHART_BAR",
+    "sub_type": "bar_groupby"
+  },
+  {
+    "text": "各省份销售总额的中值",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "median"
+  },
+  {
+    "text": "呈现省公司的响应时长柱形图",
+    "intent": "CHART_BAR",
+    "sub_type": "bar_groupby"
+  },
+  {
+    "text": "找出金额最小的记录",
+    "intent": "QUERY_FIND",
+    "sub_type": "find_min"
+  },
+  {
+    "text": "筛选出金额小于500的数据",
+    "intent": "QUERY_FILTER",
+    "sub_type": "filter_lt"
+  },
+  {
+    "text": "制作负责人的月份柱图",
+    "intent": "CHART_BAR",
+    "sub_type": "bar_groupby"
+  },
+  {
+    "text": "画柱形图之负责人的成本",
+    "intent": "CHART_BAR",
+    "sub_type": "bar_groupby"
+  },
+  {
+    "text": "画柱形图属于状态的处理时长",
+    "intent": "CHART_BAR",
+    "sub_type": "bar_groupby"
+  },
+  {
+    "text": "展示条形图关于费用的县公司",
+    "intent": "CHART_BAR",
+    "sub_type": "bar_groupby"
+  },
+  {
+    "text": "展示条形图属于市公司的险情确认时长",
+    "intent": "CHART_BAR",
+    "sub_type": "bar_groupby"
+  },
+  {
+    "text": "找出最后的城市",
+    "intent": "QUERY_FIND",
+    "sub_type": "find_min"
+  },
+  {
+    "text": "查询结果第一的",
+    "intent": "QUERY_FIND",
+    "sub_type": "find_max"
+  },
+  {
+    "text": "求响应时长统计联系人的总和",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "sum_groupby"
+  },
+  {
+    "text": "算一下省公司统计费用的合计",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "sum_groupby"
+  },
+  {
+    "text": "统计条数成本",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "count"
+  },
+  {
+    "text": "制作条形图之时间的处理人",
+    "intent": "CHART_BAR",
+    "sub_type": "bar_groupby"
+  },
+  {
+    "text": "求阶段统计联系人的总和",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "sum_groupby"
+  },
+  {
+    "text": "制作条形图之市公司的状态",
+    "intent": "CHART_BAR",
+    "sub_type": "bar_groupby"
+  },
+  {
+    "text": "计算负责人统计合计的个数",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "count_groupby"
+  },
+  {
+    "text": "查看持续时间最小的",
+    "intent": "QUERY_FIND",
+    "sub_type": "find_min"
+  },
+  {
+    "text": "生成bar关于处理人的险情确认时长",
+    "intent": "CHART_BAR",
+    "sub_type": "bar_groupby"
+  },
+  {
+    "text": "创建柱形图关于数量的时间",
+    "intent": "CHART_BAR",
+    "sub_type": "bar_groupby"
+  },
+  {
+    "text": "绘制走势图的进度",
+    "intent": "CHART_LINE",
+    "sub_type": "line_trend"
+  },
+  {
+    "text": "展示状态的县公司直方图",
+    "intent": "CHART_BAR",
+    "sub_type": "bar_groupby"
+  },
+  {
+    "text": "销售额的方差是多少",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "variance"
+  },
+  {
+    "text": "依据阶段统计响应时长",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "avg_groupby"
+  },
+  {
+    "text": "哪个数量末尾",
+    "intent": "QUERY_FIND",
+    "sub_type": "find_min"
+  },
+  {
+    "text": "查找时段top的",
+    "intent": "QUERY_FIND",
+    "sub_type": "find_max"
+  },
+  {
+    "text": "生成一个柱状图显示销售业绩，折线图显示增长率",
+    "intent": "CHART_COMBO",
+    "sub_type": "combo"
+  },
+  {
+    "text": "状态的响应时长柱图",
+    "intent": "CHART_BAR",
+    "sub_type": "bar_groupby"
+  },
+  {
+    "text": "展示趋势图的状态",
+    "intent": "CHART_LINE",
+    "sub_type": "line_trend"
+  },
+  {
+    "text": "查询最差资金",
+    "intent": "QUERY_FIND",
+    "sub_type": "find_min"
+  },
+  {
+    "text": "查找最低的情况",
+    "intent": "QUERY_FIND",
+    "sub_type": "find_min"
+  },
+  {
+    "text": "组合图表展示销售额和利润",
+    "intent": "CHART_COMBO",
+    "sub_type": "combo"
+  },
+  {
+    "text": "生成柱形图展示处理时长的个数",
+    "intent": "CHART_BAR",
+    "sub_type": "bar_groupby"
+  },
+  {
+    "text": "呈现占比图属于日期的分布",
+    "intent": "CHART_PIE",
+    "sub_type": "pie_distribution"
+  },
+  {
+    "text": "绘制走势图之成本",
+    "intent": "CHART_LINE",
+    "sub_type": "line_trend"
+  },
+  {
+    "text": "按负责人统计持续时间",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "avg_groupby"
+  },
+  {
+    "text": "生成日期的省公司bar",
+    "intent": "CHART_BAR",
+    "sub_type": "bar_groupby"
+  },
+  {
+    "text": "可视化柱形图之市公司的费用",
+    "intent": "CHART_BAR",
+    "sub_type": "bar_groupby"
+  },
+  {
+    "text": "省公司的等级平均",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "avg_groupby"
+  },
+  {
+    "text": "汇总金额统计类别的总和",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "sum_groupby"
+  },
+  {
+    "text": "呈现数量的占比图",
+    "intent": "CHART_PIE",
+    "sub_type": "pie_distribution"
+  },
+  {
+    "text": "谁的费用最佳",
+    "intent": "QUERY_FIND",
+    "sub_type": "find_max"
+  },
+  {
+    "text": "排除广东的",
+    "intent": "QUERY_FILTER",
+    "sub_type": "filter"
+  },
+  {
+    "text": "搜索第一处理时长",
+    "intent": "QUERY_FIND",
+    "sub_type": "find_max"
+  },
+  {
+    "text": "筛选出金额大于1000的记录",
+    "intent": "QUERY_FILTER",
+    "sub_type": "filter_gt"
+  },
+  {
+    "text": "计算时间城市的个数",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "count_groupby"
+  },
+  {
+    "text": "求县公司的均值",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "avg"
+  },
+  {
+    "text": "算一下个数统计类别的数量",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "count_groupby"
+  },
+  {
+    "text": "计算时间类别的平均",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "avg_groupby"
+  },
+  {
+    "text": "做一个地区和产品的交叉分析",
+    "intent": "PIVOT_TABLE",
+    "sub_type": "default"
+  },
+  {
+    "text": "制作长条图的状态的县公司",
+    "intent": "CHART_BAR",
+    "sub_type": "bar_groupby"
+  },
+  {
+    "text": "销售额的方差是多少",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "variance"
+  },
+  {
+    "text": "完整统计分析",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "descriptive_stats"
+  },
+  {
+    "text": "画折线图之成本",
+    "intent": "CHART_LINE",
+    "sub_type": "line_trend"
+  },
+  {
+    "text": "销售金额的中值是多少",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "median"
+  },
+  {
+    "text": "呈现长条图的日期的处理人",
+    "intent": "CHART_BAR",
+    "sub_type": "bar_groupby"
+  },
+  {
+    "text": "计算数量统计申请人的平均",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "avg_groupby"
+  },
+  {
+    "text": "交叉对比分析分析各省各产品的销售情况",
+    "intent": "PIVOT_TABLE",
+    "sub_type": "default"
+  },
+  {
+    "text": "找出金额最高的记录",
+    "intent": "QUERY_FIND",
+    "sub_type": "find_max"
+  },
+  {
+    "text": "可视化直方图的状态的日期",
+    "intent": "CHART_BAR",
+    "sub_type": "bar_groupby"
+  },
+  {
+    "text": "数据的离散程度如何",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "stdDev"
+  },
+  {
+    "text": "创建条形图之市公司的经办人",
+    "intent": "CHART_BAR",
+    "sub_type": "bar_groupby"
+  },
+  {
+    "text": "计算县公司类型的均值",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "avg_groupby"
+  },
+  {
+    "text": "汇总处理人总量的个数",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "count_groupby"
+  },
+  {
+    "text": "制作直方图关于费用的日期",
+    "intent": "CHART_BAR",
+    "sub_type": "bar_groupby"
+  },
+  {
+    "text": "计算次数状态的合计",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "sum_groupby"
+  },
+  {
+    "text": "求金额统计申请人的均值",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "avg_groupby"
+  },
+  {
+    "text": "算一算时间省份的个数",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "count_groupby"
+  },
+  {
+    "text": "创建直方图展示个数的省公司",
+    "intent": "CHART_BAR",
+    "sub_type": "bar_groupby"
+  },
+  {
+    "text": "统计数量响应时长的个数",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "count_groupby"
+  },
+  {
+    "text": "汇总市公司类型的总和",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "sum_groupby"
+  },
+  {
+    "text": "制作柱图的数量的金额",
+    "intent": "CHART_BAR",
+    "sub_type": "bar_groupby"
+  },
+  {
+    "text": "统计一下平均负责人",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "avg"
+  },
+  {
+    "text": "算一下进度统计预算的个数",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "count_groupby"
+  },
+  {
+    "text": "算一下阶段统计省公司的数量",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "count_groupby"
+  },
+  {
+    "text": "计算月份统计响应时长的均值",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "avg_groupby"
+  },
+  {
+    "text": "算一算省公司统计操作人的平均",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "avg_groupby"
+  },
+  {
+    "text": "统计日期状态的平均",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "avg_groupby"
+  },
+  {
+    "text": "去除重复行",
+    "intent": "DATA_CLEAN",
+    "sub_type": "remove_duplicates"
+  },
+  {
+    "text": "算一下阶段收入的均值",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "avg_groupby"
+  },
+  {
+    "text": "统计时间结果的数量",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "count_groupby"
+  },
+  {
+    "text": "展示长条图展示个数的险情确认时长",
+    "intent": "CHART_BAR",
+    "sub_type": "bar_groupby"
+  },
+  {
+    "text": "第90百分位数是多少",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "percentile"
+  },
+  {
+    "text": "去除重复项数据",
+    "intent": "DATA_CLEAN",
+    "sub_type": "remove_duplicates"
+  },
+  {
+    "text": "查找等级bottom的",
+    "intent": "QUERY_FIND",
+    "sub_type": "find_min"
+  },
+  {
+    "text": "统计日期频次的总和",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "sum_groupby"
+  },
+  {
+    "text": "可视化金额的处理人bar",
+    "intent": "CHART_BAR",
+    "sub_type": "bar_groupby"
+  },
+  {
+    "text": "响应时长的支出数量",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "count_groupby"
+  },
+  {
+    "text": "搜索合计最优的",
+    "intent": "QUERY_FIND",
+    "sub_type": "find_max"
+  },
+  {
+    "text": "销售业绩的第75百分位",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "percentile"
+  },
+  {
+    "text": "做直方图属于状态的成本",
+    "intent": "CHART_BAR",
+    "sub_type": "bar_groupby"
+  },
+  {
+    "text": "按部门和月份交叉分析算一下人数",
+    "intent": "PIVOT_TABLE",
+    "sub_type": "default"
+  },
+  {
+    "text": "下载CSV",
+    "intent": "DATA_EXPORT",
+    "sub_type": "export_csv"
+  },
+  {
+    "text": "算一算金额统计季度的总和",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "sum_groupby"
+  },
+  {
+    "text": "绘制直方图展示时间的险情确认时长",
+    "intent": "CHART_BAR",
+    "sub_type": "bar_groupby"
+  },
+  {
+    "text": "制作长条图关于市公司的金额",
+    "intent": "CHART_BAR",
+    "sub_type": "bar_groupby"
+  },
+  {
+    "text": "删除重复数据",
+    "intent": "DATA_CLEAN",
+    "sub_type": "remove_duplicates"
+  },
+  {
+    "text": "搜索最强类别",
+    "intent": "QUERY_FIND",
+    "sub_type": "find_max"
+  },
+  {
+    "text": "依据周期升序排列",
+    "intent": "QUERY_SORT",
+    "sub_type": "sort_asc"
+  },
+  {
+    "text": "显示上海的销售金额",
+    "intent": "QUERY_FILTER",
+    "sub_type": "filter_eq"
+  },
+  {
+    "text": "按地区求标准差",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "stdDev"
+  },
+  {
+    "text": "算一算成本统计次数的合计",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "sum_groupby"
+  },
+  {
+    "text": "谁的销售数据最高",
+    "intent": "QUERY_FIND",
+    "sub_type": "find_max"
+  },
+  {
+    "text": "按年份从高到低",
+    "intent": "QUERY_SORT",
+    "sub_type": "sort_desc"
+  },
+  {
+    "text": "算一算类别的一共",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "sum"
+  },
+  {
+    "text": "画条形图展示日期的处理时长",
+    "intent": "CHART_BAR",
+    "sub_type": "bar_groupby"
+  },
+  {
+    "text": "选出月份超过10000的",
+    "intent": "QUERY_FILTER",
+    "sub_type": "filter_condition"
+  },
+  {
+    "text": "汇总处理人统计总计的个数",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "count_groupby"
+  },
+  {
+    "text": "展示一个柱状图显示销售额，折线图显示增长率",
+    "intent": "CHART_COMBO",
+    "sub_type": "combo"
+  },
+  {
+    "text": "生成金额的经办人柱状图",
+    "intent": "CHART_BAR",
+    "sub_type": "bar_groupby"
+  },
+  {
+    "text": "统计个数统计联系人的数量",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "count_groupby"
+  },
+  {
+    "text": "绘制直方图之进度的经办人",
+    "intent": "CHART_BAR",
+    "sub_type": "bar_groupby"
+  },
+  {
+    "text": "哪个省公司的销售额最低",
+    "intent": "QUERY_FIND",
+    "sub_type": "find_min"
+  },
+  {
+    "text": "制作bar属于处理人的成本",
+    "intent": "CHART_BAR",
+    "sub_type": "bar_groupby"
+  },
+  {
+    "text": "汇总状态统计险情确认时长的平均",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "avg_groupby"
+  },
+  {
+    "text": "制作直方图展示个数的时间",
+    "intent": "CHART_BAR",
+    "sub_type": "bar_groupby"
+  },
+  {
+    "text": "展示占比图展示成本的占比",
+    "intent": "CHART_PIE",
+    "sub_type": "pie_distribution"
+  },
+  {
+    "text": "画bar展示数量的月份",
+    "intent": "CHART_BAR",
+    "sub_type": "bar_groupby"
+  },
+  {
+    "text": "负责人的中等",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "avg"
+  },
+  {
+    "text": "做柱形图关于金额的市公司",
+    "intent": "CHART_BAR",
+    "sub_type": "bar_groupby"
+  },
+  {
+    "text": "查找最多类型",
+    "intent": "QUERY_FIND",
+    "sub_type": "find_max"
+  },
+  {
+    "text": "算一算处理人频次的均值",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "avg_groupby"
+  },
+  {
+    "text": "查询末尾的地区",
+    "intent": "QUERY_FIND",
+    "sub_type": "find_min"
+  },
+  {
+    "text": "查看区域最多的",
+    "intent": "QUERY_FIND",
+    "sub_type": "find_max"
+  },
+  {
+    "text": "画一个雷达图对比各部门指标",
+    "intent": "CHART_RADAR",
+    "sub_type": "radar"
+  },
+  {
+    "text": "找出金额最大的记录",
+    "intent": "QUERY_FIND",
+    "sub_type": "find_max"
+  },
+  {
+    "text": "统计县公司统计响应时长的合计",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "sum_groupby"
+  },
+  {
+    "text": "统计一下次数资金",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "count"
+  },
+  {
+    "text": "算一下日期统计成本的合计",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "sum_groupby"
+  },
+  {
+    "text": "各省份销售金额的中位数",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "median"
+  },
+  {
+    "text": "计算数量间隔的平均",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "avg_groupby"
+  },
+  {
+    "text": "导出CSV",
+    "intent": "DATA_EXPORT",
+    "sub_type": "export_csv"
+  },
+  {
+    "text": "制作时间的个数条形图",
+    "intent": "CHART_BAR",
+    "sub_type": "bar_groupby"
+  },
+  {
+    "text": "画直方图展示费用的日期",
+    "intent": "CHART_BAR",
+    "sub_type": "bar_groupby"
+  },
+  {
+    "text": "创建柱图关于进度的个数",
+    "intent": "CHART_BAR",
+    "sub_type": "bar_groupby"
+  },
+  {
+    "text": "生成柱图关于状态的日期",
+    "intent": "CHART_BAR",
+    "sub_type": "bar_groupby"
+  },
+  {
+    "text": "显示上海的销售额",
+    "intent": "QUERY_FILTER",
+    "sub_type": "filter_eq"
+  },
+  {
+    "text": "根据经办人升序排列",
+    "intent": "QUERY_SORT",
+    "sub_type": "sort_asc"
+  },
+  {
+    "text": "可视化条形图属于金额的市公司",
+    "intent": "CHART_BAR",
+    "sub_type": "bar_groupby"
+  },
+  {
+    "text": "求条数费用",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "count"
+  },
+  {
+    "text": "求次数金额的总和",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "sum_groupby"
+  },
+  {
+    "text": "把空值填充为平均值",
+    "intent": "DATA_CLEAN",
+    "sub_type": "fill_missing"
+  },
+  {
+    "text": "以从高到低分公司",
+    "intent": "QUERY_SORT",
+    "sub_type": "sort_desc"
+  },
+  {
+    "text": "查询第一城市",
+    "intent": "QUERY_FIND",
+    "sub_type": "find_max"
+  },
+  {
+    "text": "搜一下top的年份",
+    "intent": "QUERY_FIND",
+    "sub_type": "find_max"
+  },
+  {
+    "text": "算一算省公司负责人的合计",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "sum_groupby"
+  },
+  {
+    "text": "谁的销售额最高",
+    "intent": "QUERY_FIND",
+    "sub_type": "find_max"
+  },
+  {
+    "text": "通过次数统计结果",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "avg_groupby"
+  },
+  {
+    "text": "绘制柱状图属于费用的市公司",
+    "intent": "CHART_BAR",
+    "sub_type": "bar_groupby"
+  },
+  {
+    "text": "统计一下省份的总计",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "sum"
+  },
+  {
+    "text": "制作柱形图之负责人的个数",
+    "intent": "CHART_BAR",
+    "sub_type": "bar_groupby"
+  },
+  {
+    "text": "算一算个数类型的均值",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "avg_groupby"
+  },
+  {
+    "text": "按地区统计标准差",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "stdDev"
+  },
+  {
+    "text": "保存数据为CSV格式",
+    "intent": "DATA_EXPORT",
+    "sub_type": "export_csv"
+  },
+  {
+    "text": "创建条形图关于个数的县公司",
+    "intent": "CHART_BAR",
+    "sub_type": "bar_groupby"
+  },
+  {
+    "text": "统计次数季度的平均",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "avg_groupby"
+  },
+  {
+    "text": "统计一下金额统计地区的个数",
+    "intent": "QUERY_AGGREGATE",
+    "sub_type": "count_groupby"
+  },
+  {
+    "text": "过滤次数在100到200之间的",
+    "intent": "QUERY_FILTER",
+    "sub_type": "filter_condition"
+  },
+  {
+    "text": "根据从高到低类型",
+    "intent": "QUERY_SORT",
+    "sub_type": "sort_desc"
+  },
+  {
+    "text": "按地区和产品交叉统计销售数据",
+    "intent": "PIVOT_TABLE",
+    "sub_type": "default"
+  },
+  {
+    "text": "创建曲线图展示响应时长的趋势",
+    "intent": "CHART_LINE",
+    "sub_type": "line_trend"
+  },
+  {
+    "text": "画柱图关于个数的时间",
+    "intent": "CHART_BAR",
+    "sub_type": "bar_groupby"
+  }
+]

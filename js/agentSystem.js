@@ -9,6 +9,8 @@
  * 4. PlanningAgent - 规划Agent：负责执行计划生成
  */
 
+import chartRecommendationEngine from './chartRecommendationEngine.js';
+
 // ========== 基础Agent类 ==========
 class BaseAgent {
     constructor(name, capabilities) {
@@ -431,77 +433,24 @@ class ChartAgent extends BaseAgent {
      * 推荐图表
      */
     recommendCharts(dataProfile) {
-        const recommendations = [];
-        
         if (!dataProfile || !dataProfile.schema) {
             return { charts: [], recommendations: [] };
         }
         
-        const { schema, columns } = dataProfile;
+        const { schema, columns, shape } = dataProfile;
         
-        // 时间序列 → 折线图
-        if (schema.dateCols.length > 0 && schema.numericCols.length > 0) {
-            recommendations.push({
-                type: 'line',
-                priority: 1,
-                title: '趋势分析',
-                config: {
-                    xAxis: schema.dateCols[0],
-                    yAxis: schema.numericCols[0],
-                    smooth: true
-                },
-                reason: '时间序列数据适合用折线图展示趋势变化'
-            });
-        }
+        // 准备数据特征
+        const dataFeatures = {
+            rowCount: shape.rows,
+            columnCount: shape.cols,
+            numericColumns: schema.numericCols,
+            categoricalColumns: schema.categoricalCols,
+            dateColumns: schema.dateCols,
+            columnProfiles: columns
+        };
         
-        // 分类数据 → 柱状图
-        if (schema.categoricalCols.length > 0 && schema.numericCols.length > 0) {
-            recommendations.push({
-                type: 'bar',
-                priority: 2,
-                title: '分类对比',
-                config: {
-                    xAxis: schema.categoricalCols[0],
-                    yAxis: schema.numericCols[0]
-                },
-                reason: '分类数据适合用柱状图进行对比分析'
-            });
-        }
-        
-        // 少量分类 → 饼图
-        if (schema.categoricalCols.length > 0) {
-            const catCol = schema.categoricalCols[0];
-            const catProfile = columns[catCol];
-            if (catProfile && catProfile.uniqueCount <= 8 && schema.numericCols.length > 0) {
-                recommendations.push({
-                    type: 'pie',
-                    priority: 3,
-                    title: '占比分布',
-                    config: {
-                        label: catCol,
-                        value: schema.numericCols[0]
-                    },
-                    reason: '类别较少时适合用饼图展示占比'
-                });
-            }
-        }
-        
-        // 多个数值列 → 散点图
-        if (schema.numericCols.length >= 2) {
-            recommendations.push({
-                type: 'scatter',
-                priority: 4,
-                title: '相关性分析',
-                config: {
-                    xAxis: schema.numericCols[0],
-                    yAxis: schema.numericCols[1]
-                },
-                reason: '两个数值列可以用散点图分析相关性'
-            });
-        }
-        
-        // 按优先级排序
-        recommendations.sort((a, b) => a.priority - b.priority);
+        // 调用统一的图表推荐引擎
+        const recommendations = chartRecommendationEngine.recommendCharts(dataFeatures);
         
         return {
             charts: [],

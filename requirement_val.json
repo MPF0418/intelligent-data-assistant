@@ -1,0 +1,297 @@
+[
+  {
+    "text": "人数的变化趋势",
+    "label": "DATA_ANALYSIS",
+    "category": "chart"
+  },
+  {
+    "text": "下午好",
+    "label": "IRRELEVANT",
+    "category": "greeting"
+  },
+  {
+    "text": "统计状态的平均值",
+    "label": "DATA_ANALYSIS",
+    "category": "query_aggregate"
+  },
+  {
+    "text": "按照收入排列",
+    "label": "DATA_ANALYSIS",
+    "category": "query_sort"
+  },
+  {
+    "text": "查找持续时间的最小值",
+    "label": "DATA_ANALYSIS",
+    "category": "query_find"
+  },
+  {
+    "text": "处理时长的变化趋势",
+    "label": "DATA_ANALYSIS",
+    "category": "chart"
+  },
+  {
+    "text": "在不在",
+    "label": "IRRELEVANT",
+    "category": "greeting"
+  },
+  {
+    "text": "按照人数排列",
+    "label": "DATA_ANALYSIS",
+    "category": "query_sort"
+  },
+  {
+    "text": "哈喽！",
+    "label": "IRRELEVANT",
+    "category": "greeting"
+  },
+  {
+    "text": "找出排名前1的",
+    "label": "DATA_ANALYSIS",
+    "category": "query_find"
+  },
+  {
+    "text": "显示测试的数据",
+    "label": "DATA_ANALYSIS",
+    "category": "query_filter"
+  },
+  {
+    "text": "帮我买东西",
+    "label": "IRRELEVANT",
+    "category": "other_task"
+  },
+  {
+    "text": "按销售额降序排列",
+    "label": "DATA_ANALYSIS",
+    "category": "query_sort"
+  },
+  {
+    "text": "体重从高到低",
+    "label": "DATA_ANALYSIS",
+    "category": "query_sort"
+  },
+  {
+    "text": "年龄的变化趋势",
+    "label": "DATA_ANALYSIS",
+    "category": "chart"
+  },
+  {
+    "text": "可视化展示",
+    "label": "DATA_ANALYSIS",
+    "category": "chart"
+  },
+  {
+    "text": "查找部门的最小值",
+    "label": "DATA_ANALYSIS",
+    "category": "query_find"
+  },
+  {
+    "text": "生成图表",
+    "label": "DATA_ANALYSIS",
+    "category": "chart"
+  },
+  {
+    "text": "查找最大的次数",
+    "label": "DATA_ANALYSIS",
+    "category": "query_find"
+  },
+  {
+    "text": "按地区统计成本的总和",
+    "label": "DATA_ANALYSIS",
+    "category": "query_aggregate"
+  },
+  {
+    "text": "只看深圳的",
+    "label": "DATA_ANALYSIS",
+    "category": "query_filter"
+  },
+  {
+    "text": "年龄从小到大",
+    "label": "DATA_ANALYSIS",
+    "category": "query_sort"
+  },
+  {
+    "text": "您好！",
+    "label": "IRRELEVANT",
+    "category": "greeting"
+  },
+  {
+    "text": "查找最大的费用",
+    "label": "DATA_ANALYSIS",
+    "category": "query_find"
+  },
+  {
+    "text": "绘制数量的柱状图",
+    "label": "DATA_ANALYSIS",
+    "category": "chart"
+  },
+  {
+    "text": "你好！",
+    "label": "IRRELEVANT",
+    "category": "greeting"
+  },
+  {
+    "text": "abc",
+    "label": "IRRELEVANT",
+    "category": "unclear"
+  },
+  {
+    "text": "筛选出广东的数据",
+    "label": "DATA_ANALYSIS",
+    "category": "query_filter"
+  },
+  {
+    "text": "区域的平均值是多少",
+    "label": "DATA_ANALYSIS",
+    "category": "query_aggregate"
+  },
+  {
+    "text": "来首诗",
+    "label": "IRRELEVANT",
+    "category": "chat"
+  },
+  {
+    "text": "绘制工资的折线图",
+    "label": "DATA_ANALYSIS",
+    "category": "chart"
+  },
+  {
+    "text": "查找距离的最大值",
+    "label": "DATA_ANALYSIS",
+    "category": "query_find"
+  },
+  {
+    "text": "谁的成本最小",
+    "label": "DATA_ANALYSIS",
+    "category": "query_find"
+  },
+  {
+    "text": "按温度升序排列",
+    "label": "DATA_ANALYSIS",
+    "category": "query_sort"
+  },
+  {
+    "text": "统计支出的总和",
+    "label": "DATA_ANALYSIS",
+    "category": "query_aggregate"
+  },
+  {
+    "text": "查找最小的体积",
+    "label": "DATA_ANALYSIS",
+    "category": "query_find"
+  },
+  {
+    "text": "画个图看看",
+    "label": "DATA_ANALYSIS",
+    "category": "chart"
+  },
+  {
+    "text": "筛选出测试的数据",
+    "label": "DATA_ANALYSIS",
+    "category": "query_filter"
+  },
+  {
+    "text": "省公司的分布饼图",
+    "label": "DATA_ANALYSIS",
+    "category": "chart"
+  },
+  {
+    "text": "你好呀！",
+    "label": "IRRELEVANT",
+    "category": "greeting"
+  },
+  {
+    "text": "险情确认时长小于1的",
+    "label": "DATA_ANALYSIS",
+    "category": "query_filter"
+  },
+  {
+    "text": "说个故事",
+    "label": "IRRELEVANT",
+    "category": "chat"
+  },
+  {
+    "text": "人数的平均值是多少",
+    "label": "DATA_ANALYSIS",
+    "category": "query_aggregate"
+  },
+  {
+    "text": "计算持续时间的平均",
+    "label": "DATA_ANALYSIS",
+    "category": "query_aggregate"
+  },
+  {
+    "text": "天气如何",
+    "label": "IRRELEVANT",
+    "category": "chat"
+  },
+  {
+    "text": "谁的成绩最大",
+    "label": "DATA_ANALYSIS",
+    "category": "query_find"
+  },
+  {
+    "text": "查找地区的最大值",
+    "label": "DATA_ANALYSIS",
+    "category": "query_find"
+  },
+  {
+    "text": "您好呀。",
+    "label": "IRRELEVANT",
+    "category": "greeting"
+  },
+  {
+    "text": "。。。",
+    "label": "IRRELEVANT",
+    "category": "unclear"
+  },
+  {
+    "text": "你好厉害",
+    "label": "IRRELEVANT",
+    "category": "chat"
+  },
+  {
+    "text": "按日期统计体积的总和",
+    "label": "DATA_ANALYSIS",
+    "category": "query_aggregate"
+  },
+  {
+    "text": "123",
+    "label": "IRRELEVANT",
+    "category": "unclear"
+  },
+  {
+    "text": "各类型的成绩平均值",
+    "label": "DATA_ANALYSIS",
+    "category": "query_aggregate"
+  },
+  {
+    "text": "按人数降序排列",
+    "label": "DATA_ANALYSIS",
+    "category": "query_sort"
+  },
+  {
+    "text": "重量在37到191之间的",
+    "label": "DATA_ANALYSIS",
+    "category": "query_filter"
+  },
+  {
+    "text": "谢谢。",
+    "label": "IRRELEVANT",
+    "category": "greeting"
+  },
+  {
+    "text": "部门小于20的",
+    "label": "DATA_ANALYSIS",
+    "category": "query_filter"
+  },
+  {
+    "text": "计算年龄的合计",
+    "label": "DATA_ANALYSIS",
+    "category": "query_aggregate"
+  },
+  {
+    "text": "金额的总和是多少",
+    "label": "DATA_ANALYSIS",
+    "category": "query_aggregate"
+  }
+]

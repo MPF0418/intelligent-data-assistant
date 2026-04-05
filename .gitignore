@@ -1,73 +1,54 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
+# Dependencies
+node_modules/
 
-# Model files (large)
-model/
+# Build outputs
+dist/
+build/
+
+# Model files (too large)
+*.pt
+*.pth
+*.safetensors
+*.bin
 model_backup/
 model_v33/
-requirement_model/
-*.bin
-*.safetensors
-*.onnx
-
-# Training data
+analysis_model/
+analysis_model_aggregate/
+results/
 training_data/
-train_data.json
-val_data.json
-training_data_expanded.json
-training_data_large.json
-requirement_train.json
-requirement_val.json
-requirement_train_data.json
+
+# Desktop app files
+desktop/
+
+# Backups
+backup_v33/
+refactor/
 
 # Test files
-test_data.json
-test_results.json
-requirement_test.json
-results/
-results_v33/
+test/
+test_data/
+test_screenshots/
+test_screenshots_v2/
+test_screenshots_v3/
+test_screenshots_full/
 
-# Backup
-backup_v33/
+# Logs
+*.log
 
 # IDE
-.idea/
 .vscode/
-*.swp
-*.swo
-*~
+.idea/
 
 # OS
 .DS_Store
 Thumbs.db
 
-# Config (contains API keys)
-config.js
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
 
-# Cloudflared
-cloudflared.exe
-cloudflared-config.yml
-
-# Logs
-*.log
-training_output.txt
-training_notes.json
+# Temporary files
+*.tmp
+*.temp

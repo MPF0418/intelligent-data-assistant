@@ -1,0 +1,514 @@
+{
+  "test_time": "2026-03-26 23:26:05",
+  "version": "V6.0",
+  "summary": {
+    "total": 53,
+    "passed": 49,
+    "failed": 4,
+    "pass_rate": "92.5%"
+  },
+  "test_groups": {
+    "intent_recognition": {
+      "total": 22,
+      "passed": 22,
+      "failed": 0,
+      "pass_rate": "100.0%",
+      "details": [
+        {
+          "case_id": "IR-001",
+          "input": "哪个省公司的销售额最高",
+          "expected": "QUERY_EXTRACT",
+          "actual": "QUERY_EXTRACT",
+          "passed": true,
+          "status": "PASS"
+        },
+        {
+          "case_id": "IR-002",
+          "input": "找出金额最低的记录",
+          "expected": "QUERY_EXTRACT",
+          "actual": "QUERY_EXTRACT",
+          "passed": true,
+          "status": "PASS"
+        },
+        {
+          "case_id": "IR-003",
+          "input": "销售额前5名是哪些",
+          "expected": "QUERY_EXTRACT",
+          "actual": "QUERY_EXTRACT",
+          "passed": true,
+          "status": "PASS"
+        },
+        {
+          "case_id": "IR-004",
+          "input": "排名第1的是谁",
+          "expected": "QUERY_EXTRACT",
+          "actual": "QUERY_EXTRACT",
+          "passed": true,
+          "status": "PASS"
+        },
+        {
+          "case_id": "IR-005",
+          "input": "最大值是多少",
+          "expected": "QUERY_EXTRACT",
+          "actual": "QUERY_EXTRACT",
+          "passed": true,
+          "status": "PASS"
+        },
+        {
+          "case_id": "IR-006",
+          "input": "找出最小的数值",
+          "expected": "QUERY_EXTRACT",
+          "actual": "QUERY_EXTRACT",
+          "passed": true,
+          "status": "PASS"
+        },
+        {
+          "case_id": "IR-007",
+          "input": "统计销售额总和",
+          "expected": "QUERY_AGGREGATE",
+          "actual": "QUERY_AGGREGATE",
+          "passed": true,
+          "status": "PASS"
+        },
+        {
+          "case_id": "IR-008",
+          "input": "计算平均销售额",
+          "expected": "QUERY_AGGREGATE",
+          "actual": "QUERY_AGGREGATE",
+          "passed": true,
+          "status": "PASS"
+        },
+        {
+          "case_id": "IR-009",
+          "input": "筛选出金额大于1000的记录",
+          "expected": "QUERY_FILTER",
+          "actual": "QUERY_FILTER",
+          "passed": true,
+          "status": "PASS"
+        },
+        {
+          "case_id": "IR-010",
+          "input": "找出广东省的数据",
+          "expected": "QUERY_FILTER",
+          "actual": "QUERY_FILTER",
+          "passed": true,
+          "status": "PASS"
+        },
+        {
+          "case_id": "IR-011",
+          "input": "只显示男性的记录",
+          "expected": "QUERY_FILTER",
+          "actual": "QUERY_FILTER",
+          "passed": true,
+          "status": "PASS"
+        },
+        {
+          "case_id": "IR-012",
+          "input": "按销售额从小到大排序",
+          "expected": "QUERY_SORT",
+          "actual": "QUERY_SORT",
+          "passed": true,
+          "status": "PASS"
+        },
+        {
+          "case_id": "IR-013",
+          "input": "画一个柱状图展示各地区销售额",
+          "expected": "CHART_BAR",
+          "actual": "CHART_BAR",
+          "passed": true,
+          "status": "PASS"
+        },
+        {
+          "case_id": "IR-014",
+          "input": "绘制销售额趋势折线图",
+          "expected": "CHART_LINE",
+          "actual": "CHART_LINE",
+          "passed": true,
+          "status": "PASS"
+        },
+        {
+          "case_id": "IR-015",
+          "input": "饼图展示各产品占比",
+          "expected": "CHART_PIE",
+          "actual": "CHART_PIE",
+          "passed": true,
+          "status": "PASS"
+        },
+        {
+          "case_id": "IR-016",
+          "input": "柱状图显示销售额，折线图显示增长率",
+          "expected": "CHART_COMBO",
+          "actual": "CHART_COMBO",
+          "passed": true,
+          "status": "PASS"
+        },
+        {
+          "case_id": "IR-017",
+          "input": "按地区和产品交叉统计销售额",
+          "expected": "QUERY_AGGREGATE",
+          "actual": "QUERY_AGGREGATE",
+          "passed": true,
+          "status": "PASS"
+        },
+        {
+          "case_id": "IR-018",
+          "input": "删除重复数据",
+          "expected": "DATA_CLEAN",
+          "actual": "DATA_CLEAN",
+          "passed": true,
+          "status": "PASS"
+        },
+        {
+          "case_id": "IR-019",
+          "input": "导出为Excel文件",
+          "expected": "DATA_EXPORT",
+          "actual": "DATA_EXPORT",
+          "passed": true,
+          "status": "PASS"
+        },
+        {
+          "case_id": "IR-020",
+          "input": "可视化一下数据",
+          "expected": "CHART_BAR",
+          "actual": "CHART_BAR",
+          "passed": true,
+          "status": "PASS"
+        },
+        {
+          "case_id": "IR-021",
+          "input": "你好",
+          "expected": "REJECTED",
+          "actual": "REJECTED",
+          "passed": true,
+          "status": "PASS"
+        },
+        {
+          "case_id": "IR-022",
+          "input": "今天天气怎么样",
+          "expected": "REJECTED",
+          "actual": "REJECTED",
+          "passed": true,
+          "status": "PASS"
+        }
+      ]
+    },
+    "clarification_mechanism": {
+      "total": 9,
+      "passed": 9,
+      "failed": 0,
+      "pass_rate": "100.0%",
+      "details": [
+        {
+          "case_id": "CL-001",
+          "input": "统计一下",
+          "expected_clarification": true,
+          "actual_clarification": true,
+          "passed": true,
+          "status": "PASS"
+        },
+        {
+          "case_id": "CL-002",
+          "input": "筛选大于1000的",
+          "expected_clarification": true,
+          "actual_clarification": true,
+          "passed": true,
+          "status": "PASS"
+        },
+        {
+          "case_id": "CL-003",
+          "input": "分析数据",
+          "expected_clarification": true,
+          "actual_clarification": true,
+          "passed": true,
+          "status": "PASS"
+        },
+        {
+          "case_id": "CL-004",
+          "input": "画个图",
+          "expected_clarification": true,
+          "actual_clarification": true,
+          "passed": true,
+          "status": "PASS"
+        },
+        {
+          "case_id": "CL-005",
+          "input": "排序",
+          "expected_clarification": true,
+          "actual_clarification": true,
+          "passed": true,
+          "status": "PASS"
+        },
+        {
+          "case_id": "CL-006",
+          "input": "按地区统计销售额并画柱状图",
+          "expected_clarification": false,
+          "actual_clarification": false,
+          "passed": true,
+          "status": "PASS"
+        },
+        {
+          "case_id": "CL-007",
+          "input": "筛选出金额大于1000的记录",
+          "expected_clarification": false,
+          "actual_clarification": false,
+          "passed": true,
+          "status": "PASS"
+        },
+        {
+          "case_id": "CL-008",
+          "input": "按销售额从高到低排序",
+          "expected_clarification": false,
+          "actual_clarification": false,
+          "passed": true,
+          "status": "PASS"
+        },
+        {
+          "case_id": "CL-009",
+          "input": "导出为Excel文件",
+          "expected_clarification": false,
+          "actual_clarification": false,
+          "passed": true,
+          "status": "PASS"
+        }
+      ]
+    },
+    "entity_extraction": {
+      "total": 5,
+      "passed": 1,
+      "failed": 4,
+      "pass_rate": "20.0%",
+      "details": [
+        {
+          "case_id": "EE-001",
+          "input": "华东地区的销售额",
+          "expected_dimensions": [
+            "地区"
+          ],
+          "actual_dimensions": [
+            "地区"
+          ],
+          "expected_measures": [
+            "销售额"
+          ],
+          "actual_measures": [
+            "销售"
+          ],
+          "passed": false,
+          "status": "FAIL"
+        },
+        {
+          "case_id": "EE-002",
+          "input": "广东省的利润",
+          "expected_dimensions": [
+            "省份"
+          ],
+          "actual_dimensions": [],
+          "expected_measures": [
+            "利润"
+          ],
+          "actual_measures": [
+            "利润"
+          ],
+          "passed": false,
+          "status": "FAIL"
+        },
+        {
+          "case_id": "EE-003",
+          "input": "筛选出金额大于1000的",
+          "expected_dimensions": [],
+          "actual_dimensions": [],
+          "expected_measures": [
+            "金额"
+          ],
+          "actual_measures": [
+            "金额"
+          ],
+          "passed": true,
+          "status": "PASS"
+        },
+        {
+          "case_id": "EE-004",
+          "input": "找出北京的记录",
+          "expected_dimensions": [
+            "城市"
+          ],
+          "actual_dimensions": [],
+          "expected_measures": [],
+          "actual_measures": [],
+          "passed": false,
+          "status": "FAIL"
+        },
+        {
+          "case_id": "EE-005",
+          "input": "按地区统计销售额",
+          "expected_dimensions": [
+            "地区"
+          ],
+          "actual_dimensions": [
+            "地区"
+          ],
+          "expected_measures": [
+            "销售额"
+          ],
+          "actual_measures": [
+            "销售"
+          ],
+          "passed": false,
+          "status": "FAIL"
+        }
+      ]
+    },
+    "rejection_mechanism": {
+      "total": 7,
+      "passed": 7,
+      "failed": 0,
+      "pass_rate": "100.0%",
+      "details": [
+        {
+          "case_id": "REJ-001",
+          "input": "你好",
+          "expected_reject": true,
+          "actual_reject": true,
+          "passed": true,
+          "status": "PASS"
+        },
+        {
+          "case_id": "REJ-002",
+          "input": "今天天气怎么样",
+          "expected_reject": true,
+          "actual_reject": true,
+          "passed": true,
+          "status": "PASS"
+        },
+        {
+          "case_id": "REJ-003",
+          "input": "给我讲个笑话",
+          "expected_reject": true,
+          "actual_reject": true,
+          "passed": true,
+          "status": "PASS"
+        },
+        {
+          "case_id": "REJ-004",
+          "input": "123456",
+          "expected_reject": true,
+          "actual_reject": true,
+          "passed": true,
+          "status": "PASS"
+        },
+        {
+          "case_id": "REJ-005",
+          "input": "",
+          "expected_reject": true,
+          "actual_reject": true,
+          "passed": true,
+          "status": "PASS"
+        },
+        {
+          "case_id": "REJ-006",
+          "input": "按地区统计销售额",
+          "expected_reject": false,
+          "actual_reject": false,
+          "passed": true,
+          "status": "PASS"
+        },
+        {
+          "case_id": "REJ-007",
+          "input": "画一个柱状图",
+          "expected_reject": false,
+          "actual_reject": false,
+          "passed": true,
+          "status": "PASS"
+        }
+      ]
+    },
+    "frontend_integration": {
+      "total": 10,
+      "passed": 10,
+      "failed": 0,
+      "pass_rate": "100.0%",
+      "details": [
+        {
+          "case_id": "FILE-001",
+          "file": "index.html",
+          "description": "Main HTML",
+          "exists": true,
+          "passed": true,
+          "status": "PASS"
+        },
+        {
+          "case_id": "FILE-002",
+          "file": "script.js",
+          "description": "Core Script",
+          "exists": true,
+          "passed": true,
+          "status": "PASS"
+        },
+        {
+          "case_id": "FILE-003",
+          "file": "config.js",
+          "description": "Config File",
+          "exists": true,
+          "passed": true,
+          "status": "PASS"
+        },
+        {
+          "case_id": "FILE-004",
+          "file": "styles.css",
+          "description": "Styles",
+          "exists": true,
+          "passed": true,
+          "status": "PASS"
+        },
+        {
+          "case_id": "FILE-005",
+          "file": "js/requirementClassifier.js",
+          "description": "Requirement Classifier",
+          "exists": true,
+          "passed": true,
+          "status": "PASS"
+        },
+        {
+          "case_id": "FILE-006",
+          "file": "js/conversationManager.js",
+          "description": "Conversation Manager",
+          "exists": true,
+          "passed": true,
+          "status": "PASS"
+        },
+        {
+          "case_id": "FUNC-007",
+          "function": "handleUnifiedNLP",
+          "description": "Main NLP Handler",
+          "exists": true,
+          "passed": true,
+          "status": "PASS"
+        },
+        {
+          "case_id": "FUNC-008",
+          "function": "handleClarificationSelection",
+          "description": "Clarification Handler",
+          "exists": true,
+          "passed": true,
+          "status": "PASS"
+        },
+        {
+          "case_id": "FUNC-009",
+          "function": "showClarificationDialog",
+          "description": "Clarification Dialog",
+          "exists": true,
+          "passed": true,
+          "status": "PASS"
+        },
+        {
+          "case_id": "FUNC-010",
+          "function": "showRejectionMessage",
+          "description": "Rejection Message",
+          "exists": true,
+          "passed": true,
+          "status": "PASS"
+        }
+      ]
+    }
+  }
+}

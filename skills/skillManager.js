@@ -68,6 +68,5 @@ class SkillManager {
     }
 }
 
-// 导出单例实例
-const skillManager = new SkillManager();
-export default skillManager;
+// 导出SkillManager类
+export default SkillManager;

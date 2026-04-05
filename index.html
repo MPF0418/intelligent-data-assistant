@@ -4,11 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>智能数据分析助手</title>
-    <link rel="stylesheet" href="styles.css?v=4.0.0">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="styles.css?v=5.0.0">
+    <link rel="stylesheet" href="final-layout.css?v=1.0.5">
+    <script src="js/chart.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <script src="config.js"></script>
+    <!-- 快速修复脚本 -->
+    <script src="quick_fix.js"></script>
+    <!-- V6.0简化版文件上传修复脚本 -->
+    <script src="upload_simple_fix.js"></script>
+    <!-- 日志复制功能修复脚本 -->
+    <script src="log_copy_fix.js"></script>
+    <!-- Bug修复脚本 V1.0 - 修复空输入拦截和筛选条件添加 -->
+    <script src="bugfix_v1.js"></script>
+    <!-- Bug修复脚本 V2.0 - 意图识别可视化 + 统计超时优化 -->
+    <script src="bugfix_v2.js"></script>
+    <script src="script.js"></script>
     <script>
         // V3.0: 检查Chart.js是否加载成功
         window.addEventListener('load', function() {
@@ -37,10 +49,18 @@
         <header>
             <div class="header-content">
                 <div class="header-left">
-                    <h1>🔍 智能数据分析助手 <span class="version-badge">V4.0</span></h1>
+                    <h1>🔍 智能数据分析助手 <span class="version-badge">V5.0</span></h1>
                     <p>上传您的数据文件，说出您的分析需求</p>
                 </div>
                 <div class="header-right">
+                    <button id="agent-workflow-btn" class="icon-btn" title="Agent工作流 (V5.0新功能)">
+                        <span class="icon">🤖</span>
+                        <span class="new-badge">NEW</span>
+                    </button>
+                    <button id="performance-monitor-btn" class="icon-btn" title="性能监控 (V5.0新功能)">
+                        <span class="icon">📊</span>
+                        <span class="new-badge">NEW</span>
+                    </button>
                     <button id="toggle-log-btn" class="icon-btn" title="查看处理日志">
                         <span class="icon">📋</span>
                         <span class="badge" id="log-badge" style="display: none;">0</span>
@@ -93,146 +113,123 @@
                 </div>
             </div>
             
-            <!-- 数据预览区域 -->
+            <!-- V5.0重构：数据画像区域 -->
             <section id="data-preview" class="hidden">
                 <div class="section-header">
-                    <h2>📊 数据预览</h2>
-                    <div class="data-info" id="data-info">
-                        <span class="info-item"><span class="info-label">总行数:</span> <span id="total-rows">0</span></span>
-                        <span class="info-item"><span class="info-label">总列数:</span> <span id="total-cols">0</span></span>
-                        <span class="info-item mode-badge" id="mode-badge">内存模式</span>
-                    </div>
-                </div>
-                
-                <!-- V4.0新增：数据画像面板 -->
-                <div id="data-profile-panel" class="profile-panel hidden">
-                    <div class="profile-header">
-                        <h3>📋 数据画像</h3>
-                        <button id="toggle-profile" class="toggle-btn" title="展开/收起">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="6 9 12 15 18 9"></polyline>
-                            </svg>
+                    <h2>📊 数据画像</h2>
+                    <div class="header-actions">
+                        <div class="data-info" id="data-info">
+                            <span class="info-item"><span class="info-icon">📊</span> <span id="total-rows">0</span> 行 × <span id="total-cols">0</span> 列</span>
+                            <span class="info-item"><span class="info-icon">🔢</span> 数值型 <span id="numeric-cols">0</span> 个</span>
+                            <span class="info-item"><span class="info-icon">📝</span> 文本型 <span id="text-cols">0</span> 个</span>
+                            <span class="info-item"><span class="info-icon">📅</span> 日期型 <span id="date-cols">0</span> 个</span>
+                            <span class="info-item"><span class="info-icon">✅</span> 质量 <span id="quality-grade">A</span></span>
+                            <span class="info-item"><span class="info-icon">📊</span> 向量化 <span id="vectorization-status">❌ 未向量化</span></span>
+                        </div>
+                        <button id="view-profile-detail-btn" class="btn btn-sm btn-outline">
+                            查看详情
                         </button>
                     </div>
-                    <div class="profile-body" id="profile-body">
-                        <div class="profile-summary" id="profile-summary">
-                            <!-- 数据画像摘要将动态填充 -->
-                        </div>
-                        <div class="profile-columns" id="profile-columns">
-                            <!-- 列画像将动态填充 -->
-                        </div>
-                        <div class="profile-quality" id="profile-quality">
-                            <!-- 数据质量将动态填充 -->
-                        </div>
-                    </div>
                 </div>
                 
-                <!-- 数据筛选区域 -->
-                <div class="preview-controls">
-                    <div class="filter-section">
-                        <div class="filter-header">
-                            <h3>🔧 数据筛选</h3>
-                            <button id="toggle-filter" class="toggle-btn" title="展开/收起">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <polyline points="6 9 12 15 18 9"></polyline>
-                                </svg>
-                            </button>
-                        </div>
-                        <div class="filter-body" id="filter-body">
-                            <div id="filter-conditions">
-                                <!-- 筛选条件将动态添加到这里 -->
+                <!-- 左右分栏布局：左侧对话窗口，右侧所有其他内容 -->
+                <div class="main-content-layout">
+                    <!-- 左侧：智能对话窗口 -->
+                    <div class="left-panel">
+                        <div class="conversation-section">
+                            <div class="conversation-header">
+                                <h3>💬 智能数据分析助手</h3>
+                                <div class="conversation-status" id="conversation-status">
+                                    <span class="status-dot"></span>
+                                    <span class="status-text">就绪</span>
+                                </div>
                             </div>
-                            <div class="filter-actions">
-                                <button id="add-filter" class="btn btn-outline">
-                                    <span class="btn-icon">+</span> 添加条件
-                                </button>
-                                <button id="apply-filter" class="btn btn-primary">
-                                    <span class="btn-icon">✓</span> 应用筛选
-                                </button>
-                                <button id="clear-filter" class="btn btn-secondary">
-                                    <span class="btn-icon">×</span> 清除筛选
+                            
+                            <div class="conversation-messages" id="conversation-messages">
+                                <!-- 对话消息将动态添加到这里 -->
+                                <div class="message system">
+                                    <div class="message-content">
+                                        <p>你好！我是智能数据洞察助手，有什么可以帮助你的吗？</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="conversation-form">
+                                <div class="input-wrapper">
+                                    <textarea id="conversation-input" placeholder="请输入您的数据分析需求..." rows="3"></textarea>
+                                    <button id="clear-conversation" class="clear-btn" title="清空">×</button>
+                                </div>
+                                <button id="send-message" class="btn btn-primary">
+                                    <span class="btn-icon">💬</span> 发送
                                 </button>
                             </div>
+                            
+                            <div id="conversation-progress" class="query-progress hidden">
+                                <div class="progress-container">
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" id="conversation-progress-fill"></div>
+                                    </div>
+                                    <div class="progress-info">
+                                        <span class="progress-percent" id="conversation-progress-percent">0%</span>
+                                        <span class="progress-text">正在分析您的需求...</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                </div>
-                
-                <!-- 数据表格 -->
-                <div class="preview-container">
-                    <div class="table-scroll-wrapper">
-                        <table id="data-table">
-                            <thead></thead>
-                            <tbody></tbody>
-                        </table>
-                    </div>
-                    <div class="table-pagination" id="table-pagination">
-                        <button id="prev-page" class="page-btn" disabled>上一页</button>
-                        <span class="page-info">第 <span id="current-page">1</span> / <span id="total-pages">1</span> 页 (共 <span id="pagination-total-rows">0</span> 条数据)</span>
-                        <button id="next-page" class="page-btn">下一页</button>
-                    </div>
-                </div>
-                
-                <!-- 自然语言交互区域（优化版） -->
-                <div class="nlp-interaction-section">
-                    <div class="nlp-header">
-                        <h3>💬 智能查询与可视化</h3>
-                        <div class="nlp-status" id="nlp-status">
-                            <span class="status-dot"></span>
-                            <span class="status-text">就绪</span>
-                        </div>
-                    </div>
-                    <p class="nlp-hint">输入您的问题或可视化需求，AI将自动判断并执行查询或生成图表</p>
-                    
-                    <div class="nlp-examples">
-                        <span class="example-label">试试这些：</span>
-                        <button class="example-btn" data-query="哪个省公司的销售额最高？">查找最高值</button>
-                        <button class="example-btn" data-query="按地区统计事件数量">分组统计</button>
-                        <button class="example-btn" data-query="绘制柱状图展示各区域数据">生成图表</button>
                     </div>
                     
-                    <div class="nlp-form">
-                        <div class="input-wrapper">
-                            <input type="text" id="nlp-input" placeholder="例如：哪个省公司的险情确认时长最长？或 按省公司统计事件数量并绘制柱状图">
-                            <button id="clear-nlp" class="clear-btn" title="清空">×</button>
+                    <!-- 右侧：所有其他内容 -->
+                    <div class="right-panel">
+                        <!-- 数据筛选区域 -->
+                        <div class="preview-controls">
+                            <div class="filter-section">
+                                <div class="filter-header">
+                                    <h3>🔧 数据筛选</h3>
+                                    <button id="toggle-filter" class="toggle-btn" title="展开/收起">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="6 9 12 15 18 9"></polyline>
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div class="filter-body" id="filter-body">
+                                    <div id="filter-conditions">
+                                        <!-- 筛选条件将动态添加到这里 -->
+                                    </div>
+                                    <div class="filter-actions">
+                                        <button id="add-filter" class="btn btn-outline">
+                                            <span class="btn-icon">+</span> 添加条件
+                                        </button>
+                                        <button id="apply-filter" class="btn btn-primary">
+                                            <span class="btn-icon">✓</span> 应用筛选
+                                        </button>
+                                        <button id="clear-filter" class="btn btn-secondary">
+                                            <span class="btn-icon">×</span> 清除筛选
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <button id="submit-nlp" class="btn btn-primary btn-lg">
-                            <span class="btn-icon">🚀</span> 执行
-                        </button>
-                        <button id="stop-nlp" class="btn btn-danger btn-lg hidden">
-                            <span class="btn-icon">⏹</span> 停止
-                        </button>
+                        
+                        <!-- 结果展示区域 -->
+                        <div id="conversation-result" class="conversation-result hidden">
+                            <!-- 查询结果将动态显示在这里 -->
+                        </div>
+                        
+                        <!-- 数据表格 -->
+                        <div class="preview-container">
+                            <div class="table-scroll-wrapper">
+                                <table id="data-table">
+                                    <thead></thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                            <div class="table-pagination" id="table-pagination">
+                                <button id="prev-page" class="page-btn" disabled>上一页</button>
+                                <span class="page-info">第 <span id="current-page">1</span> / <span id="total-pages">1</span> 页 (共 <span id="pagination-total-rows">0</span> 条数据)</span>
+                                <button id="next-page" class="page-btn">下一页</button>
+                            </div>
+                        </div>
                     </div>
-                    
-                    <div id="nlp-progress" class="query-progress hidden">
-                        <div class="progress-container">
-                            <div class="progress-bar">
-                                <div class="progress-fill" id="nlp-progress-fill"></div>
-                            </div>
-                            <div class="progress-info">
-                                <span class="progress-percent" id="nlp-progress-percent">0%</span>
-                                <span class="progress-text">正在分析您的需求...</span>
-                            </div>
-                        </div>
-                        <div class="progress-steps" id="progress-steps">
-                            <div class="step active" data-step="1">
-                                <span class="step-icon">1</span>
-                                <span class="step-text">意图识别</span>
-                            </div>
-                            <div class="step" data-step="2">
-                                <span class="step-icon">2</span>
-                                <span class="step-text">配置生成</span>
-                            </div>
-                            <div class="step" data-step="3">
-                                <span class="step-icon">3</span>
-                                <span class="step-text">执行处理</span>
-                            </div>
-                            <div class="step" data-step="4">
-                                <span class="step-icon">4</span>
-                                <span class="step-text">结果展示</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div id="nlp-result"></div>
                 </div>
             </section>
             
@@ -269,18 +266,13 @@
             </section>
         </main>
         
-        <!-- 底部工具栏 -->
+        <!-- V5.0优化：底部工具栏 -->
         <footer class="app-footer">
             <div class="footer-left">
-                <span class="version">v3.2</span>
-                <span class="separator">|</span>
                 <span class="tech-info" id="tech-info">内存模式</span>
             </div>
             <div class="footer-right">
-                <!-- V3.0：错误报告和一键修复按钮由 feedbackUI.js 在右下角浮动显示 -->
-                <button id="toggle-log-btn-footer" class="footer-btn">
-                    <span class="icon">📋</span> 处理日志
-                </button>
+                <!-- V5.0：错误报告和反馈功能将在后续版本重构 -->
             </div>
         </footer>
     </div>
@@ -299,6 +291,22 @@
             </div>
             <div class="modal-body">
                 <div id="processing-log" class="log-container"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- V5.0新增：数据画像详细弹窗 -->
+    <div id="profile-detail-modal" class="modal hidden">
+        <div class="modal-overlay"></div>
+        <div class="modal-content modal-lg">
+            <div class="modal-header">
+                <h3>📋 数据画像详情</h3>
+                <button id="close-profile-detail-modal" class="modal-close">×</button>
+            </div>
+            <div class="modal-body">
+                <div id="profile-detail-content" class="profile-detail-content">
+                    <!-- 详细数据画像内容将动态填充 -->
+                </div>
             </div>
         </div>
     </div>
@@ -380,49 +388,42 @@
     <link rel="stylesheet" href="css/feedback-ui.css">
     <link rel="stylesheet" href="css/error-guide-ui.css">
     
-    <!-- 主脚本 -->
-    <script src="script.js?v=20260303v4.13"></script>
-    
-    <!-- V4.0 核心模块 -->
+    <!-- V5.0 核心模块 -->
     <script type="module">
-        console.log('[V4.0] 开始加载模块...');
+        console.log('[V5.0] 开始加载模块...');
         
         try {
-            // 导入 V3.0 核心模块
-            const { default: chartRecommender } = await import('./js/chartRecommender.js?v=4');
-            const { default: errorCollector } = await import('./js/errorCollector.js?v=4');
-            const { default: feedbackManager } = await import('./js/feedbackManager.js?v=4');
-            const { default: dataPreprocessor } = await import('./js/dataPreprocessor.js?v=4');
-            const { default: autoFixer } = await import('./js/autoFixer.js?v=4');
-            const { default: feedbackUI } = await import('./js/feedbackUI.js?v=4');
-            const { default: errorGuideUI } = await import('./js/errorGuideUI.js?v=4');
-            const { default: requirementClassifier } = await import('./js/requirementClassifier.js?v=7');
-            const { default: llmPrompts } = await import('./js/llmPrompts.js?v=4');
+            // 导入 V5.0 核心模块
+            const { default: App } = await import('./js/app.js');
+            const { default: DataManager } = await import('./js/dataManager.js');
+            const { default: QueryPipeline } = await import('./js/queryPipeline.js');
             
-            // 导入 V4.0 新模块（使用时间戳强制刷新缓存）
-            const cacheBuster = Date.now();
+            // 导入原有模块
+            const { default: chartRecommender } = await import('./js/chartRecommender.js?v=5');
+            const { default: errorCollector } = await import('./js/errorCollector.js?v=5');
+            const { default: feedbackManager } = await import('./js/feedbackManager.js?v=5');
+            const { default: dataPreprocessor } = await import('./js/dataPreprocessor.js?v=5');
+            const { default: autoFixer } = await import('./js/autoFixer.js?v=5');
+            const { default: feedbackUI } = await import('./js/feedbackUI.js?v=5');
+            const { default: errorGuideUI } = await import('./js/errorGuideUI.js?v=5');
+            const { default: requirementClassifier } = await import('./js/requirementClassifier.js?v=5');
+            const { default: llmPrompts } = await import('./js/llmPrompts.js?v=5');
+            const { default: entityExtractor } = await import('./js/entityExtractor.js');
+            const { default: agentRouter, AnalysisAgent, ChartAgent, ExplanationAgent, PlanningAgent } = await import('./js/agentSystem.js');
+            const { default: executionPlanUI } = await import('./js/executionPlanUI.js');
             
-            // 单独导入并检查 dataProfiler
-            console.log('[V4.0] 开始导入 dataProfiler 模块...');
-            let dataProfiler;
-            try {
-                const dataProfilerModule = await import(`./js/dataProfiler.js?v=${cacheBuster}`);
-                console.log('[V4.0] dataProfiler 模块导入成功:', dataProfilerModule);
-                dataProfiler = dataProfilerModule.default || dataProfilerModule;
-                console.log('[V4.0] dataProfiler 对象:', dataProfiler);
-                console.log('[V4.0] dataProfiler 类型:', typeof dataProfiler);
-                console.log('[V4.0] dataProfiler.profile:', dataProfiler?.profile);
-            } catch (e) {
-                console.error('[V4.0] dataProfiler 导入失败:', e);
-            }
+            console.log('[V5.0] 所有模块导入成功');
             
-            const { default: agentRouter, AnalysisAgent, ChartAgent, ExplanationAgent, PlanningAgent } = await import(`./js/agentSystem.js?v=${cacheBuster}`);
-            const { default: executionPlanUI } = await import(`./js/executionPlanUI.js?v=${cacheBuster}`);
-            const { default: entityExtractor } = await import(`./js/entityExtractor.js?v=${cacheBuster}`);
-            
-            console.log('[V4.0] 所有模块导入成功');
+            // 初始化应用
+            const app = new App();
+            const dataManager = new DataManager();
+            const queryPipeline = new QueryPipeline();
+            await queryPipeline.init();
             
             // 暴露到全局作用域
+            window.app = app;
+            window.dataManager = dataManager;
+            window.queryPipeline = queryPipeline;
             window.chartRecommender = chartRecommender;
             window.errorCollector = errorCollector;
             window.feedbackManager = feedbackManager;
@@ -495,5 +496,152 @@
     
     <!-- V3.0 集成补丁 -->
     <script src="v3-integration.js"></script>
+    
+    <!-- V5.0 Agent工作流可视化面板 -->
+    <div id="agent-workflow-panel" class="agent-workflow-panel">
+        <div class="agent-workflow-header">
+            <h3>🤖 Agent工作流可视化</h3>
+            <button id="close-agent-workflow" class="close-btn">&times;</button>
+        </div>
+        <div class="agent-workflow-body">
+            <div id="workflow-container">
+                <p style="color: #666; text-align: center;">点击"开始分析"查看Agent工作流</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- V5.0 性能监控面板 -->
+    <div id="performance-panel" class="performance-panel">
+        <div class="performance-header">
+            <h3>📊 系统性能监控</h3>
+            <button id="close-performance" class="close-btn">&times;</button>
+        </div>
+        <div class="performance-body">
+            <div class="metric-card">
+                <h4>API响应时间</h4>
+                <div class="metric-value" id="api-response-time">-- ms</div>
+            </div>
+            <div class="metric-card">
+                <h4>缓存命中率</h4>
+                <div class="metric-value" id="cache-hit-rate">--%</div>
+            </div>
+            <div class="metric-card">
+                <h4>并发请求数</h4>
+                <div class="metric-value" id="concurrent-requests">-- / 10</div>
+            </div>
+            <div class="metric-card">
+                <h4>系统状态</h4>
+                <div class="metric-value" id="system-status" style="color: #38ef7d;">运行正常</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- V5.0 功能脚本 -->
+    <script>
+        // V5.0 Agent工作流面板控制
+        document.getElementById('agent-workflow-btn').addEventListener('click', function() {
+            document.getElementById('agent-workflow-panel').classList.toggle('active');
+            document.getElementById('performance-panel').classList.remove('active');
+        });
+        
+        document.getElementById('close-agent-workflow').addEventListener('click', function() {
+            document.getElementById('agent-workflow-panel').classList.remove('active');
+        });
+        
+        // V5.0 性能监控面板控制
+        document.getElementById('performance-monitor-btn').addEventListener('click', function() {
+            document.getElementById('performance-panel').classList.toggle('active');
+            document.getElementById('agent-workflow-panel').classList.remove('active');
+            updatePerformanceMetrics();
+        });
+        
+        document.getElementById('close-performance').addEventListener('click', function() {
+            document.getElementById('performance-panel').classList.remove('active');
+        });
+        
+        // V5.0 更新性能指标
+        function updatePerformanceMetrics() {
+            // 检查性能面板是否激活，只有激活时才更新
+            const performancePanel = document.getElementById('performance-panel');
+            if (!performancePanel || !performancePanel.classList.contains('active')) {
+                return;
+            }
+            
+            // 更新API响应时间
+            fetch('http://127.0.0.1:5001/api/v1/performance/metrics')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('API not available');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.status === 'success') {
+                        const metrics = data.data;
+                        
+                        // 计算所有API的平均响应时间
+                        let totalAvg = 0;
+                        let count = 0;
+                        Object.keys(metrics).forEach(key => {
+                            if (metrics[key] && metrics[key].avg) {
+                                totalAvg += metrics[key].avg;
+                                count++;
+                            }
+                        });
+                        
+                        if (count > 0) {
+                            const avgResponseTime = Math.round(totalAvg / count);
+                            document.getElementById('api-response-time').textContent = avgResponseTime + ' ms';
+                        }
+                        
+                        // 计算缓存命中率（如果有缓存数据）
+                        if (metrics.cache_hits && metrics.cache_misses) {
+                            const total = metrics.cache_hits + metrics.cache_misses;
+                            if (total > 0) {
+                                const hitRate = Math.round((metrics.cache_hits / total) * 100);
+                                document.getElementById('cache-hit-rate').textContent = hitRate + '%';
+                            }
+                        }
+                    }
+                })
+                .catch(err => {
+                    console.log('性能监控更新失败:', err);
+                    // 显示默认值
+                    document.getElementById('api-response-time').textContent = '-- ms';
+                    document.getElementById('cache-hit-rate').textContent = '--%';
+                });
+            
+            // 更新并发状态
+            fetch('http://127.0.0.1:5001/api/v1/performance/concurrency/status')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('API not available');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.status === 'success') {
+                        const status = data.data;
+                        document.getElementById('concurrent-requests').textContent = 
+                            status.active_tasks + ' / ' + status.max_concurrent;
+                    }
+                })
+                .catch(err => {
+                    console.log('并发状态更新失败:', err);
+                    document.getElementById('concurrent-requests').textContent = '-- / 10';
+                });
+        }
+        
+        // 立即执行一次性能指标更新
+        // 注释掉自动更新，只有在打开性能面板时才更新
+        // updatePerformanceMetrics();
+        
+        // 每5秒自动更新性能指标
+        // 注释掉自动更新，避免频繁的404错误
+        // setInterval(updatePerformanceMetrics, 5000);
+        
+        console.log('[V5.0] 智能数据分析助手 V5.0 已加载');
+        console.log('[V5.0] 新功能: Agent工作流可视化、性能监控');
+    </script>
 </body>
 </html>

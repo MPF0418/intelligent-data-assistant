@@ -13,10 +13,65 @@ let dbManager = null; // 数据库管理器
 let intentRecognizer = null; // 意图识别器
 let useLocalIntentRecognition = true; // 是否使用本地意图识别
 let useDatabaseMode = false; // 是否使用数据库模式（大数据量时启用）
+let vectorizationEnabled = true; // 启用Excel向量化功能
+let vectorizationTable = 'data'; // 向量化表名
+
+// 上下文管理模块
+const contextManager = {
+    maxHistory: 5, // 最大历史记录数
+    history: [], // 对话历史
+    
+    // 添加新的用户输入到历史
+    addInput(input) {
+        this.history.push({
+            type: 'user',
+            content: input,
+            timestamp: new Date().getTime()
+        });
+        
+        // 保持历史记录不超过最大数量
+        if (this.history.length > this.maxHistory) {
+            this.history = this.history.slice(-this.maxHistory);
+        }
+    },
+    
+    // 添加系统响应到历史
+    addResponse(response) {
+        this.history.push({
+            type: 'system',
+            content: response,
+            timestamp: new Date().getTime()
+        });
+        
+        // 保持历史记录不超过最大数量
+        if (this.history.length > this.maxHistory) {
+            this.history = this.history.slice(-this.maxHistory);
+        }
+    },
+    
+    // 获取最近的历史记录
+    getRecentHistory() {
+        return this.history.map(item => `${item.type === 'user' ? '用户: ' : '系统: '}${item.content}`).join('\n');
+    },
+    
+    // 检查是否有之前的图表相关请求
+    hasRecentChartRequest() {
+        return this.history.some(item => 
+            item.type === 'user' && /柱状图|条形图|饼图|折线图|图表|可视化/.test(item.content)
+        );
+    },
+    
+    // 清空历史记录
+    clear() {
+        this.history = [];
+    }
+};
 
 // API基础URL配置 - 支持从URL参数动态配置（用于公网部署）
 // 用法：https://前端地址?apiUrl=https://后端API地址
+// 向量化API使用端口5002，其他API使用端口5001
 const API_BASE_URL = new URLSearchParams(window.location.search).get('apiUrl') || 'http://localhost:5001';
+const VECTOR_API_BASE_URL = 'http://localhost:5002';
 
 // 文件上下文信息（用于辅助理解用户意图）
 let fileContext = {
@@ -90,6 +145,179 @@ class SimpleDataProfiler {
 // 立即创建全局实例
 window.dataProfiler = new SimpleDataProfiler();
 console.log('[V4.0] ✅ 内联数据画像模块已创建（文件头部）');
+
+// Excel向量化相关函数
+async function vectorizeExcelData(tableName, excelData) {
+    try {
+        // 检查数据格式，兼容多种格式
+        let rowCount = 0;
+        let dataReference = excelData;
+        
+        if (excelData.data && Array.isArray(excelData.data)) {
+            rowCount = excelData.data.length;
+        } else if (excelData.rows && Array.isArray(excelData.rows)) {
+            rowCount = excelData.rows.length;
+            // 为了向后兼容，创建一个data属性的副本
+            dataReference = {
+                ...excelData,
+                data: excelData.rows
+            };
+        } else if (Array.isArray(excelData)) {
+            rowCount = excelData.length;
+            dataReference = {
+                data: excelData,
+                rows: excelData
+            };
+        } else {
+            throw new Error('向量化数据格式无效: 缺少data或rows属性');
+        }
+        
+        console.log('[向量化] 开始向量化处理，表名:', tableName, '数据行数:', rowCount);
+        addProcessingLog('info', '开始Excel数据向量化', `表名: ${tableName}, 行数: ${rowCount}`);
+        
+        // 检查向量化API是否可用
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 3000);
+            
+            const healthResponse = await fetch(`${VECTOR_API_BASE_URL}/health`, {
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            
+            const healthResult = await healthResponse.json();
+            if (!healthResult || !healthResult.status || healthResult.status !== 'healthy') {
+                console.warn('[向量化] API不健康，状态:', healthResult);
+                // 不抛出错误，继续尝试向量化，让API自己处理
+            }
+        } catch (error) {
+            console.warn('[向量化] 健康检查失败，将继续尝试向量化:', error.message);
+            // 不阻塞流程，继续尝试向量化
+        }
+        
+        // 调用向量化API
+        const response = await fetch(`${VECTOR_API_BASE_URL}/api/v1/vectorization/vectorize`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                table_name: tableName,
+                data: dataReference  // 使用修复后的数据引用
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            addProcessingLog('success', 'Excel数据向量化成功', `向量数量: ${result.row_count || 0}`);
+            showNotification('Excel数据向量化成功，支持语义查询', 'success');
+            console.log('[向量化] 成功:', result);
+            return result;
+        } else {
+            addProcessingLog('warning', 'Excel数据向量化失败', result.message || '未知错误');
+            showNotification('Excel数据向量化失败: ' + (result.message || '未知错误'), 'warning');
+            return null;
+        }
+    } catch (error) {
+        addProcessingLog('error', 'Excel数据向量化异常', error.message);
+        console.error('[向量化] 异常:', error);
+        
+        // 如果向量化失败，但Excel数据已成功加载，不应中断主流程
+        // 只是显示一个警告
+        showNotification('Excel向量化处理失败，但数据已正常加载: ' + error.message, 'warning');
+        return null;
+    }
+}
+
+// 更新向量化状态显示
+function updateVectorizationStatus(status = 'check') {
+    const vectorizationStatus = document.getElementById('vectorization-status');
+    if (!vectorizationStatus) return;
+    
+    if (status === 'processing') {
+        vectorizationStatus.textContent = '⏳ 正在向量化';
+        vectorizationStatus.style.color = '#ffc107';
+    } else if (status === 'check') {
+        // 检查实际状态
+        getVectorizedCollections().then(collections => {
+            const isVectorized = collections.includes(vectorizationTable);
+            vectorizationStatus.textContent = isVectorized ? '✅ 已向量化' : '❌ 未向量化';
+            vectorizationStatus.style.color = isVectorized ? '#28a745' : '#dc3545';
+        });
+    }
+}
+
+async function queryVectorizedData(queryText, tableName, filters = {}) {
+    if (!vectorizationEnabled) {
+        console.log('[向量化查询] 向量化功能已禁用');
+        return null;
+    }
+    
+    try {
+        console.log('[向量化查询] 开始语义查询:', queryText, tableName);
+        addProcessingLog('info', '开始语义查询', `查询: ${queryText}, 表名: ${tableName}`);
+        
+        // 检查向量化API是否可用
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+            
+            const healthResponse = await fetch(`${VECTOR_API_BASE_URL}/health`, {
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            
+            const healthResult = await healthResponse.json();
+            if (!healthResult || !healthResult.status || healthResult.status !== 'healthy') {
+                throw new Error('向量化API不健康');
+            }
+        } catch (error) {
+            console.log('[向量化查询] API不可用，跳过向量化查询:', error.message);
+            return null; // 静默失败，不影响主查询流程
+        }
+        
+        const response = await fetch(`${VECTOR_API_BASE_URL}/api/v1/vectorization/query`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                query: queryText,
+                table_name: tableName,
+                filters: filters,
+                top_k: 10
+            }),
+            timeout: 10000 // 10秒超时
+        });
+        
+        const result = await response.json();
+        
+        if (result.success && result.results && result.results.length > 0) {
+            addProcessingLog('success', '语义查询成功', `匹配结果数: ${result.results.length}`);
+            console.log('[向量化查询] 成功，匹配结果:', result.results.length);
+            return result;
+        } else {
+            console.log('[向量化查询] 无匹配结果或失败:', result.message || '未知错误');
+            return null;
+        }
+    } catch (error) {
+        console.warn('[向量化查询] 异常:', error.message);
+        // 不显示错误，避免影响用户体验
+        return null;
+    }
+}
+
+async function getVectorizedCollections() {
+    try {
+        const response = await fetch(`${VECTOR_API_BASE_URL}/api/v1/vectorization/collections`);
+        const result = await response.json();
+        return result.collections || [];
+    } catch (error) {
+        console.error('获取向量化集合失败:', error);
+        return [];
+    }
+}
 
 // 显示通知
 function showNotification(message, type = 'info') {
@@ -242,8 +470,36 @@ function endOperationTiming() {
 async function initSkillManager() {
     try {
         // 动态导入技能管理器
-        const { default: SkillManager } = await import('./skills/skillManager.js');
-        skillManager = SkillManager;
+        let SkillManagerClass = null;
+        try {
+            console.log('[初始化] 尝试加载技能管理器...');
+            const module = await import('./skills/skillManager.js');
+            SkillManagerClass = module.default;
+            console.log('[初始化] 技能管理器加载成功');
+        } catch (e) {
+            console.log('[初始化] 无法加载技能管理器:', e.message, '使用备用方案...');
+            // 创建简单的技能管理器替代
+            class SimpleSkillManager {
+                constructor() {
+                    this.skills = {};
+                    this.loadedSkills = [];
+                }
+                
+                async loadSkills() {
+                    console.log('[备用技能管理器] 加载基础技能');
+                    // 仅提供基础技能
+                    const baseSkills = ['dataAnalysis', 'chartGenerator'];
+                    this.loadedSkills = baseSkills;
+                    return this.loadedSkills;
+                }
+                
+                getLoadedSkills() {
+                    return this.loadedSkills;
+                }
+            }
+            SkillManagerClass = SimpleSkillManager;
+        }
+        skillManager = new SkillManagerClass();
         
         // 加载技能
         const loadedSkills = await skillManager.loadSkills();
@@ -546,6 +802,64 @@ function initEventListeners() {
         });
     }
     
+    // 新增：对话窗口功能
+    const sendMessageBtn = document.getElementById('send-message');
+    const conversationInput = document.getElementById('conversation-input');
+    const clearConversationBtn = document.getElementById('clear-conversation');
+    const conversationMessages = document.getElementById('conversation-messages');
+    
+    if (sendMessageBtn && conversationInput) {
+        // 添加输入验证 - 启用/禁用发送按钮
+        const updateSendButtonState = () => {
+            const inputValue = conversationInput.value.trim();
+            if (inputValue.length === 0) {
+                sendMessageBtn.disabled = true;
+                sendMessageBtn.style.opacity = '0.6';
+                sendMessageBtn.style.cursor = 'not-allowed';
+            } else {
+                sendMessageBtn.disabled = false;
+                sendMessageBtn.style.opacity = '1';
+                sendMessageBtn.style.cursor = 'pointer';
+            }
+        };
+        
+        // 监听输入事件
+        conversationInput.addEventListener('input', updateSendButtonState);
+        conversationInput.addEventListener('paste', () => {
+            setTimeout(updateSendButtonState, 0);
+        });
+        
+        // 初始化按钮状态
+        updateSendButtonState();
+        
+        // 绑定发送事件
+        sendMessageBtn.addEventListener('click', handleSendMessage);
+        conversationInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (conversationInput.value.trim().length > 0) {
+                    handleSendMessage();
+                }
+            }
+        });
+        
+        console.log('[initChat] 对话窗口输入验证已初始化');
+    }
+    
+    if (clearConversationBtn && conversationInput) {
+        clearConversationBtn.addEventListener('click', () => {
+            conversationInput.value = '';
+            conversationInput.focus();
+            // 更新按钮状态
+            const sendBtn = document.getElementById('send-message');
+            if (sendBtn) {
+                sendBtn.disabled = true;
+                sendBtn.style.opacity = '0.6';
+                sendBtn.style.cursor = 'not-allowed';
+            }
+        });
+    }
+    
     // V3.0 功能按钮事件绑定
     const errorReportBtn = document.getElementById('error-report-btn');
     const autoFixBtn = document.getElementById('auto-fix-btn');
@@ -620,6 +934,76 @@ function hideLogModal() {
     }
 }
 
+// V5.0新增：更新Agent工作流可视化
+function updateAgentWorkflow(step, status, data = null) {
+    const workflowContainer = document.getElementById('workflow-container');
+    if (!workflowContainer) return;
+    
+    // 定义工作流步骤
+    const workflowSteps = {
+        'intent_recognition': { name: '意图识别', icon: '🎯' },
+        'entity_extraction': { name: '实体提取', icon: '📋' },
+        'generate_config': { name: '生成查询配置', icon: '⚙️' },
+        'execute_query': { name: '执行查询', icon: '🔍' },
+        'render_result': { name: '渲染结果', icon: '📊' }
+    };
+    
+    // 获取或创建工作流列表
+    let workflowList = workflowContainer.querySelector('.workflow-list');
+    if (!workflowList) {
+        workflowList = document.createElement('div');
+        workflowList.className = 'workflow-list';
+        workflowContainer.innerHTML = '';
+        workflowContainer.appendChild(workflowList);
+        
+        // 初始化所有步骤
+        Object.keys(workflowSteps).forEach((stepKey, index) => {
+            const stepDiv = document.createElement('div');
+            stepDiv.className = `workflow-step ${stepKey}`;
+            stepDiv.innerHTML = `
+                <div class="step-number">${index + 1}</div>
+                <div class="step-icon">${workflowSteps[stepKey].icon}</div>
+                <div class="step-info">
+                    <div class="step-name">${workflowSteps[stepKey].name}</div>
+                    <div class="step-status">等待中...</div>
+                </div>
+                <div class="step-time"></div>
+            `;
+            workflowList.appendChild(stepDiv);
+        });
+    }
+    
+    // 更新指定步骤的状态
+    const stepElement = workflowList.querySelector('.workflow-step.' + step);
+    if (stepElement) {
+        const statusElement = stepElement.querySelector('.step-status');
+        const timeElement = stepElement.querySelector('.step-time');
+        
+        const statusMap = {
+            'running': { text: '进行中...', class: 'running', color: '#667eea' },
+            'completed': { text: '已完成', class: 'completed', color: '#38ef7d' },
+            'error': { text: '失败', class: 'error', color: '#f44747' }
+        };
+        
+        const statusInfo = statusMap[status] || statusMap['running'];
+        statusElement.textContent = statusInfo.text;
+        statusElement.style.color = statusInfo.color;
+        stepElement.className = `workflow-step ${step} ${statusInfo.class}`;
+        
+        if (status === 'completed' && data) {
+            timeElement.textContent = new Date().toLocaleTimeString();
+            
+            // 添加详细信息
+            if (data.configs) {
+                const detailDiv = document.createElement('div');
+                detailDiv.className = 'step-detail';
+                detailDiv.innerHTML = `<small>生成 ${data.configs.length} 个配置</small>`;
+                stepElement.appendChild(detailDiv);
+            }
+        }
+    }
+}
+
 // 显示设置弹窗
 function showSettingsModal() {
     const settingsModal = document.getElementById('settings-modal');
@@ -644,6 +1028,8 @@ async function copyLogsToClipboard() {
     
     try {
         await navigator.clipboard.writeText(logText);
+        
+        // 处理页面中的复制按钮
         const copyBtn = document.getElementById('copy-log');
         if (copyBtn) {
             const originalText = copyBtn.textContent;
@@ -652,8 +1038,24 @@ async function copyLogsToClipboard() {
                 copyBtn.textContent = originalText;
             }, 2000);
         }
+        
+        // 处理动态modal中的复制按钮
+        const copyLogsBtn = document.getElementById('copy-logs-btn');
+        if (copyLogsBtn) {
+            const originalText2 = copyLogsBtn.textContent;
+            copyLogsBtn.textContent = '已复制!';
+            copyLogsBtn.style.background = '#17a2b8';
+            setTimeout(() => {
+                copyLogsBtn.textContent = originalText2;
+                copyLogsBtn.style.background = '#28a745';
+            }, 2000);
+        }
+        
+        // 显示复制成功提示
+        showToast('日志已复制到剪贴板！', 'success');
     } catch (err) {
         console.error('复制失败:', err);
+        showToast('复制失败，请手动复制', 'error');
     }
 }
 
@@ -801,24 +1203,154 @@ function updateChartProgressText(text) {
 
 // ==================== 新的统一NLP处理功能 ====================
 
+// 进度消息容器，用于将所有进度信息显示在一个方框里
+let progressMessageContainer = null;
+
+// 在聊天窗口中添加进度信息消息
+function addProgressMessage(text, percent = 0) {
+    const messagesContainer = document.getElementById('conversation-messages');
+    if (!messagesContainer) return;
+    
+    // 如果还没有进度消息容器，创建一个
+    if (!progressMessageContainer) {
+        progressMessageContainer = document.createElement('div');
+        progressMessageContainer.className = 'message system progress-message-container';
+        progressMessageContainer.innerHTML = `
+            <div class="message-content">
+                <div class="progress-card">
+                    <div class="progress-card-header">
+                        <div class="progress-card-title">
+                            <span class="progress-icon">🔄</span>
+                            <span>执行进度</span>
+                        </div>
+                        <div class="progress-card-percent">${percent}%</div>
+                    </div>
+                    <div class="progress-card-body">
+                        <div class="progress-bar-container">
+                            <div class="progress-bar-fill" style="width: ${percent}%"></div>
+                        </div>
+                        <div class="progress-current-step">${text}</div>
+                        <div class="progress-steps"></div>
+                    </div>
+                </div>
+            </div>
+        `;
+        messagesContainer.appendChild(progressMessageContainer);
+    } else {
+        // 更新现有进度卡片
+        const progressBarFill = progressMessageContainer.querySelector('.progress-bar-fill');
+        const progressCardPercent = progressMessageContainer.querySelector('.progress-card-percent');
+        const progressCurrentStep = progressMessageContainer.querySelector('.progress-current-step');
+        
+        if (progressBarFill) {
+            progressBarFill.style.width = percent + '%';
+        }
+        if (progressCardPercent) {
+            progressCardPercent.textContent = percent + '%';
+        }
+        if (progressCurrentStep) {
+            progressCurrentStep.textContent = text;
+        }
+        
+        // 确保更新所有百分比显示元素
+        const allPercentElements = progressMessageContainer.querySelectorAll('.progress-card-percent');
+        allPercentElements.forEach(element => {
+            element.textContent = percent + '%';
+        });
+        
+        // 当完成时，更新图标和标题
+        if (percent === 100 && text === '完成') {
+            const progressIcon = progressMessageContainer.querySelector('.progress-icon');
+            if (progressIcon) {
+                progressIcon.textContent = '✅';
+            }
+        }
+    }
+    
+    // 在进度容器中添加新的进度步骤
+    const progressSteps = progressMessageContainer.querySelector('.progress-steps');
+    if (progressSteps) {
+        // 检查是否已经存在相同的进度步骤，避免重复添加
+        const existingSteps = progressSteps.querySelectorAll('.progress-step');
+        const isDuplicate = Array.from(existingSteps).some(step => step.textContent === text);
+        
+        // 特别处理：避免重复添加"正在分析您的需求..."步骤
+        if (text === '正在分析您的需求...') {
+            const existingAnalysisSteps = Array.from(existingSteps).filter(step => 
+                step.textContent.includes('分析您的需求') || step.textContent.includes('分析需求特征')
+            );
+            if (existingAnalysisSteps.length > 0) {
+                return; // 避免重复添加分析步骤
+            }
+        }
+        
+        if (!isDuplicate) {
+            const stepElement = document.createElement('div');
+            stepElement.className = 'progress-step';
+            stepElement.textContent = text;
+            progressSteps.appendChild(stepElement);
+        }
+    }
+    
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+// 清除进度消息容器
+function clearProgressMessageContainer() {
+    if (progressMessageContainer) {
+        progressMessageContainer.remove();
+        progressMessageContainer = null;
+    }
+}
+
 // 显示NLP进度
 function showNLPProgress(text = '正在分析您的需求...') {
+    // 清除之前的进度消息容器
+    clearProgressMessageContainer();
+    
+    // 隐藏旧的进度条
     const progressDiv = document.getElementById('nlp-progress');
-    const progressText = progressDiv.querySelector('.progress-text');
+    if (progressDiv) {
+        progressDiv.classList.add('hidden');
+    }
+    
     const submitBtn = document.getElementById('submit-nlp');
     const stopBtn = document.getElementById('stop-nlp');
     
-    if (progressDiv) {
-        progressDiv.classList.remove('hidden');
-        if (progressText) {
-            progressText.textContent = text;
-        }
-    }
     if (submitBtn) {
         submitBtn.classList.add('hidden');
     }
     if (stopBtn) {
         stopBtn.classList.remove('hidden');
+    }
+    
+    // 不在这里添加进度步骤，由setNLPProgress函数负责添加
+    // 创建进度卡片但不添加步骤
+    const messagesContainer = document.getElementById('conversation-messages');
+    if (messagesContainer) {
+        progressMessageContainer = document.createElement('div');
+        progressMessageContainer.className = 'message system progress-message-container';
+        progressMessageContainer.innerHTML = `
+            <div class="message-content">
+                <div class="progress-card">
+                    <div class="progress-card-header">
+                        <div class="progress-card-title">
+                            <span class="progress-icon">🔄</span>
+                            <span>执行进度</span>
+                        </div>
+                        <div class="progress-card-percent">0%</div>
+                    </div>
+                    <div class="progress-card-body">
+                        <div class="progress-bar-container">
+                            <div class="progress-bar-fill" style="width: 0%"></div>
+                        </div>
+                        <div class="progress-current-step">${text}</div>
+                        <div class="progress-steps"></div>
+                    </div>
+                </div>
+            </div>
+        `;
+        messagesContainer.appendChild(progressMessageContainer);
     }
 }
 
@@ -839,6 +1371,26 @@ function hideNLPProgress() {
     }
 }
 
+// 重置NLP进度
+function resetNLPProgress() {
+    const progressFill = document.getElementById('nlp-progress-fill');
+    const progressPercent = document.getElementById('nlp-progress-percent');
+    const progressText = document.querySelector('#nlp-progress .progress-text');
+    
+    if (progressFill) {
+        progressFill.style.width = '0%';
+    }
+    if (progressPercent) {
+        progressPercent.textContent = '0%';
+    }
+    if (progressText) {
+        progressText.textContent = '准备中...';
+    }
+    
+    // 重置聊天窗口中的进度卡片
+    progressMessageContainer = null;
+}
+
 // 设置NLP进度
 function setNLPProgress(percent, text) {
     const progressFill = document.getElementById('nlp-progress-fill');
@@ -853,6 +1405,11 @@ function setNLPProgress(percent, text) {
     }
     if (progressText && text) {
         progressText.textContent = text;
+    }
+    
+    // 无论如何都更新聊天窗口中的进度信息，确保进度卡片正确更新
+    if (text) {
+        addProgressMessage(text, percent);
     }
 }
 
@@ -869,8 +1426,27 @@ async function handleUnifiedNLP() {
         return;
     }
     
+    // 添加上下文管理
+    contextManager.addInput(userInput);
+    
+    // 检查是否有之前的图表相关请求
+    const hasRecentChart = contextManager.hasRecentChartRequest();
+    if (hasRecentChart && /排序|从高到低|从低到高|升序|降序/.test(userInput)) {
+        addProcessingLog('info', '检测到与之前图表请求相关的排序需求', '将当前输入视为对之前图表的补充');
+    }
+    
     // 清空之前的日志
     clearProcessingLogs();
+    
+    // 重置进度
+    resetNLPProgress();
+    
+    // V5.0: 初始化Agent工作流
+    updateAgentWorkflow('intent_recognition', 'running');
+    updateAgentWorkflow('entity_extraction', 'waiting');
+    updateAgentWorkflow('generate_config', 'waiting');
+    updateAgentWorkflow('execute_query', 'waiting');
+    updateAgentWorkflow('render_result', 'waiting');
     
     // 记录开始时间
     const totalStartTime = Date.now();
@@ -918,6 +1494,27 @@ async function handleUnifiedNLP() {
             addProcessingLog('info', `需求分类结果: ${classification.mode}`, 
                 `理由: ${classification.reason}, 置信度: ${classification.confidence.toFixed(2)}`);
             
+            // V5.0: 更新Agent工作流 - 意图识别完成
+            updateAgentWorkflow('intent_recognition', 'completed', {
+                mode: classification.mode,
+                confidence: classification.confidence
+            });
+            
+            // V5.0: 更新Agent工作流 - 实体提取开始
+            updateAgentWorkflow('entity_extraction', 'running');
+            
+            // 模拟实体提取过程
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // V5.0: 更新Agent工作流 - 实体提取完成
+            updateAgentWorkflow('entity_extraction', 'completed', {
+                entities: classification.entityExtraction || [],  // 修复null错误
+                matchedColumns: classification.matchedColumns || []
+            });
+            
+            // V5.0: 更新Agent工作流 - 生成配置开始
+            updateAgentWorkflow('generate_config', 'running');
+            
             processingMode = classification.mode;
             
             // V3.0新增：处理拒识情况
@@ -953,6 +1550,25 @@ async function handleUnifiedNLP() {
                 return;
             }
             
+            // V5.0新增：处理多意图场景
+            // 多意图场景直接转向大模型，不在本地模型处理
+            // 这是为了保障不漏掉用户需求中的复杂意图
+            if (classification.mode === 'multi_intent') {
+                addProcessingLog('info', '检测到多意图需求，自动转大模型处理', 
+                    `检测到意图: ${(classification.detectedIntents || classification.intents || []).join(', ')}`);
+                addProcessingLog('info', '多意图说明', classification.reason);
+                
+                // V5.0: 更新Agent工作流 - 多意图识别完成
+                updateAgentWorkflow('intent_recognition', 'completed', {
+                    mode: 'multi_intent',
+                    confidence: classification.confidence,
+                    detectedIntents: classification.detectedIntents || classification.intents || []
+                });
+                
+                // 直接转向大模型分支处理
+                processingMode = 'intelligent';
+            }
+            
             if (classification.mode === 'precise') {
                 // 精准模式：使用本地模型
                 setNLPProgress(20, '需求明确，使用本地模型处理...');
@@ -972,13 +1588,27 @@ async function handleUnifiedNLP() {
                         addProcessingLog('success', '本地意图识别完成', 
                             `意图: ${intentResult.intent}, 置信度: ${intentResult.confidence.toFixed(2)}, 方法: ${intentResult.method}`);
                         
-                        const isChart = intentRecognizer.isChartIntent(intentResult.intent);
+                        // V5.0: 更新Agent工作流状态
+                        updateAgentWorkflow('generate_config', 'completed');
+                        updateAgentWorkflow('execute_query', 'running');
+                        
+                        // 检查是否包含图表关键词
+                        const hasChartKeyword = /柱状图|条形图|饼图|折线图|图表|可视化/.test(userInput);
+                        // 检查是否有之前的图表请求
+                        const hasRecentChart = contextManager.hasRecentChartRequest();
+                        // 检查是否包含排序关键词
+                        const hasSortKeyword = intentResult.intent === 'QUERY_SORT' || /排序|从高到低|从低到高|升序|降序/.test(userInput);
+                        
+                        // 如果有之前的图表请求且当前输入包含排序关键词，将其视为图表意图
+                        const isChart = intentRecognizer.isChartIntent(intentResult.intent) || hasChartKeyword || (hasRecentChart && hasSortKeyword);
                         intentResult = {
                             intent: isChart ? 'chart' : 'query',
                             confidence: intentResult.confidence,
                             reason: intentResult.description,
                             detailedIntent: intentResult.intent,
-                            mode: 'precise'
+                            mode: 'precise',
+                            hasSort: hasSortKeyword,
+                            hasRecentChart: hasRecentChart
                         };
                     }
                 } else {
@@ -1132,8 +1762,19 @@ async function handleUnifiedNLP() {
                 addProcessingLog('info', `直接使用大模型生成的图表配置（${chartConfigs.length}个图表）`, 
                     JSON.stringify(chartConfigs).substring(0, 150));
                 
+                // 显示处理中的消息
+                const processingMessage = addMessage('system', '正在生成图表...');
+                
                 // 直接使用大模型配置生成图表
                 await handleNLPChartWithConfig(userInput, dataInfo, totalStartTime, chartConfigs);
+                
+                // 更新处理消息为完成状态
+                if (processingMessage) {
+                    const messageContent = processingMessage.querySelector('.message-content');
+                    if (messageContent) {
+                        messageContent.innerHTML = '<p>图表生成完成，请在下方"数据可视化"区域查看</p>';
+                    }
+                }
             } else {
                 setNLPProgress(40, '使用大模型生成的查询配置...');
                 addProcessingLog('info', '直接使用大模型生成的查询配置');
@@ -1150,7 +1791,8 @@ async function handleUnifiedNLP() {
                 await handleNLPChart(userInput, dataInfo, totalStartTime, intentResult.detailedIntent, entityExtractionResult);
             } else {
                 setNLPProgress(40, '识别为查询需求，正在生成查询配置...');
-                await handleNLPQuery(userInput, dataInfo, totalStartTime, intentResult.detailedIntent, entityExtractionResult);
+                // 传递isLocalModelSuccess参数，指示本地模型已成功识别
+                await handleNLPQuery(userInput, dataInfo, totalStartTime, intentResult.detailedIntent, entityExtractionResult, true);
             }
         }
         
@@ -1169,8 +1811,265 @@ async function handleUnifiedNLP() {
 }
 
 // 处理NLP查询
-async function handleNLPQuery(userInput, dataInfo, totalStartTime, detailedIntent = null, entityExtractionResult = null) {
+async function handleNLPQuery(userInput, dataInfo, totalStartTime, detailedIntent = null, entityExtractionResult = null, isLocalModelSuccess = false) {
     startOperationTiming('生成查询配置');
+    
+    // ========== 增强复合查询处理 ==========
+    // 专门处理"哪个区域的销售额最大？"这类查询
+    const enhancedQueryConfig = await enhanceComplexQueryHandling(userInput, dataInfo);
+    if (enhancedQueryConfig) {
+        addProcessingLog('success', '检测到复合查询，使用增强处理', `查询类型: ${enhancedQueryConfig.queryType}`);
+        endOperationTiming();
+        await executeLocalQuery(userInput, dataInfo, totalStartTime, enhancedQueryConfig);
+        return;
+    }
+    
+    // 如果本地模型已经成功识别，直接执行本地查询逻辑
+    if (isLocalModelSuccess) {
+        addProcessingLog('info', '本地模型已成功识别，直接执行本地查询');
+        
+        // 尝试本地生成配置
+        const localConfig = await tryGenerateChartConfigLocally(userInput, dataInfo, detailedIntent, entityExtractionResult);
+        
+        // 如果本地生成成功且是筛选聚合查询
+        if (localConfig && localConfig.length > 0 && localConfig[0].queryType === 'filter_aggregate') {
+            addProcessingLog('success', '本地生成筛选聚合配置成功', `配置: ${JSON.stringify(localConfig[0]).substring(0, 100)}...`);
+            endOperationTiming();
+            
+            // 执行本地查询
+            await executeLocalQuery(userInput, dataInfo, totalStartTime, localConfig[0]);
+            return;
+        }
+        
+        // 兜底：如果没有生成配置，尝试直接执行本地聚合查询
+        if (detailedIntent === 'QUERY_AGGREGATE') {
+            // 分析用户输入，生成合适的查询配置
+            const lowerInput = userInput.toLowerCase();
+            
+            // 检查是否包含"平均"、"时长"等关键词
+            if (lowerInput.includes('平均') && lowerInput.includes('时长')) {
+                // 查找时长列
+                const durationColumn = dataInfo.columns.find(col => 
+                    col.includes('时长') || col.includes('时间')
+                );
+                
+                // 查找地区列
+                const regionColumn = dataInfo.columns.find(col => 
+                    col.includes('区域') || col.includes('地区') || col.includes('省份') || col.includes('省公司')
+                );
+                
+                // 提取地区名称（如"江苏区域"）
+                const regionMatch = userInput.match(/(\w+)(区域|地区|省份|省公司)/);
+                const regionValue = regionMatch ? regionMatch[1] + regionMatch[2] : null;
+                
+                if (durationColumn) {
+                    const config = {
+                        queryType: 'filter_aggregate',
+                        filterColumn: regionColumn,
+                        filterValue: regionValue,
+                        valueColumn: durationColumn,
+                        aggregateFunction: 'avg',
+                        title: `${regionValue || '地区'}平均${durationColumn}统计`,
+                        description: `计算${regionValue || '地区'}的平均${durationColumn}`
+                    };
+                    
+                    addProcessingLog('success', '生成平均时长统计配置', `配置: ${JSON.stringify(config).substring(0, 100)}...`);
+                    endOperationTiming();
+                    
+                    // 执行本地查询
+                    await executeLocalQuery(userInput, dataInfo, totalStartTime, config);
+                    return;
+                }
+            }
+            
+            // 如果不是平均时长查询，再尝试省公司数量统计
+            const provinceColumn = dataInfo.columns.find(col => 
+                col.includes('省公司') || col.includes('省份') || col.includes('地区')
+            );
+            
+            if (provinceColumn) {
+                const config = {
+                    queryType: 'filter_aggregate',
+                    valueColumn: provinceColumn,
+                    aggregateFunction: 'count_distinct',
+                    title: '省公司数量统计',
+                    description: '计算表中省公司的数量'
+                };
+                
+                addProcessingLog('success', '生成省公司数量统计配置', `配置: ${JSON.stringify(config).substring(0, 100)}...`);
+                endOperationTiming();
+                
+                // 执行本地查询
+                await executeLocalQuery(userInput, dataInfo, totalStartTime, config);
+                return;
+            }
+        }
+    }
+    
+    // 首先尝试使用Excel向量化进行语义查询
+    if (vectorizationEnabled) {
+        const vectorizedResult = await queryVectorizedData(userInput, vectorizationTable);
+        if (vectorizedResult && vectorizedResult.results && vectorizedResult.results.length > 0) {
+            addProcessingLog('success', '语义查询成功', `匹配结果: ${vectorizedResult.results.length}`);
+            console.log('[语义查询] 向量化结果:', vectorizedResult.results);
+            
+            // V6.0优化：从用户查询中直接提取筛选条件，而不是依赖向量化结果的metadata
+            // 1. 提取筛选值（如"上海的" -> "上海"）
+            const filterValue = extractFilterValueFromQuery(userInput);
+            // 2. 提取聚合列（如"销售额"）
+            const aggregateColumn = extractAggregateColumnFromQuery(userInput, dataInfo.columns);
+            
+            console.log('[语义查询] 提取的筛选值:', filterValue, '聚合列:', aggregateColumn);
+            
+            // 如果能提取到筛选值和聚合列，直接生成配置执行
+            if (filterValue && aggregateColumn) {
+                // 找到对应的列
+                let filterColumn = dataInfo.columns.find(col => 
+                    col.includes('地区') || col.includes('区域') || col.includes('省') || col.includes('省份') || 
+                    col.includes('城市') || col.includes('市') || col.includes('产品') || col.includes('类别')
+                );
+                
+                let valueColumn = dataInfo.columns.find(col => 
+                    col.includes(aggregateColumn) || col.includes('销售额') || col.includes('销售') || 
+                    col.includes('金额') || col.includes('利润') || col.includes('数量')
+                );
+                
+                if (filterColumn && valueColumn) {
+                    const semanticConfig = {
+                        queryType: 'filter_aggregate',
+                        filterColumn: filterColumn,
+                        filterValue: filterValue,
+                        filterValues: [filterValue],
+                        valueColumn: valueColumn,
+                        aggregateFunction: 'sum',
+                        title: `${filterValue}${valueColumn}`,
+                        description: `计算${filterValue}的${valueColumn}总和`
+                    };
+                    
+                    addProcessingLog('success', '基于语义查询生成配置成功', `筛选: ${filterColumn}=${filterValue}, 聚合: ${valueColumn}`);
+                    endOperationTiming();
+                    
+                    // 执行本地查询
+                    await executeLocalQuery(userInput, dataInfo, totalStartTime, semanticConfig);
+                    return;
+                }
+            }
+            
+            // 如果无法从查询提取，回退到原来的metadata分析逻辑
+            const semanticResults = vectorizedResult.results;
+            
+            // 尝试从语义查询结果中提取筛选条件和聚合列
+            const regionResult = semanticResults.find(result => {
+                return result.metadata.data && (result.metadata.data.includes('华东') || result.metadata.data.includes('地区') || result.metadata.data.includes('上海'));
+            });
+            
+            const salesResult = semanticResults.find(result => {
+                return result.metadata.data && (result.metadata.data.includes('销售额') || result.metadata.data.includes('销售'));
+            });
+            
+            if (regionResult && salesResult) {
+                let regionValue = '华东';
+                if (regionResult.metadata.data) {
+                    const regionMatch = regionResult.metadata.data.match(/['"](华东|华南|华北|华中|西南|西北|东北|上海|北京|广东)['"]/);
+                    if (regionMatch) {
+                        regionValue = regionMatch[1];
+                    }
+                }
+                
+                let regionColumn = dataInfo.columns.find(col => 
+                    col.includes('地区') || col.includes('区域') || col.includes('省') || col.includes('省份')
+                );
+                
+                let salesColumn = dataInfo.columns.find(col => 
+                    col.includes('销售额') || col.includes('销售') || col.includes('金额')
+                );
+                
+                if (regionColumn && salesColumn) {
+                    const semanticConfig = {
+                        queryType: 'filter_aggregate',
+                        filterColumn: regionColumn,
+                        filterValue: regionValue,
+                        filterValues: [regionValue],
+                        valueColumn: salesColumn,
+                        aggregateFunction: 'sum',
+                        title: `${regionValue}的${salesColumn}`,
+                        description: `计算${regionValue}的${salesColumn}总和`
+                    };
+                    
+                    addProcessingLog('success', '基于语义查询结果生成配置成功', `配置: ${JSON.stringify(semanticConfig).substring(0, 100)}...`);
+                    endOperationTiming();
+                    
+                    await executeLocalQuery(userInput, dataInfo, totalStartTime, semanticConfig);
+                    return;
+                }
+            }
+        }
+    }
+    
+    // V6.0新增：从用户查询中提取筛选值
+    function extractFilterValueFromQuery(query) {
+        // 匹配 "上海的" -> "上海", "北京的" -> "北京"
+        const patterns = [
+            /([^\s]+)的(销售额|利润|数量|金额|地区|省|市|产品)/,
+            /在([^\s]+?)(?:的|销售额|利润|数量|金额|地区|省|市|产品)/,
+            /([^\s]+?)(?:地区|省|市|产品)的/
+        ];
+        
+        for (const pattern of patterns) {
+            const match = query.match(pattern);
+            if (match && match[1]) {
+                const value = match[1].trim();
+                // 过滤掉常见动词和助词
+                if (!['计算', '查询', '查看', '统计', '看看', '帮我', '我要', '请问'].includes(value)) {
+                    return value;
+                }
+            }
+        }
+        
+        // 备选：从查询中提取可能的地名/产品名
+        const chineseRegions = ['上海', '北京', '广东', '浙江', '江苏', '山东', '四川', '湖北', '湖南', '福建', '安徽', '河南', '河北', '东北', '华东', '华南', '华北', '华中', '西南', '西北'];
+        for (const region of chineseRegions) {
+            if (query.includes(region)) {
+                return region;
+            }
+        }
+        
+        return null;
+    }
+    
+    // V6.0新增：从用户查询中提取聚合列
+    function extractAggregateColumnFromQuery(query, availableColumns) {
+        // 优先从查询中提取
+        const columnPatterns = [
+            /(销售额|销售金额|总收入|营业额)/,
+            /(利润|纯利润|净利润)/,
+            /(数量|总数量|销量|销售数量)/,
+            /(成本|总成本)/,
+            /(订单|订单数|客户)/
+        ];
+        
+        for (const pattern of columnPatterns) {
+            const match = query.match(pattern);
+            if (match) {
+                return match[1];
+            }
+        }
+        
+        // 如果查询中没有，尝试从可用列中推断
+        if (availableColumns) {
+            // 优先找销售额相关的列
+            const salesCol = availableColumns.find(col => col.includes('销售额') || col.includes('销售') || col.includes('金额'));
+            if (salesCol) return salesCol;
+            
+            const profitCol = availableColumns.find(col => col.includes('利润'));
+            if (profitCol) return profitCol;
+            
+            const quantityCol = availableColumns.find(col => col.includes('数量') || col.includes('销量'));
+            if (quantityCol) return quantityCol;
+        }
+        
+        return null;
+    }
     
     // 首先尝试本地生成配置（意图库匹配）
     setNLPProgress(45, '正在尝试本地生成查询配置...');
@@ -1181,8 +2080,20 @@ async function handleNLPQuery(userInput, dataInfo, totalStartTime, detailedInten
         addProcessingLog('success', '本地生成图表配置成功', `配置: ${JSON.stringify(localConfig[0]).substring(0, 100)}...`);
         endOperationTiming();
         
+        // 显示处理中的消息
+        const processingMessage = addMessage('system', '正在生成图表...');
+        
         // 使用图表处理流程
         await handleNLPChartWithConfig(userInput, dataInfo, totalStartTime, localConfig);
+        
+        // 更新处理消息为完成状态
+        if (processingMessage) {
+            const messageContent = processingMessage.querySelector('.message-content');
+            if (messageContent) {
+                messageContent.innerHTML = '<p>图表生成完成，请在下方"数据可视化"区域查看</p>';
+            }
+        }
+        
         return;
     }
     
@@ -1195,6 +2106,50 @@ async function handleNLPQuery(userInput, dataInfo, totalStartTime, detailedInten
         // 执行本地查询（filter_aggregate在executeLocalQuery中处理）
         await executeLocalQuery(userInput, dataInfo, totalStartTime, localConfig[0]);
         return;
+    }
+    
+    // 修复：如果本地生成的配置不是filter_aggregate，且用户查询包含"的"和"平均"，则尝试手动生成filter_aggregate配置
+    if (userInput.includes('的') && userInput.includes('平均') && dataInfo.columns.length > 0) {
+        const parts = userInput.split('的');
+        if (parts.length >= 2) {
+            const filterValue = parts[0].trim();
+            const valuePart = parts[1].trim();
+            
+            // 找到筛选列（优先匹配包含"省公司名称"的列，然后是"省公司"或"区域"）
+            let filterColumn = dataInfo.columns.find(col => col.includes('省公司名称'));
+            if (!filterColumn) {
+                filterColumn = dataInfo.columns.find(col => col.includes('省公司') || col.includes('区域'));
+            }
+            if (!filterColumn && dataInfo.columns.length > 0) {
+                filterColumn = dataInfo.columns[0];
+            }
+            
+            // 找到数值列（优先匹配包含"时长"的列）
+            let valueColumn = dataInfo.columns.find(col => col.includes('时长') || col.includes('数值'));
+            if (!valueColumn && dataInfo.columns.length > 1) {
+                valueColumn = dataInfo.columns[1];
+            }
+            
+            if (filterColumn && valueColumn) {
+                const filterAggregateConfig = {
+                    queryType: 'filter_aggregate',
+                    filterColumn: filterColumn,
+                    filterValue: filterValue,
+                    filterValues: [filterValue],
+                    valueColumn: valueColumn,
+                    aggregateFunction: 'avg',
+                    title: `${filterValue}的${valueColumn}平均值`,
+                    description: `计算${filterValue}的${valueColumn}平均值`
+                };
+                
+                addProcessingLog('success', '手动生成筛选聚合配置成功', `配置: ${JSON.stringify(filterAggregateConfig).substring(0, 100)}...`);
+                endOperationTiming();
+                
+                // 执行本地查询
+                await executeLocalQuery(userInput, dataInfo, totalStartTime, filterAggregateConfig);
+                return;
+            }
+        }
     }
     
     // 如果本地生成成功且是聚合查询配置（优先检查，因为聚合查询也有queryType）
@@ -1221,16 +2176,43 @@ async function handleNLPQuery(userInput, dataInfo, totalStartTime, detailedInten
     if (localConfig === null) {
         addProcessingLog('warning', '本地正则匹配失败，尝试BERT语义匹配...', '');
         
-        // V3.0新增：调用BERT语义匹配配置生成API
+        // V4.2新增：获取列的唯一值，帮助模型识别筛选列
+        const columnValues = getColumnUniqueValues(dataInfo);
+        
+        // V4.2关键改进：在前端进行智能匹配，不依赖后端
+        // 根据columnValues智能识别筛选列
+        let smartConfig = null;
+        if (columnValues) {
+            smartConfig = generateSmartFilterConfig(userInput, dataInfo.columns, columnValues);
+            if (smartConfig) {
+                addProcessingLog('success', 'V4.2前端智能匹配成功', `配置: ${JSON.stringify(smartConfig)}`);
+                endOperationTiming();
+                await executeLocalQuery(userInput, dataInfo, totalStartTime, smartConfig);
+                return;
+            }
+        }
+        
+        // V4.2改进：调用BERT语义匹配配置生成API，传入列的唯一值
         try {
-            const bertConfig = await callBERTConfigAPI(userInput, detailedIntent, dataInfo.columns);
+            const bertConfig = await callBERTConfigAPI(userInput, detailedIntent, dataInfo.columns, columnValues);
             if (bertConfig) {
                 addProcessingLog('success', 'BERT语义匹配配置生成成功', `配置: ${JSON.stringify(bertConfig).substring(0, 100)}...`);
                 endOperationTiming();
                 
                 // 根据配置类型执行相应操作
                 if (bertConfig.chartType) {
+                    // 显示处理中的消息
+                    const processingMessage = addMessage('system', '正在生成图表...');
+                    
                     await handleNLPChartWithConfig(userInput, dataInfo, totalStartTime, [bertConfig]);
+                    
+                    // 更新处理消息为完成状态
+                    if (processingMessage) {
+                        const messageContent = processingMessage.querySelector('.message-content');
+                        if (messageContent) {
+                            messageContent.innerHTML = '<p>图表生成完成，请在下方"数据可视化"区域查看</p>';
+                        }
+                    }
                 } else if (bertConfig.queryType) {
                     await executeLocalQuery(userInput, dataInfo, totalStartTime, bertConfig);
                 } else if (bertConfig.aggregateFunction) {
@@ -1246,9 +2228,41 @@ async function handleNLPQuery(userInput, dataInfo, totalStartTime, detailedInten
         addProcessingLog('warning', '将尝试使用大模型API', '');
     }
     
+    // V4.1新增：如果大模型也未配置，提示用户
+    if (!config.ai.apiKey || config.ai.apiKey === 'your-api-key-here') {
+        addProcessingLog('warning', '大模型API未配置，无法生成配置');
+        
+        // 显示用户确认对话框
+        const userConfirmed = confirm(
+            `系统无法自动理解您的查询需求："${userInput}"\n\n` +
+            `可能原因：\n` +
+            `1. 查询表达不够明确\n` +
+            `2. 缺少大模型API配置\n\n` +
+            `建议：\n` +
+            `• 尝试更明确的表达，如"统计华东地区的销售额总和"\n` +
+            `• 使用"各XX的YY"格式，如"各省份的销售额"\n` +
+            `• 在设置中配置大模型API密钥\n\n` +
+            `是否查看帮助文档？`
+        );
+        
+        if (userConfirmed) {
+            // 显示帮助信息
+            showNotification('请尝试使用以下格式：\n1. 统计[列名]的[求和/平均值/数量]\n2. [地区/省份]的[列名]是多少\n3. 各[分组列]的[数值列]分布', 'info', 8000);
+        }
+        
+        hideNLPProgress();
+        throw new Error('配置生成失败：本地模型无法理解需求，且大模型API未配置');
+    }
+    
     // V3.0优化：使用优化的大模型提示词
     setNLPProgress(50, '正在调用AI生成查询配置...');
     addProcessingLog('info', '使用优化的大模型提示词生成配置');
+    
+    // 更新工作流状态 - 大模型生成配置
+    updateAgentWorkflow('generate_config', 'completed', {
+        method: 'llm',
+        configs: 1
+    });
     
     let queryPrompt;
     if (window.llmPrompts && window.requirementClassifier) {
@@ -1270,26 +2284,71 @@ async function handleNLPQuery(userInput, dataInfo, totalStartTime, detailedInten
     const response = await callLLMAPI(queryPrompt, currentQueryController.signal, 30000);
     endOperationTiming();
     
-    // 解析查询配置
+    // V5.0修复：增强查询配置解析逻辑，更健壮地处理大模型返回的JSON
     startOperationTiming('解析并执行查询');
     setNLPProgress(60, '正在解析查询配置...');
     
     let queryLogics = [];
     try {
-        const jsonArrayMatch = response.match(/\[[\s\S]*\]/);
-        if (jsonArrayMatch) {
-            queryLogics = JSON.parse(jsonArrayMatch[0]);
-        } else {
-            const jsonMatch = response.match(/\{[\s\S]*\}/);
-            if (jsonMatch) {
-                queryLogics = [JSON.parse(jsonMatch[0])];
+        // 1. 清理响应内容，移除可能的Markdown代码块和额外文本
+        let cleanedResponse = response.trim();
+        
+        // 移除Markdown代码块标记
+        cleanedResponse = cleanedResponse.replace(/^```json\n|^```\n|\n```$/g, '');
+        
+        // 2. 尝试解析完整响应
+        try {
+            const parsed = JSON.parse(cleanedResponse);
+            queryLogics = Array.isArray(parsed) ? parsed : [parsed];
+            addProcessingLog('info', `直接解析成功，共${queryLogics.length}个查询任务`);
+        } catch (e1) {
+            // 3. 如果直接解析失败，尝试匹配JSON数组
+            const jsonArrayMatch = cleanedResponse.match(/\[[\s\S]*\]/);
+            if (jsonArrayMatch) {
+                try {
+                    const parsed = JSON.parse(jsonArrayMatch[0]);
+                    queryLogics = Array.isArray(parsed) ? parsed : [parsed];
+                    addProcessingLog('info', `解析到数组配置，共${queryLogics.length}个查询任务`);
+                } catch (e2) {
+                    // 4. 尝试匹配JSON对象
+                    const jsonMatch = cleanedResponse.match(/\{[\s\S]*?\}/);
+                    if (jsonMatch) {
+                        try {
+                            const parsed = JSON.parse(jsonMatch[0]);
+                            queryLogics = [parsed];
+                            addProcessingLog('info', `解析到对象配置，1个查询任务`);
+                        } catch (e3) {
+                            // 5. 尝试修复常见的JSON格式问题
+                            try {
+                                const fixedJson = fixJSON(cleanedResponse);
+                                const parsed = JSON.parse(fixedJson);
+                                queryLogics = Array.isArray(parsed) ? parsed : [parsed];
+                                addProcessingLog('info', `修复JSON格式后解析成功，共${queryLogics.length}个查询任务`);
+                            } catch (e4) {
+                                throw new Error('无法解析查询配置');
+                            }
+                        }
+                    } else {
+                        throw new Error('未找到JSON配置');
+                    }
+                }
+            } else {
+                throw new Error('未找到JSON配置');
             }
         }
+        
+        // 验证配置有效性
+        if (!queryLogics || queryLogics.length === 0) {
+            throw new Error('配置为空');
+        }
+        
+        addProcessingLog('info', `成功解析 ${queryLogics.length} 个查询任务`);
     } catch (e) {
-        throw new Error('无法解析查询配置');
+        addProcessingLog('error', '查询配置解析失败', e.message);
+        console.error('[查询配置解析]', e);
+        console.error('[原始响应]', response);
+        throw new Error(`无法解析查询配置: ${e.message}`);
     }
-    
-    addProcessingLog('info', `成功解析 ${queryLogics.length} 个查询任务`);
     
     // 执行查询
     setNLPProgress(70, '正在执行查询...');
@@ -1313,6 +2372,19 @@ async function handleNLPQuery(userInput, dataInfo, totalStartTime, detailedInten
     // 记录总耗时
     const totalDuration = Date.now() - totalStartTime;
     addProcessingLog('performance', '查询处理完成', `总耗时: ${totalDuration}ms (${(totalDuration/1000).toFixed(2)}秒)`);
+    
+    // V5.0修复：更新Agent工作流为完成状态
+    updateAgentWorkflow('execute_query', 'completed');
+    updateAgentWorkflow('render_result', 'completed', {
+        resultType: 'llm_query',
+        duration: totalDuration
+    });
+    
+    // V4.0新增：记录成功查询到历史
+    if (window.queryHistoryManager) {
+        window.queryHistoryManager.addQuery(userInput, true);
+        updateQuerySuggestions();
+    }
     
     setNLPProgress(100, '完成');
     setTimeout(() => {
@@ -1352,7 +2424,18 @@ async function executeAggregateQuery(userInput, dataInfo, totalStartTime, config
     startOperationTiming('执行聚合查询');
     setNLPProgress(70, '正在执行聚合查询...');
     
+    console.log('executeAggregateQuery - 开始执行:', {
+        userInput,
+        config,
+        columns: dataInfo.columns,
+        dataLength: dataInfo.data ? dataInfo.data.length : 0
+    });
+    
     const { aggregateFunction, valueColumn, groupColumn, queryType } = config;
+    
+    // 从dataInfo获取实际数据
+    const headers = dataInfo.columns;
+    const data = dataInfo.data || [];
     
     // 判断是否是找极值的复合查询（如"哪个产品的销售额最高"）
     const isFindExtremeQuery = queryType === 'group_aggregate_find';
@@ -1369,6 +2452,14 @@ async function executeAggregateQuery(userInput, dataInfo, totalStartTime, config
         actualGroupCol = headers.find(h => h.includes(groupColumn) || groupColumn.includes(h));
     }
     
+    console.log('executeAggregateQuery - 列匹配结果:', {
+        actualValueCol,
+        actualGroupCol,
+        isFindExtremeQuery,
+        aggregateFunction,
+        queryType
+    });
+    
     // 辅助函数：解析数值（处理千分位逗号、货币符号等）
     const parseNumericValue = (value) => {
         if (value === null || value === undefined || value === '') return NaN;
@@ -1379,32 +2470,56 @@ async function executeAggregateQuery(userInput, dataInfo, totalStartTime, config
     
     let results = [];
     
+    console.log('debug-complex-query - 数据检查:', {
+        dataLength: data.length,
+        actualGroupCol,
+        actualValueCol,
+        config
+    });
+    
     if (actualGroupCol) {
         // ========== 处理分组聚合查询 ==========
+        console.log('debug-complex-query - 开始分组聚合，分组列:', actualGroupCol);
+        
         // 按分组列分组
         const groups = {};
         for (const row of data) {
             const groupKey = row[actualGroupCol];
-            if (!groupKey) continue;
+            if (!groupKey) {
+                console.log('debug-complex-query - 跳过空分组键的行:', row);
+                continue;
+            }
             
             if (!groups[groupKey]) {
                 groups[groupKey] = {
                     count: 0,
-                    sum: 0
+                    sum: 0,
+                    max: -Infinity
                 };
             }
             
             if (actualValueCol) {
-                const val = parseNumericValue(row[actualValueCol]);
+                const origVal = row[actualValueCol];
+                const val = parseNumericValue(origVal);
+                console.log('debug-complex-query - 数值:', {actualValueCol, origVal, parsed: val});
+                
                 if (!isNaN(val)) {
                     groups[groupKey].sum += val;
                     groups[groupKey].count++;
+                    // 计算最大值
+                    if (val > groups[groupKey].max) {
+                        groups[groupKey].max = val;
+                    }
+                } else if (origVal) {
+                    console.warn('debug-complex-query - 数值解析失败:', origVal);
                 }
             } else {
                 // 如果没有数值列，只计数
                 groups[groupKey].count++;
             }
         }
+        
+        console.log('debug-complex-query - 分组统计结果:', groups);
         
         // 计算聚合结果
         for (const [group, stats] of Object.entries(groups)) {
@@ -1415,7 +2530,20 @@ async function executeAggregateQuery(userInput, dataInfo, totalStartTime, config
                 resultValue = stats.sum;
             } else if (aggregateFunction === 'count') {
                 resultValue = stats.count;
+            } else if (aggregateFunction === 'max') {
+                // 处理最大值查询
+                resultValue = stats.max === -Infinity ? 0 : stats.max;
+            } else {
+                // 默认使用sum
+                resultValue = stats.sum;
             }
+            
+            console.log('debug-complex-query - 聚合结果:', {
+                group, 
+                resultValue, 
+                stats,
+                aggregateFunction
+            });
             
             results.push({
                 group: group,
@@ -1435,6 +2563,7 @@ async function executeAggregateQuery(userInput, dataInfo, totalStartTime, config
         // ========== 处理整体聚合查询 ==========
         let sum = 0;
         let count = 0;
+        let max = -Infinity;
         
         if (actualValueCol) {
             for (const row of data) {
@@ -1442,6 +2571,10 @@ async function executeAggregateQuery(userInput, dataInfo, totalStartTime, config
                 if (!isNaN(val)) {
                     sum += val;
                     count++;
+                    // 计算最大值
+                    if (val > max) {
+                        max = val;
+                    }
                 }
             }
         } else {
@@ -1455,6 +2588,12 @@ async function executeAggregateQuery(userInput, dataInfo, totalStartTime, config
             resultValue = sum;
         } else if (aggregateFunction === 'count') {
             resultValue = count;
+        } else if (aggregateFunction === 'max') {
+            // 处理最大值查询
+            resultValue = max === -Infinity ? 0 : max;
+        } else {
+            // 默认使用sum
+            resultValue = sum;
         }
         
         results = [{ group: '整体', value: resultValue }];
@@ -1462,11 +2601,22 @@ async function executeAggregateQuery(userInput, dataInfo, totalStartTime, config
     
     endOperationTiming();
     
+    console.log('debug-complex-query - 最终结果摘要:', {
+        resultsCount: results.length,
+        results: results.slice(0, 5),
+        isFindExtremeQuery,
+        actualGroupCol,
+        actualValueCol,
+        aggregateFunction
+    });
+    
     // 显示结果
     setNLPProgress(90, '正在生成结果...');
     
     const nlpResult = document.getElementById('nlp-result');
     if (nlpResult) {
+        console.log('debug-complex-query - nlpResult元素找到，开始渲染结果');
+        
         const resultType = aggregateFunction === 'avg' ? '平均值' : aggregateFunction === 'sum' ? '总和' : '数量';
         const groupDesc = actualGroupCol || '整体';
         
@@ -1475,20 +2625,24 @@ async function executeAggregateQuery(userInput, dataInfo, totalStartTime, config
             const topResult = results[0];
             const orderText = userInput.toLowerCase().includes('高') || userInput.toLowerCase().includes('大') || userInput.toLowerCase().includes('多') ? '最高' : '最低';
             
+            // 生成标题和描述
+            const extremeTitle = config.title || `${actualGroupCol || '数据'}的${valueColumn || '统计'}分析`;
+            const extremeDesc = config.description || `查找${actualGroupCol || '各组'}中${valueColumn || '统计值'}${orderText}的项`;
+            
             let html = `
                 <div class="query-results">
                     <div class="result-header">
-                        <h4>查询结果：${config.title}</h4>
-                        <p>${config.description}</p>
+                        <h4>查询结果：${extremeTitle}</h4>
+                        <p>${extremeDesc}</p>
                     </div>
                     <div class="result-content" style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-top: 15px;">
                         <div style="font-size: 18px; margin-bottom: 15px;">
-                            <strong>${actualGroupCol}的${valueColumn}${orderText}的是：</strong>
+                            <strong>${actualGroupCol || '分组'}的${valueColumn || '统计值'}${orderText}的是：</strong>
                             <span style="color: #667eea; font-size: 24px; font-weight: bold;">${topResult.group}</span>
-                            <span style="margin-left: 20px; color: #666;">${valueColumn}合计：<strong>${topResult.value.toFixed(2)}</strong></span>
+                            <span style="margin-left: 20px; color: #666;">${valueColumn || '统计值'}合计：<strong>${topResult.value.toFixed(2)}</strong></span>
                         </div>
                         <div style="margin-top: 20px;">
-                            <h5 style="margin-bottom: 10px;">各${actualGroupCol}${valueColumn}排名（前5名）：</h5>
+                            <h5 style="margin-bottom: 10px;">各${actualGroupCol || '分组'}${valueColumn || '统计值'}排名（前5名）：</h5>
                             <div style="overflow-x: auto; max-width: 100%;">
                                 <table class="result-table" style="width: auto; min-width: 300px; border-collapse: collapse; white-space: nowrap;">
                                     <thead>
@@ -1517,11 +2671,15 @@ async function executeAggregateQuery(userInput, dataInfo, totalStartTime, config
             nlpResult.classList.remove('hidden');
         } else {
             // 普通聚合查询，显示所有结果
+            // 生成标题和描述
+            const resultTitle = config.title || `${actualGroupCol || '数据'}的${valueColumn || '统计'}分析`;
+            const resultDesc = config.description || `按${actualGroupCol || '整体'}分组统计${valueColumn || '记录数'}`;
+            
             let html = `
                 <div class="query-results">
                     <div class="result-header">
-                        <h4>查询结果：${config.title}</h4>
-                        <p>${config.description}</p>
+                        <h4>查询结果：${resultTitle}</h4>
+                        <p>${resultDesc}</p>
                     </div>
                     <div class="result-content" style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-top: 15px;">
                         <div style="font-size: 16px; margin-bottom: 15px; color: #666;">
@@ -1564,23 +2722,32 @@ async function executeAggregateQuery(userInput, dataInfo, totalStartTime, config
     else if (queryType === 'filter_aggregate') {
         const { filterColumn, filterValue, filterValues, valueColumn, aggregateFunction = 'sum' } = config;
         
-        // 找到实际的筛选列
-        let actualFilterCol = filterColumn;
-        if (filterColumn && !headers.includes(filterColumn)) {
-            actualFilterCol = headers.find(h => h.includes(filterColumn) || filterColumn.includes(h));
-        }
-        
         // 找到实际的数值列
         let actualValueCol = valueColumn;
         if (valueColumn && !headers.includes(valueColumn)) {
             actualValueCol = headers.find(h => h.includes(valueColumn) || valueColumn.includes(h));
         }
         
-        if (!actualFilterCol) {
-            throw new Error(`筛选列"${filterColumn}"不存在`);
-        }
-        if (!actualValueCol) {
-            throw new Error(`数值列"${valueColumn}"不存在`);
+        // 定义实际的筛选列变量
+        let actualFilterCol = filterColumn;
+        
+        // 对于count_distinct查询，不需要筛选列
+        if (aggregateFunction === 'count_distinct') {
+            if (!actualValueCol) {
+                throw new Error(`数值列"${valueColumn}"不存在`);
+            }
+        } else {
+            // 找到实际的筛选列
+            if (filterColumn && !headers.includes(filterColumn)) {
+                actualFilterCol = headers.find(h => h.includes(filterColumn) || filterColumn.includes(h));
+            }
+            
+            if (!actualFilterCol) {
+                throw new Error(`筛选列"${filterColumn}"不存在`);
+            }
+            if (!actualValueCol) {
+                throw new Error(`数值列"${valueColumn}"不存在`);
+            }
         }
         
         // 处理单个筛选值或多个筛选值
@@ -1591,32 +2758,47 @@ async function executeAggregateQuery(userInput, dataInfo, totalStartTime, config
         let count = 0;
         const filteredRows = [];
         
-        for (const row of data) {
-            const cellValue = row[actualFilterCol];
-            if (cellValue !== undefined && cellValue !== null) {
-                const cellStr = cellValue.toString().toLowerCase();
-                // 检查是否匹配任一筛选值
-                const isMatch = filterValueList.some(fv => {
-                    const filterStr = fv.toString().toLowerCase();
-                    return cellStr.includes(filterStr) || filterStr.includes(cellStr);
-                });
-                
-                if (isMatch) {
-                    count++;
-                    const numValue = parseFloat(String(row[actualValueCol] || 0).replace(/,/g, ''));
-                    if (!isNaN(numValue)) {
-                        result += numValue;
-                    }
-                    filteredRows.push(row);
+        if (aggregateFunction === 'count_distinct') {
+            // 去重计数逻辑
+            const uniqueValues = new Set();
+            for (const row of data) {
+                const cellValue = row[actualValueCol];
+                if (cellValue !== undefined && cellValue !== null && cellValue !== '') {
+                    uniqueValues.add(String(cellValue));
                 }
+            }
+            result = uniqueValues.size;
+            count = data.length;
+        } else {
+            // 传统聚合逻辑
+            for (const row of data) {
+                const cellValue = row[actualFilterCol];
+                if (cellValue !== undefined && cellValue !== null) {
+                    const cellStr = cellValue.toString().toLowerCase();
+                    // 检查是否匹配任一筛选值
+                    const isMatch = filterValueList.some(fv => {
+                        const filterStr = fv.toString().toLowerCase();
+                        return cellStr.includes(filterStr) || filterStr.includes(cellStr);
+                    });
+                    
+                    if (isMatch) {
+                        count++;
+                        const numValue = parseFloat(String(row[actualValueCol] || 0).replace(/,/g, ''));
+                        if (!isNaN(numValue)) {
+                            result += numValue;
+                        }
+                        filteredRows.push(row);
+                    }
+                }
+            }
+            
+            // 根据聚合函数计算最终结果
+            if (aggregateFunction === 'avg' && count > 0) {
+                result = result / count;
             }
         }
         
-        // 根据聚合函数计算最终结果
-        let finalResult = result;
-        if (aggregateFunction === 'avg' && count > 0) {
-            finalResult = result / count;
-        }
+        const finalResult = result;
         
         endOperationTiming();
         
@@ -1625,48 +2807,107 @@ async function executeAggregateQuery(userInput, dataInfo, totalStartTime, config
         
         const nlpResult = document.getElementById('nlp-result');
         if (nlpResult) {
-            const filterDesc = filterValueList.map(fv => `"${fv}"`).join(' 或 ');
-            const aggDesc = aggregateFunction === 'sum' ? '总和' : aggregateFunction === 'avg' ? '平均值' : '统计';
+            const aggDesc = aggregateFunction === 'sum' ? '总和' : aggregateFunction === 'avg' ? '平均值' : aggregateFunction === 'count_distinct' ? '去重计数' : '统计';
             
-            const html = `
-                <div class="query-results">
-                    <div class="result-header">
-                        <h4>查询结果：${config.title}</h4>
-                        <p>${config.description}</p>
+            let html, cardContent;
+            
+            if (aggregateFunction === 'count_distinct') {
+                // 对于count_distinct查询的特殊显示
+                html = `
+                    <div class="query-results">
+                        <div class="result-header">
+                            <h4>查询结果：${config.title}</h4>
+                            <p>${config.description}</p>
+                        </div>
+                        <div class="result-content" style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-top: 15px;">
+                            <div style="font-size: 18px; margin-bottom: 15px;">
+                                <strong>${actualValueCol}${aggDesc}：</strong>
+                                <span style="color: #667eea; font-size: 24px; font-weight: bold;">${finalResult}</span>
+                            </div>
+                            <div style="color: #666; font-size: 14px;">
+                                基于 ${data.length} 条记录计算
+                            </div>
+                        </div>
                     </div>
-                    <div class="result-content" style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-top: 15px;">
-                        <div style="font-size: 18px; margin-bottom: 15px;">
-                            <strong>${actualFilterCol}为${filterDesc}时，${actualValueCol}${aggDesc}：</strong>
-                            <span style="color: #667eea; font-size: 24px; font-weight: bold;">${finalResult.toFixed(2)}</span>
+                `;
+                
+                cardContent = `
+                    <div class="result-card">
+                        <div class="result-card-header">
+                            <h4>查询结果</h4>
                         </div>
-                        <div style="color: #666; font-size: 14px;">
-                            基于 ${data.length} 条记录筛选，匹配 ${count} 条
+                        <div class="result-card-body">
+                            <p><strong>${config.title || '数据查询'}</strong></p>
+                            <p>${actualValueCol}${aggDesc}：<span style="font-size: 1.2em; font-weight: bold;">${finalResult}</span></p>
+                            <p style="font-size: 0.85em; opacity: 0.9;">基于 ${data.length} 条记录计算</p>
                         </div>
-                        ${filteredRows.length > 0 ? `
-                        <div style="margin-top: 15px;">
-                            <h5 style="margin-bottom: 10px;">匹配记录（前10条）：</h5>
-                            <table class="result-table" style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
-                                <thead>
-                                    <tr style="background: #667eea; color: white;">
-                                        ${headers.map(h => `<th style="padding: 8px; text-align: left;">${h}</th>`).join('')}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${filteredRows.slice(0, 10).map((r, i) => `
-                                        <tr style="background: ${i % 2 === 0 ? 'white' : '#f8f9fa'};">
-                                            ${headers.map(h => `<td style="padding: 8px; border-bottom: 1px solid #eee;">${r[h] || ''}</td>`).join('')}
+                    </div>
+                `;
+            } else {
+                // 传统筛选聚合查询的显示
+                const filterDesc = filterValueList.map(fv => `"${fv}"`).join(' 或 ');
+                html = `
+                    <div class="query-results">
+                        <div class="result-header">
+                            <h4>查询结果：${config.title}</h4>
+                            <p>${config.description}</p>
+                        </div>
+                        <div class="result-content" style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-top: 15px;">
+                            <div style="font-size: 18px; margin-bottom: 15px;">
+                                <strong>${actualFilterCol}为${filterDesc}时，${actualValueCol}${aggDesc}：</strong>
+                                <span style="color: #667eea; font-size: 24px; font-weight: bold;">${finalResult.toFixed(2)}</span>
+                            </div>
+                            <div style="color: #666; font-size: 14px;">
+                                基于 ${data.length} 条记录筛选，匹配 ${count} 条
+                            </div>
+                            ${filteredRows.length > 0 ? `
+                            <div style="margin-top: 15px;">
+                                <h5 style="margin-bottom: 10px;">匹配记录（前10条）：</h5>
+                                <table class="result-table" style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
+                                    <thead>
+                                        <tr style="background: #667eea; color: white;">
+                                            ${headers.map(h => `<th style="padding: 8px; text-align: left;">${h}</th>`).join('')}
                                         </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody>
+                                        ${filteredRows.slice(0, 10).map((r, i) => `
+                                            <tr style="background: ${i % 2 === 0 ? 'white' : '#f8f9fa'};">
+                                                ${headers.map(h => `<td style="padding: 8px; border-bottom: 1px solid #eee;">${r[h] || ''}</td>`).join('')}
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                            ` : ''}
                         </div>
-                        ` : ''}
                     </div>
-                </div>
-            `;
+                `;
+                
+                cardContent = `
+                    <div class="result-card">
+                        <div class="result-card-header">
+                            <h4>查询结果</h4>
+                        </div>
+                        <div class="result-card-body">
+                            <p><strong>${config.title || '数据查询'}</strong></p>
+                            <p>${actualFilterCol}为${filterDesc}时，${actualValueCol}${aggDesc}：<span style="font-size: 1.2em; font-weight: bold;">${finalResult.toFixed(2)}</span></p>
+                            <p style="font-size: 0.85em; opacity: 0.9;">基于 ${data.length} 条记录筛选，匹配 ${count} 条</p>
+                        </div>
+                    </div>
+                `;
+            }
+            
             nlpResult.innerHTML = html;
             nlpResult.classList.remove('hidden');
+            addMessage('system', cardContent);
         }
+        
+        // ========== V5.0修复：更新Agent工作流状态 ==========
+        updateAgentWorkflow('execute_query', 'completed');
+        updateAgentWorkflow('render_result', 'completed', {
+            resultType: 'filter_aggregate',
+            value: finalResult.toFixed(2)
+        });
     }
     
     // 记录总耗时
@@ -1684,10 +2925,19 @@ async function executeLocalQuery(userInput, dataInfo, totalStartTime, config) {
     startOperationTiming('执行本地查询');
     setNLPProgress(70, '正在执行查询...');
     
+    // V5.0: 更新Agent工作流 - 开始执行查询
+    updateAgentWorkflow('generate_config', 'completed', {
+        configType: config.queryType || 'unknown',
+        description: config.description || '执行查询'
+    });
+    updateAgentWorkflow('execute_query', 'running');
+    
     // ========== V4.0新增：使用实体抽取增强配置 ==========
     let enhancedConfig = { ...config };
-    if (window.entityExtractor) {
+    // V4.2修复：检查entityExtractor和extract方法都存在
+    if (window.entityExtractor && typeof window.entityExtractor.extract === 'function') {
         try {
+            const headers = dataInfo.columns;
             const entities = window.entityExtractor.extract(userInput, headers);
             enhancedConfig = window.entityExtractor.enhanceConfig(entities, config);
             console.log('[V4.0] 实体抽取结果:', entities);
@@ -1751,16 +3001,16 @@ async function executeLocalQuery(userInput, dataInfo, totalStartTime, config) {
     // 传统执行方式（兜底）
     const { queryType, valueColumn, aggregateFunction, groupColumn, order, limit } = enhancedConfig;
     
+    // 检查是否是filter_aggregate类型的查询
+    const isFilterAggregate = queryType === 'filter_aggregate' || (enhancedConfig.filterColumn && enhancedConfig.valueColumn && enhancedConfig.aggregateFunction);
+    
     // ========== V4.0新增：处理带筛选条件的聚合查询（如"广东省的销售额"）==========
-    if (queryType === 'filter_aggregate') {
+    if (isFilterAggregate) {
         const { filterColumn, filterValue, filterValues, valueColumn: vc, aggregateFunction: af = 'sum' } = enhancedConfig;
         const headers = dataInfo.columns;
         
-        // 找到实际的筛选列
+        // 定义实际的筛选列变量
         let actualFilterCol = filterColumn;
-        if (filterColumn && !headers.includes(filterColumn)) {
-            actualFilterCol = headers.find(h => h.includes(filterColumn) || filterColumn.includes(h));
-        }
         
         // 找到实际的数值列
         let actualValueCol = vc;
@@ -1768,8 +3018,20 @@ async function executeLocalQuery(userInput, dataInfo, totalStartTime, config) {
             actualValueCol = headers.find(h => h.includes(vc) || vc.includes(h));
         }
         
-        if (!actualFilterCol || !actualValueCol) {
-            throw new Error(`筛选列或数值列不存在: ${filterColumn}, ${vc}`);
+        // 对于count_distinct查询，不需要筛选列
+        if (af === 'count_distinct') {
+            if (!actualValueCol) {
+                throw new Error(`数值列不存在: ${vc}`);
+            }
+        } else {
+            // 找到实际的筛选列
+            if (filterColumn && !headers.includes(filterColumn)) {
+                actualFilterCol = headers.find(h => h.includes(filterColumn) || filterColumn.includes(h));
+            }
+            
+            if (!actualFilterCol || !actualValueCol) {
+                throw new Error(`筛选列或数值列不存在: ${filterColumn}, ${vc}`);
+            }
         }
         
         // 处理单个筛选值或多个筛选值
@@ -1780,22 +3042,36 @@ async function executeLocalQuery(userInput, dataInfo, totalStartTime, config) {
         let count = 0;
         const filteredRows = [];
         
-        for (const row of data) {
-            const cellValue = row[actualFilterCol];
-            if (cellValue !== undefined && cellValue !== null) {
-                const cellStr = cellValue.toString().toLowerCase();
-                const isMatch = filterValueList.some(fv => {
-                    const filterStr = fv.toString().toLowerCase();
-                    return cellStr.includes(filterStr) || filterStr.includes(cellStr);
-                });
-                
-                if (isMatch) {
-                    count++;
-                    const numValue = parseFloat(String(row[actualValueCol] || 0).replace(/,/g, ''));
-                    if (!isNaN(numValue)) {
-                        result += numValue;
+        if (af === 'count_distinct') {
+            // 去重计数逻辑
+            const uniqueValues = new Set();
+            for (const row of data) {
+                const cellValue = row[actualValueCol];
+                if (cellValue !== undefined && cellValue !== null && cellValue !== '') {
+                    uniqueValues.add(String(cellValue));
+                }
+            }
+            result = uniqueValues.size;
+            count = data.length;
+        } else {
+            // 传统聚合逻辑
+            for (const row of data) {
+                const cellValue = row[actualFilterCol];
+                if (cellValue !== undefined && cellValue !== null) {
+                    const cellStr = cellValue.toString().toLowerCase();
+                    const isMatch = filterValueList.some(fv => {
+                        const filterStr = fv.toString().toLowerCase();
+                        return cellStr.includes(filterStr) || filterStr.includes(cellStr);
+                    });
+                    
+                    if (isMatch) {
+                        count++;
+                        const numValue = parseFloat(String(row[actualValueCol] || 0).replace(/,/g, ''));
+                        if (!isNaN(numValue)) {
+                            result += numValue;
+                        }
+                        filteredRows.push(row);
                     }
-                    filteredRows.push(row);
                 }
             }
         }
@@ -1807,6 +3083,25 @@ async function executeLocalQuery(userInput, dataInfo, totalStartTime, config) {
         }
         
         endOperationTiming();
+        
+        // 检查是否需要单位换算
+        let displayValue = finalResult;
+        let unit = '';
+        
+        // 检查用户输入是否包含单位换算要求
+        if (userInput && (userInput.includes('换算') || userInput.includes('转换'))) {
+            if (userInput.includes('分钟') && actualValueCol.includes('时长')) {
+                // 秒换算为分钟
+                displayValue = finalResult / 60;
+                unit = '分钟';
+                addProcessingLog('info', '单位换算', '秒 → 分钟');
+            } else if (userInput.includes('小时') && actualValueCol.includes('时长')) {
+                // 秒换算为小时
+                displayValue = finalResult / 3600;
+                unit = '小时';
+                addProcessingLog('info', '单位换算', '秒 → 小时');
+            }
+        }
         
         // 显示结果
         const nlpResult = document.getElementById('nlp-result');
@@ -1823,9 +3118,9 @@ async function executeLocalQuery(userInput, dataInfo, totalStartTime, config) {
                 <div class="result-body">
                     <div style="padding: 20px; text-align: center;">
                         <div style="font-size: 18px; margin-bottom: 15px; color: white;">
-                            <strong>${actualFilterCol}为${filterDesc}时，${actualValueCol}${aggDesc}：</strong>
+                            <strong>${actualFilterCol ? actualFilterCol + '为' + filterDesc + '时，' : ''}${actualValueCol}${aggDesc}：</strong>
                         </div>
-                        <div style="color: white; font-size: 32px; font-weight: bold; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">${finalResult.toFixed(2)}</div>
+                        <div style="color: white; font-size: 32px; font-weight: bold; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">${displayValue.toFixed(2)}${unit}</div>
                         <div style="color: rgba(255,255,255,0.9); font-size: 14px; margin-top: 10px;">
                             基于 ${data.length} 条记录筛选，匹配 ${count} 条
                         </div>
@@ -1839,7 +3134,14 @@ async function executeLocalQuery(userInput, dataInfo, totalStartTime, config) {
         
         nlpResult.classList.remove('hidden');
         
-        addProcessingLog('success', '筛选聚合查询完成', `${actualFilterCol}=${filterDesc}, ${actualValueCol}${aggDesc}=${finalResult.toFixed(2)}`);
+        addProcessingLog('success', '筛选聚合查询完成', `${actualFilterCol ? actualFilterCol + '=' + filterDesc + ', ' : ''}${actualValueCol}${aggDesc}=${finalResult.toFixed(2)}`);
+        
+        // V5.0: 更新Agent工作流 - 完成
+        updateAgentWorkflow('execute_query', 'completed');
+        updateAgentWorkflow('render_result', 'completed', {
+            resultType: 'filter_aggregate',
+            value: finalResult.toFixed(2)
+        });
         
         setNLPProgress(100, '完成');
         setTimeout(() => {
@@ -1935,6 +3237,12 @@ async function executeLocalQuery(userInput, dataInfo, totalStartTime, config) {
         // 记录总耗时
         const totalDuration = Date.now() - totalStartTime;
         addProcessingLog('performance', '查询处理完成', `总耗时: ${totalDuration}ms (${(totalDuration/1000).toFixed(2)}秒)`);
+        
+        // V4.0新增：记录成功查询到历史
+        if (window.queryHistoryManager) {
+            window.queryHistoryManager.addQuery(userInput, true);
+            updateQuerySuggestions();
+        }
         
         setNLPProgress(100, '完成');
         setTimeout(() => {
@@ -2546,6 +3854,13 @@ async function executeLocalQuery(userInput, dataInfo, totalStartTime, config) {
             nlpResult.innerHTML = html;
             nlpResult.classList.remove('hidden');
         }
+        
+        // ========== V5.0修复：更新Agent工作流状态 ==========
+        updateAgentWorkflow('execute_query', 'completed');
+        updateAgentWorkflow('render_result', 'completed', {
+            resultType: 'aggregate_filter',
+            count: count
+        });
     }
     
     // ========== 处理人员筛选查询（如"谁是广东人"）==========
@@ -2617,11 +3932,26 @@ async function executeLocalQuery(userInput, dataInfo, totalStartTime, config) {
             nlpResult.innerHTML = html;
             nlpResult.classList.remove('hidden');
         }
+        
+        // ========== V5.0修复：更新Agent工作流状态 ==========
+        updateAgentWorkflow('execute_query', 'completed');
+        updateAgentWorkflow('render_result', 'completed', {
+            resultType: 'filter_people',
+            count: filteredRows.length
+        });
     }
     
+    // ========== V5.0修复：确保所有查询路径都更新Agent工作流状态 ==========
     // 记录总耗时
     const totalDuration = Date.now() - totalStartTime;
     addProcessingLog('performance', '查询处理完成', `总耗时: ${totalDuration}ms (${(totalDuration/1000).toFixed(2)}秒)`);
+    
+    // V5.0修复：更新Agent工作流为完成状态（如果还没有更新）
+    updateAgentWorkflow('execute_query', 'completed');
+    updateAgentWorkflow('render_result', 'completed', {
+        resultType: queryType || 'unknown',
+        duration: totalDuration
+    });
     
     setNLPProgress(100, '完成');
     setTimeout(() => {
@@ -2677,6 +4007,13 @@ async function executeLLMQuery(userInput, dataInfo, totalStartTime, config) {
             endOperationTiming();
             addProcessingLog('success', '去重计数查询完成', `${column}共有 ${distinctCount} 个不同值`);
             
+            // ========== V5.0修复：更新Agent工作流状态 ==========
+            updateAgentWorkflow('execute_query', 'completed');
+            updateAgentWorkflow('render_result', 'completed', {
+                resultType: 'count_distinct',
+                count: distinctCount
+            });
+            
             // 隐藏进度条
             setNLPProgress(100, '完成');
             setTimeout(() => {
@@ -2717,6 +4054,13 @@ async function executeLLMQuery(userInput, dataInfo, totalStartTime, config) {
             
             endOperationTiming();
             addProcessingLog('success', '数据行数统计完成', `表中共有 ${rowCount} 条数据`);
+            
+            // ========== V5.0修复：更新Agent工作流状态 ==========
+            updateAgentWorkflow('execute_query', 'completed');
+            updateAgentWorkflow('render_result', 'completed', {
+                resultType: 'count_rows',
+                count: rowCount
+            });
             
             // 隐藏进度条
             setNLPProgress(100, '完成');
@@ -2821,6 +4165,14 @@ async function executeLLMQuery(userInput, dataInfo, totalStartTime, config) {
             endOperationTiming();
             addProcessingLog('success', '筛选聚合查询完成', `${actualFilterCol}=${filterDesc}, ${actualValueCol}${aggDesc}=${finalResult.toFixed(2)}`);
             
+            // ========== V5.0修复：更新Agent工作流状态 ==========
+            updateAgentWorkflow('execute_query', 'completed');
+            updateAgentWorkflow('render_result', 'completed', {
+                resultType: 'filter_aggregate',
+                value: finalResult.toFixed(2),
+                method: 'llm'
+            });
+            
             setNLPProgress(100, '完成');
             setTimeout(() => {
                 hideNLPProgress();
@@ -2866,10 +4218,236 @@ async function executeLLMQuery(userInput, dataInfo, totalStartTime, config) {
         endOperationTiming();
         addProcessingLog('success', '大模型查询执行完成');
         
+        // ========== V5.0修复：更新Agent工作流状态 ==========
+        updateAgentWorkflow('execute_query', 'completed');
+        updateAgentWorkflow('render_result', 'completed', {
+            resultType: queryType || 'llm_query',
+            method: 'llm'
+        });
+        
     } catch (error) {
         addProcessingLog('error', '执行大模型查询失败', error.message);
+        // V5.0修复：更新Agent工作流为失败状态
+        updateAgentWorkflow('execute_query', 'error', { error: error.message });
         throw error;
     }
+}
+
+// 增强复合查询处理
+async function enhanceComplexQueryHandling(userInput, dataInfo) {
+    const lowerInput = userInput.toLowerCase();
+    const columns = dataInfo.columns;
+    
+    console.log('enhanceComplexQueryHandling - 处理查询:', userInput, '列:', columns);
+    
+    // 检测"哪个...最大/最高/最多"模式
+    const maxPatterns = [
+        /哪个(.+?)最(大|高|多)/,
+        /哪些(.+?)最(大|高|多)/,
+        /(.+?)(最多|最大|最高)/,
+        /找出最(大|高|多)的(.+?)/
+    ];
+    
+    let matched = false;
+    let groupColumn = null;
+    let valueColumn = null;
+    
+    for (const pattern of maxPatterns) {
+        const match = lowerInput.match(pattern);
+        if (match) {
+            matched = true;
+            const queryText = (match[1] || match[2] || '').trim();
+            console.log('匹配到查询模式:', pattern, '查询文本:', queryText);
+            
+            // 智能列名匹配逻辑
+            for (const col of columns) {
+                const colLower = col.toLowerCase();
+                
+                // 1. 首先检查查询文本中是否包含列名
+                if (queryText && queryText.includes(colLower)) {
+                    console.log('查询文本匹配到列名:', col);
+                    // 判断这是分组列还是数值列
+                    if (colLower.includes('区域') || colLower.includes('地区') || colLower.includes('省') || 
+                        colLower.includes('市') || colLower.includes('城市') || colLower.includes('产品') ||
+                        colLower.includes('类别')) {
+                        groupColumn = col;
+                    } else if (colLower.includes('销售') || colLower.includes('金额') || colLower.includes('收入') ||
+                              colLower.includes('数') || colLower.includes('额') || colLower.includes('价')) {
+                        valueColumn = col;
+                    } else {
+                        // 不确定的类型，先作为分组列
+                        groupColumn = col;
+                    }
+                }
+                
+                // 2. 检查完整输入中是否包含列名
+                if (lowerInput.includes(colLower) && !colLower.includes('哪个') && !colLower.includes('最大')) {
+                    console.log('完整输入匹配到列名:', col);
+                    if (!valueColumn && (colLower.includes('销售') || colLower.includes('金额') || 
+                                         colLower.includes('收入') || colLower.includes('价'))) {
+                        valueColumn = col;
+                    }
+                    if (!groupColumn && (colLower.includes('区域') || colLower.includes('地区') || 
+                                        colLower.includes('产品') || colLower.includes('类别'))) {
+                        groupColumn = col;
+                    }
+                }
+            }
+            
+            // 3. 如果没有找到分组列，但查询类型是"哪个X最大"，那么X就是分组列
+            if (!groupColumn && queryText) {
+                // 尝试从查询文本中提取可能的列名关键词
+                const categoryKeywords = ['区域', '地区', '产品', '类别', '部门', '省', '市'];
+                for (const keyword of categoryKeywords) {
+                    if (queryText.includes(keyword)) {
+                        // 尝试在列名中查找包含该关键词的列
+                        const matchedCol = columns.find(c => c.includes(keyword));
+                        if (matchedCol) {
+                            groupColumn = matchedCol;
+                            console.log('通过关键词找到分组列:', keyword, '->', groupColumn);
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            break;
+        }
+    }
+    
+    if (!matched) {
+        // 检测极值类型查询
+        const extremePatterns = [
+            /最大(.+?)$/,
+            /最高(.+?)$/,
+            /最多(.+?)$/,
+            /最小值$/,
+            /最低$/,
+            /最少$/
+        ];
+        
+        for (const pattern of extremePatterns) {
+            if (pattern.test(lowerInput)) {
+                matched = true;
+                
+                // 尝试从输入中提取列名
+                for (const col of columns) {
+                    if (lowerInput.includes(col.toLowerCase()) && !col.toLowerCase().includes('哪个')) {
+                        if (!valueColumn && (col.toLowerCase().includes('销售') || col.toLowerCase().includes('数') || 
+                                             col.toLowerCase().includes('额') || col.toLowerCase().includes('价'))) {
+                            valueColumn = col;
+                        }
+                        if (!groupColumn && !col.toLowerCase().includes('销售') && !col.toLowerCase().includes('数')) {
+                            groupColumn = col;  // 假设其他列为分组列
+                        }
+                    }
+                }
+                break;
+            }
+        }
+    }
+    
+    if (!matched) {
+        console.log('未匹配到复合查询模式');
+        return null;
+    }
+    
+    console.log('初步匹配结果:', { groupColumn, valueColumn, columns });
+    
+    // 如果没有自动匹配到数值列，尝试常用数值列名
+    if (!valueColumn) {
+        const numericCols = ['销售额', '收入', '金额', '数量', '价格', '数值', '值', '金额'];
+        for (const colName of numericCols) {
+            for (const col of columns) {
+                if (col.includes(colName)) {
+                    valueColumn = col;
+                    console.log('通过常用数值列名找到:', colName, '->', col);
+                    break;
+                }
+            }
+            if (valueColumn) break;
+        }
+    }
+    
+    // 如果没有自动匹配到分组列，尝试常用分组列名
+    if (!groupColumn) {
+        const categoricalCols = ['区域', '地区', '省', '市', '城市', '产品', '类别', '类型', '部门', '年份'];
+        for (const colName of categoricalCols) {
+            for (const col of columns) {
+                if (col.includes(colName)) {
+                    groupColumn = col;
+                    console.log('通过常用分组列名找到:', colName, '->', col);
+                    break;
+                }
+            }
+            if (groupColumn) break;
+        }
+    }
+    
+    // 如果仍然没有分组列，尝试第一个非数值列作为分组列
+    if (!groupColumn && columns.length > 0) {
+        for (const col of columns) {
+            const colLower = col.toLowerCase();
+            if (!colLower.includes('销售') && !colLower.includes('金额') && !colLower.includes('收入') &&
+                !colLower.includes('价') && !colLower.includes('数') && !colLower.includes('额')) {
+                groupColumn = col;
+                console.log('使用第一个非数值列作为分组列:', col);
+                break;
+            }
+        }
+    }
+    
+    // 如果仍然没有数值列，尝试第一个数值类型的列
+    if (!valueColumn && columns.length > 0) {
+        for (const col of columns) {
+            const colLower = col.toLowerCase();
+            if (colLower.includes('销售') || colLower.includes('金额') || colLower.includes('收入') ||
+                colLower.includes('价') || colLower.includes('数') || colLower.includes('额')) {
+                valueColumn = col;
+                console.log('使用第一个数值类型列作为数值列:', col);
+                break;
+            }
+        }
+    }
+    
+    // 最后回退：如果还没有找到，使用第一列
+    if (!valueColumn && columns.length > 0) {
+        valueColumn = columns[0];
+        console.log('回退使用第一列作为数值列:', columns[0]);
+    }
+    
+    console.log('最终匹配结果:', { groupColumn, valueColumn });
+    
+    // 确保至少有一列匹配
+    if (!groupColumn && !valueColumn) {
+        console.log('未能匹配到任何列');
+        return null;
+    }
+    
+    // 检查是否包含最大/最高/最多关键词
+    const hasMax = lowerInput.includes('最大') || lowerInput.includes('最高') || lowerInput.includes('最多');
+    
+    // 如果没有分组列，使用查找最大/最小值查询
+    if (!groupColumn) {
+        console.log('无分组列，使用find_max/find_min查询');
+        return {
+            queryType: hasMax ? 'find_max' : 'find_min',
+            valueColumn: valueColumn || columns[0],
+            title: `查找${valueColumn || columns[0]}的${hasMax ? '最大值' : '最小值'}`,
+            description: `查找${hasMax ? '最大' : '最小'}的${valueColumn || columns[0]}值`
+        };
+    }
+    
+    console.log('使用group_aggregate_find查询:', { groupColumn, valueColumn });
+    
+    // 如果有分组列和数值列，使用分组聚合查找查询
+    return {
+        queryType: 'group_aggregate_find',
+        groupColumn: groupColumn,
+        valueColumn: valueColumn || groupColumn,  // 如果没有数值列，使用分组列作为数值列（计数）
+        title: `查找${groupColumn}中${valueColumn ? valueColumn : '数量'}最${hasMax ? '大' : '小'}的项`,
+        description: `按${groupColumn}分组，查找${valueColumn ? valueColumn : '数量'}最${hasMax ? '大' : '小'}的${groupColumn}`
+    };
 }
 
 // 尝试本地生成图表配置（无需调用大模型）
@@ -2878,6 +4456,201 @@ async function tryGenerateChartConfigLocally(userInput, dataInfo, detailedIntent
     const columns = dataInfo.columns;
     
     console.log('尝试本地生成图表配置:', { userInput: lowerInput, columns, detailedIntent, entityExtractionResult });
+    
+    // ========== V5.0新增：调用后端查询配置生成API ==========
+    try {
+        addProcessingLog('info', 'V5.0新功能', '正在调用智能查询配置生成服务...');
+        console.log('V5.0 API调用参数:', {
+            user_input: userInput,
+            columns: columns,
+            data_preview: dataInfo.sampleData || []
+        });
+    console.log('V5.0 API调用参数 - columns详细信息:', columns);
+        
+        // 修复：使用API_BASE_URL，确保跨协议请求正常工作
+        const apiUrl = `${API_BASE_URL}/api/v1/query/generate-config`;
+        console.log('V5.0 API调用URL:', apiUrl);
+        
+        try {
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    user_input: userInput,
+                    columns: columns,
+                    data_preview: dataInfo.sampleData || []
+                }),
+                // 允许跨域请求
+                credentials: 'include',
+                // 超时设置
+                signal: AbortSignal.timeout(5000)
+            });
+            
+            console.log('V5.0 API响应状态:', response.status);
+            console.log('V5.0 API响应头:', response.headers);
+            
+            if (response.ok) {
+                const result = await response.json();
+                console.log('V5.0 API响应内容:', result);
+                
+                // 修复：检查result.configs是否存在，即使没有status字段
+                if (result.configs && result.configs.length > 0) {
+                    console.log('V5.0后端API生成配置成功:', result.configs);
+                    addProcessingLog('success', 'V5.0智能配置生成成功', 
+                        `生成 ${result.configs.length} 个配置任务, 方法: ${result.method || 'local_rules'}`);
+                    
+                    // V5.0新增：检查是否需要追问
+                    const needsClarificationConfig = result.configs.find(config => config.needsClarification === true);
+                    if (needsClarificationConfig) {
+                        console.log('V5.0 需要追问用户:', needsClarificationConfig);
+                        addProcessingLog('info', '需要追问用户', needsClarificationConfig.message);
+                        
+                        // 触发追问机制
+                        return {
+                            needsClarification: true,
+                            clarificationType: needsClarificationConfig.clarificationType,
+                            mentionedColumn: needsClarificationConfig.mentionedColumn,
+                            availableDimensions: needsClarificationConfig.availableDimensions,
+                            chartType: needsClarificationConfig.chartType,
+                            message: needsClarificationConfig.message,
+                            description: needsClarificationConfig.description
+                        };
+                    }
+                    
+                    // 检查配置是否包含乱码
+                    const hasGarbageData = result.configs.some(config => {
+                        if (config.type === 'filter_aggregate') {
+                            return config.filterColumn === '??' || config.valueColumn === '??';
+                        } else if (config.type === 'aggregate') {
+                            return config.aggregations[0].column === '??' || config.aggregations[0].group_by === '??';
+                        } else if (config.type === 'chart') {
+                            return config.xAxisColumn === '??' || config.yAxisColumn === '??';
+                        }
+                        return false;
+                    });
+                    
+                    if (hasGarbageData) {
+                        console.log('V5.0 API返回乱码配置，使用本地匹配');
+                        addProcessingLog('warning', 'V5.0智能配置生成失败', '返回乱码配置，使用本地匹配');
+                    } else {
+                        // 转换配置格式以兼容现有代码
+                        const convertedConfigs = result.configs.map(config => {
+                            // ========== V5.0修复：处理filter_aggregate类型 ==========
+                            if (config.type === 'filter_aggregate') {
+                                return {
+                                    queryType: 'filter_aggregate',
+                                    filterColumn: config.filterColumn,
+                                    filterValue: config.filterValue,
+                                    filterValues: config.filterValues,
+                                    valueColumn: config.valueColumn,
+                                    aggregateFunction: config.aggregateFunction,
+                                    title: config.title,
+                                    description: config.description
+                                };
+                            } else if (config.type === 'aggregate') {
+                                return {
+                                    queryType: 'aggregate',
+                                    aggregateFunction: config.aggregations[0].operation,
+                                    valueColumn: config.aggregations[0].column,
+                                    groupColumn: config.aggregations[0].group_by,
+                                    description: config.description
+                                };
+                            } else if (config.type === 'filter') {
+                                return {
+                                    queryType: 'filter',
+                                    conditions: config.conditions,
+                                    description: config.description
+                                };
+                            } else if (config.type === 'sort') {
+                                return {
+                                    queryType: 'sort',
+                                    sortColumn: config.column,
+                                    sortOrder: config.order,
+                                    description: config.description
+                                };
+                            } else if (config.type === 'chart') {
+                                // V5.0新增：处理图表配置（包含排序参数）
+                                return {
+                                    chartType: config.chartType,
+                                    xAxisColumn: config.xAxisColumn,
+                                    yAxisColumn: config.yAxisColumn,
+                                    labelColumn: config.labelColumn,
+                                    valueColumn: config.valueColumn,
+                                    title: config.title,
+                                    description: config.description,
+                                    aggregateFunction: config.aggregateFunction || 'sum',
+                                    sortOrder: config.sortOrder || null,
+                                    sortBy: config.sortBy || null
+                                };
+                            }
+                            return config;
+                        }).filter(config => config.chartType || config.queryType); // 保留chart类型和queryType类型的配置
+
+                        // 如果没有chart类型的配置，尝试从聚合配置生成图表配置
+                        if (convertedConfigs.length === 0) {
+                            const aggregateConfig = result.configs.find(config => config.type === 'aggregate');
+                            if (aggregateConfig) {
+                                const aggregation = aggregateConfig.aggregations[0];
+                                // 确保xAxisColumn和yAxisColumn是有效的列名
+                                let xAxisColumn = aggregation.group_by;
+                                let yAxisColumn = aggregation.column;
+                                
+                                // 如果group_by是无效的，使用columns中的第一个列
+                                if (!xAxisColumn || xAxisColumn === '??' || xAxisColumn === '???') {
+                                    xAxisColumn = columns[0] || '地区';
+                                }
+                                
+                                // 如果column是无效的，使用columns中的第二个列或第一个列
+                                if (!yAxisColumn || yAxisColumn === '??' || yAxisColumn === '???') {
+                                    yAxisColumn = columns[1] || columns[0] || '销售额';
+                                }
+                                
+                                // 检测排序需求
+                                const hasSortDesc = /从高到低|从大到小|降序|倒序|排序.*高|排序.*大/.test(userInput);
+                                const hasSortAsc = /从低到高|从小到大|升序|正序|排序.*低|排序.*小/.test(userInput);
+                                const sortOrder = hasSortDesc ? 'desc' : (hasSortAsc ? 'asc' : null);
+                                
+                                convertedConfigs.push({
+                                    chartType: 'bar',
+                                    xAxisColumn: xAxisColumn,
+                                    yAxisColumn: yAxisColumn,
+                                    labelColumn: xAxisColumn,
+                                    valueColumn: yAxisColumn,
+                                    title: `各${xAxisColumn}的${yAxisColumn}${sortOrder ? (sortOrder === 'desc' ? '从高到低' : '从低到高') : ''}`,
+                                    description: `${aggregation.operation}图表: 显示${xAxisColumn}的${yAxisColumn}分布${sortOrder ? (sortOrder === 'desc' ? '（从高到低排序）' : '（从低到高排序）') : ''}`,
+                                    aggregateFunction: aggregation.operation,
+                                    sortOrder: sortOrder,
+                                    sortBy: null
+                                });
+                            }
+                        }
+                        
+                        // 更新Agent工作流可视化
+                        updateAgentWorkflow('generate_config', 'completed', {
+                            configs: result.configs,
+                            method: result.method || 'local_rules'
+                        });
+                        
+                        return convertedConfigs;
+                    }
+                } else {
+                    console.log('V5.0 API响应格式不正确:', result);
+                    addProcessingLog('warning', 'V5.0智能配置生成失败', '响应格式不正确');
+                }
+            } else {
+                console.log('V5.0 API响应失败:', response.status, response.statusText);
+                addProcessingLog('warning', 'V5.0智能配置生成失败', `API响应失败: ${response.status}`);
+            }
+        } catch (error) {
+            console.error('V5.0后端API调用失败:', error);
+            addProcessingLog('warning', 'V5.0智能配置生成失败', `调用失败: ${error.message}`);
+        }
+    } catch (error) {
+        console.error('V5.0智能配置生成过程出错:', error);
+        addProcessingLog('warning', 'V5.0智能配置生成失败', `过程出错: ${error.message}`);
+    }
     
     // ========== 第零层：使用QueryConfigGenerator（基于意图类型）==========
     // 如果有详细的意图类型，优先使用queryConfigGenerator生成配置
@@ -2897,7 +4670,17 @@ async function tryGenerateChartConfigLocally(userInput, dataInfo, detailedIntent
                 // 根据配置类型返回不同格式
                 // 注意：优先检查aggregateFunction，因为复合查询同时有queryType和aggregateFunction
                 if (config.chartType) {
-                    // 图表配置
+                    // V5.0修复：优先使用对话管理器传来的排序配置
+                    let sortOrder = config.sortOrder || null;
+                    let sortBy = config.sortBy || null;
+                    
+                    // 如果没有从配置中获取到排序信息，则重新检测
+                    if (!sortOrder) {
+                        const hasSortDesc = /从高到低|从大到小|降序|倒序|排序.*高|排序.*大/.test(userInput);
+                        const hasSortAsc = /从低到高|从小到大|升序|正序|排序.*低|排序.*小/.test(userInput);
+                        sortOrder = hasSortDesc ? 'desc' : (hasSortAsc ? 'asc' : null);
+                    }
+                    
                     return [{
                         chartType: config.chartType,
                         xAxisColumn: config.xAxisColumn,
@@ -2907,7 +4690,8 @@ async function tryGenerateChartConfigLocally(userInput, dataInfo, detailedIntent
                         title: config.title,
                         description: config.description,
                         aggregateFunction: config.aggregateFunction || 'sum',
-                        sortOrder: 'desc'
+                        sortOrder: sortOrder,
+                        sortBy: sortBy
                     }];
                 } else if (config.aggregateFunction) {
                     // 聚合查询配置（优先于普通查询，因为复合查询也有queryType）
@@ -2963,6 +4747,11 @@ async function tryGenerateChartConfigLocally(userInput, dataInfo, detailedIntent
         console.warn('意图库加载失败:', error);
     }
     
+    // 检查排序需求
+    const hasSortDesc = /从高到低|从大到小|降序|倒序|排序.*高|排序.*大/.test(userInput);
+    const hasSortAsc = /从低到高|从小到大|升序|正序|排序.*低|排序.*小/.test(userInput);
+    const sortOrder = hasSortDesc ? 'desc' : (hasSortAsc ? 'asc' : null);
+    
     // ========== 第三层：使用正则规则匹配 ==========
     // 规则1: 按XX的YY平均值绘制柱状图
     // 匹配模式: 按{分组列}的{数值列}平均值...绘制柱状图
@@ -3009,7 +4798,7 @@ async function tryGenerateChartConfigLocally(userInput, dataInfo, detailedIntent
                 title: `各省公司${actualValueCol}平均值`,
                 description: `按照${actualGroupCol}统计的${actualValueCol}平均值`,
                 aggregateFunction: 'avg',
-                sortOrder: 'desc',
+                sortOrder: sortOrder || 'desc',
                 dataTransform: dataTransform
             }];
         }
@@ -3033,10 +4822,167 @@ async function tryGenerateChartConfigLocally(userInput, dataInfo, detailedIntent
                 title: `按${actualGroupCol}统计${actualValueCol}`,
                 description: `按照${actualGroupCol}分组统计${actualValueCol}`,
                 aggregateFunction: 'sum',
-                sortOrder: 'desc',
+                sortOrder: sortOrder || 'desc',
                 dataTransform: null
             }];
         }
+    }
+    
+    // 规则3: 排序需求（与之前的图表请求关联）
+    if (contextManager.hasRecentChartRequest() && sortOrder) {
+        // 尝试从历史记录中提取最近的图表请求信息
+        const recentChartRequest = contextManager.history.find(item => 
+            item.type === 'user' && /柱状图|条形图|饼图|折线图|图表|可视化/.test(item.content)
+        );
+        
+        if (recentChartRequest) {
+            // 分析最近的图表请求
+            const chartRequest = recentChartRequest.content;
+            
+            // 尝试提取图表类型和列信息
+            let chartType = 'bar'; // 默认柱状图
+            let groupCol = null;
+            let valueCol = null;
+            
+            // 匹配柱状图请求
+            const barMatch = chartRequest.match(/(柱状图|条形图)/);
+            if (barMatch) {
+                chartType = 'bar';
+                
+                // 尝试提取分组列和数值列
+                const groupMatch = chartRequest.match(/按(.+?)统计|按(.+?)的/);
+                if (groupMatch) {
+                    groupCol = (groupMatch[1] || groupMatch[2]).trim();
+                }
+                
+                const valueMatch = chartRequest.match(/统计(.+?)|的(.+?)(?:平均值|总和|数量)/);
+                if (valueMatch) {
+                    valueCol = (valueMatch[1] || valueMatch[2]).trim();
+                }
+            }
+            
+            // 查找匹配的列名
+            let actualGroupCol = null;
+            let actualValueCol = null;
+            
+            if (groupCol) {
+                actualGroupCol = columns.find(c => {
+                    const lowerC = c.toLowerCase();
+                    const lowerGroup = groupCol.toLowerCase();
+                    return lowerC.includes(lowerGroup) || lowerGroup.includes(lowerC);
+                });
+            }
+            
+            if (valueCol) {
+                actualValueCol = columns.find(c => {
+                    const lowerC = c.toLowerCase();
+                    const lowerValue = valueCol.toLowerCase();
+                    return lowerC.includes(lowerValue) || lowerValue.includes(lowerC);
+                });
+            }
+            
+            // 如果没有找到列，尝试自动匹配
+            if (!actualGroupCol && columns.length > 0) {
+                // 尝试找到分类列
+                const categoryKeywords = ['地区', '省份', '省', '城市', '产品', '类别', '类型'];
+                actualGroupCol = columns.find(c => {
+                    const lowerC = c.toLowerCase();
+                    return categoryKeywords.some(keyword => lowerC.includes(keyword));
+                }) || columns[0];
+            }
+            
+            if (!actualValueCol && columns.length > 1) {
+                // 尝试找到数值列
+                const numericKeywords = ['销售额', '金额', '数量', '数值', '价格', '成本'];
+                actualValueCol = columns.find(c => {
+                    const lowerC = c.toLowerCase();
+                    return numericKeywords.some(keyword => lowerC.includes(keyword));
+                }) || columns[1];
+            }
+            
+            if (actualGroupCol && actualValueCol) {
+                addProcessingLog('success', '基于历史上下文生成排序图表配置', 
+                    `图表类型: ${chartType}, 分组列: ${actualGroupCol}, 数值列: ${actualValueCol}, 排序: ${sortOrder}`);
+                
+                return [{
+                    chartType: chartType,
+                    xAxisColumn: actualGroupCol,
+                    yAxisColumn: actualValueCol,
+                    title: `按${actualValueCol}${sortOrder === 'desc' ? '从高到低' : '从低到高'}排序的${chartType}`,
+                    description: `按照${actualValueCol}${sortOrder === 'desc' ? '从高到低' : '从低到高'}排序的${actualGroupCol}${chartType}`,
+                    aggregateFunction: 'sum',
+                    sortOrder: sortOrder,
+                    dataTransform: null
+                }];
+            }
+        }
+    }
+    
+    // 规则4: 单独的排序需求（没有历史图表请求）
+    if (sortOrder) {
+        // 尝试自动匹配列名
+        let actualGroupCol = null;
+        let actualValueCol = null;
+        
+        // 从用户输入中提取排序列
+        const sortColumnMatch = userInput.match(/按照(.+?)排序/);
+        let sortColumn = sortColumnMatch ? sortColumnMatch[1].trim() : '销售额';
+        
+        // 尝试找到分类列
+        if (columns.length > 0) {
+            const categoryKeywords = ['地区', '省份', '省', '城市', '产品', '类别', '类型'];
+            actualGroupCol = columns.find(c => {
+                const lowerC = c.toLowerCase();
+                return categoryKeywords.some(keyword => lowerC.includes(keyword));
+            });
+        }
+        
+        // 尝试找到数值列（优先使用排序列）
+        if (columns.length > 0) {
+            actualValueCol = columns.find(c => {
+                const lowerC = c.toLowerCase();
+                const lowerSort = sortColumn.toLowerCase();
+                return lowerC.includes(lowerSort) || lowerSort.includes(lowerC);
+            });
+            
+            // 如果没有找到，尝试使用常见的数值列
+            if (!actualValueCol) {
+                const numericKeywords = ['销售额', '金额', '数量', '数值', '价格', '成本'];
+                actualValueCol = columns.find(c => {
+                    const lowerC = c.toLowerCase();
+                    return numericKeywords.some(keyword => lowerC.includes(keyword));
+                });
+            }
+        }
+        
+        // 如果没有找到合适的分类列或数值列，返回需要追问的配置
+        if (!actualGroupCol || !actualValueCol) {
+            addProcessingLog('info', '需要追问用户', '无法自动匹配分类列或数值列');
+            return {
+                needsClarification: true,
+                clarificationType: 'dimension',
+                mentionedColumn: sortColumn,
+                availableDimensions: columns,
+                chartType: 'bar',
+                message: `您想按哪一列来分组显示${sortColumn}？`,
+                description: '需要用户指定分组维度'
+            };
+        }
+        
+        // 找到合适的列，生成图表配置
+        addProcessingLog('success', '基于排序需求生成图表配置', 
+            `图表类型: bar, 分组列: ${actualGroupCol}, 数值列: ${actualValueCol}, 排序: ${sortOrder}`);
+        
+        return [{
+            chartType: 'bar',
+            xAxisColumn: actualGroupCol,
+            yAxisColumn: actualValueCol,
+            title: `按${actualValueCol}${sortOrder === 'desc' ? '从高到低' : '从低到高'}排序的柱状图`,
+            description: `按照${actualValueCol}${sortOrder === 'desc' ? '从高到低' : '从低到高'}排序的${actualGroupCol}柱状图`,
+            aggregateFunction: 'sum',
+            sortOrder: sortOrder,
+            dataTransform: null
+        }];
     }
     
     // 规则3: XX的占比/分布饼图
@@ -3060,6 +5006,103 @@ async function tryGenerateChartConfigLocally(userInput, dataInfo, detailedIntent
         }
     }
     
+    // V4.1新增：支持"各XX的YY饼图"模式（如"各个产品的销售额饼图"）
+    const pieGroupValuePattern = /各(?:个)?(.+?)的(.+?)饼图|(.+?)的(.+?)饼图/;
+    const pieGroupMatch = lowerInput.match(pieGroupValuePattern);
+    if (pieGroupMatch && lowerInput.includes('饼图')) {
+        // 尝试提取分组列和数值列
+        let groupCol, valueCol;
+        
+        if (pieGroupMatch[1] && pieGroupMatch[2]) {
+            // 匹配到"各XX的YY饼图"
+            groupCol = pieGroupMatch[1].trim();
+            valueCol = pieGroupMatch[2].trim();
+        } else if (pieGroupMatch[3] && pieGroupMatch[4]) {
+            // 匹配到"XX的YY饼图"
+            groupCol = pieGroupMatch[3].trim();
+            valueCol = pieGroupMatch[4].trim();
+        }
+        
+        console.log('V4.1饼图模式匹配:', { groupCol, valueCol, columns });
+        
+        // 在列中查找匹配
+        const actualGroupCol = columns.find(c => {
+            const lowerC = c.toLowerCase();
+            const lowerGroup = groupCol.toLowerCase();
+            return lowerC.includes(lowerGroup) || lowerGroup.includes(lowerC);
+        });
+        
+        const actualValueCol = columns.find(c => {
+            const lowerC = c.toLowerCase();
+            const lowerValue = valueCol.toLowerCase();
+            return lowerC.includes(lowerValue) || lowerValue.includes(lowerC);
+        });
+        
+        console.log('匹配的列:', { actualGroupCol, actualValueCol });
+        
+        if (actualGroupCol && actualValueCol) {
+            addProcessingLog('success', 'V4.1本地生成饼图配置成功', 
+                `分组: ${actualGroupCol}, 数值: ${actualValueCol}`);
+            return [{
+                chartType: 'pie',
+                labelColumn: actualGroupCol,
+                valueColumn: actualValueCol,
+                title: `${actualGroupCol}的${actualValueCol}分布`,
+                description: `按${actualGroupCol}分组统计${actualValueCol}的饼图`,
+                aggregateFunction: 'sum',
+                sortOrder: 'desc',
+                dataTransform: null
+            }];
+        }
+    }
+    
+    // V4.1新增：简单饼图模式（只有饼图关键词，自动选择分类列）
+    if (lowerInput.includes('饼图') || lowerInput.includes('饼状图') || lowerInput.includes('圆形图')) {
+        // 自动寻找合适的分类列（产品、地区、省份等）
+        const categoricalKeywords = ['产品', '地区', '省份', '省', '城市', '类别', '类型', '分组'];
+        let bestGroupCol = null;
+        
+        for (const keyword of categoricalKeywords) {
+            const matched = columns.find(c => c.includes(keyword));
+            if (matched) {
+                bestGroupCol = matched;
+                break;
+            }
+        }
+        
+        // 如果没有找到分类列，使用第一个非数值列
+        if (!bestGroupCol && columns.length > 0) {
+            bestGroupCol = columns[0];
+        }
+        
+        // 自动寻找数值列（销售额、数量、金额等）
+        const numericKeywords = ['销售额', '金额', '数量', '数值', '价格', '成本'];
+        let bestValueCol = null;
+        
+        for (const keyword of numericKeywords) {
+            const matched = columns.find(c => c.includes(keyword));
+            if (matched) {
+                bestValueCol = matched;
+                break;
+            }
+        }
+        
+        if (bestGroupCol) {
+            addProcessingLog('info', 'V4.1自动匹配饼图配置', 
+                `分组: ${bestGroupCol}${bestValueCol ? ', 数值: ' + bestValueCol : ' (计数)'}`);
+            return [{
+                chartType: 'pie',
+                labelColumn: bestGroupCol,
+                valueColumn: bestValueCol,
+                title: `${bestGroupCol}${bestValueCol ? '的' + bestValueCol : '分布'}`,
+                description: bestValueCol ? `按${bestGroupCol}统计${bestValueCol}的饼图` : `${bestGroupCol}的占比分布`,
+                aggregateFunction: bestValueCol ? 'sum' : 'count',
+                sortOrder: 'desc',
+                dataTransform: null
+            }];
+        }
+    }
+    
     // 无法本地处理，返回null
     return null;
 }
@@ -3076,23 +5119,38 @@ async function handleNLPChartWithConfig(userInput, dataInfo, totalStartTime, cha
     addProcessingLog('info', `成功解析 ${chartConfigs.length} 个图表配置`);
     
     // 显示可视化区域
-    document.getElementById('data-visualization').classList.remove('hidden');
+    const dataVisualization = document.getElementById('data-visualization');
+    if (dataVisualization) {
+        dataVisualization.classList.remove('hidden');
+    }
     const chartsContainer = document.querySelector('.charts-container');
-    chartsContainer.innerHTML = '';
+    if (chartsContainer) {
+        chartsContainer.innerHTML = '';
+    } else {
+        console.warn('[handleNLPChartWithConfig] 未找到charts-container元素');
+    }
     
     // 生成图表
     setNLPProgress(70, '正在生成图表...');
-    for (let i = 0; i < chartConfigs.length; i++) {
-        const config = chartConfigs[i];
-        addProcessingLog('command', `生成图表 ${i + 1}/${chartConfigs.length}`, `${config.title}`);
-        const startTime = Date.now();
-        createChartFromConfig(config, chartsContainer, null);
-        const duration = Date.now() - startTime;
-        addProcessingLog('performance', `图表 ${i + 1} 生成完成`, `耗时: ${duration}ms`);
-        setNLPProgress(70 + Math.round(((i + 1) / chartConfigs.length) * 20), `正在生成图表 ${i + 1}/${chartConfigs.length}...`);
+    if (chartsContainer) {
+        for (let i = 0; i < chartConfigs.length; i++) {
+            const config = chartConfigs[i];
+            addProcessingLog('command', `生成图表 ${i + 1}/${chartConfigs.length}`, `${config.title}`);
+            const startTime = Date.now();
+            createChartFromConfig(config, chartsContainer, null);
+            const duration = Date.now() - startTime;
+            addProcessingLog('performance', `图表 ${i + 1} 生成完成`, `耗时: ${duration}ms`);
+            setNLPProgress(70 + Math.round(((i + 1) / chartConfigs.length) * 20), `正在生成图表 ${i + 1}/${chartConfigs.length}...`);
+        }
+    } else {
+        console.warn('[handleNLPChartWithConfig] 无法生成图表，charts-container元素不存在');
     }
     
     endOperationTiming();
+    
+    // V5.0: 更新Agent工作流 - 执行查询完成，渲染结果开始
+    updateAgentWorkflow('execute_query', 'completed');
+    updateAgentWorkflow('render_result', 'running');
     
     // 显示结果摘要
     setNLPProgress(90, '正在完成...');
@@ -3101,6 +5159,19 @@ async function handleNLPChartWithConfig(userInput, dataInfo, totalStartTime, cha
     // 记录总耗时
     const totalDuration = Date.now() - totalStartTime;
     addProcessingLog('performance', '图表生成完成', `总耗时: ${totalDuration}ms (${(totalDuration/1000).toFixed(2)}秒)`);
+    
+    // V5.0: 更新Agent工作流 - 渲染结果完成
+    updateAgentWorkflow('render_result', 'completed', {
+        resultType: 'chart',
+        chartCount: chartConfigs.length,
+        duration: totalDuration
+    });
+    
+    // V4.0新增：记录成功查询到历史
+    if (window.queryHistoryManager) {
+        window.queryHistoryManager.addQuery(userInput, true);
+        updateQuerySuggestions();
+    }
     
     setNLPProgress(100, '完成');
     setTimeout(() => {
@@ -3116,6 +5187,16 @@ async function handleNLPChart(userInput, dataInfo, totalStartTime, detailedInten
     setNLPProgress(45, '正在尝试本地生成图表配置...');
     const localConfig = await tryGenerateChartConfigLocally(userInput, dataInfo, detailedIntent, entityExtractionResult);
     
+    // V5.0新增：检查是否需要追问
+    if (localConfig && localConfig.needsClarification) {
+        console.log('[handleNLPChart] 需要追问用户:', localConfig);
+        endOperationTiming();
+        
+        // 触发追问机制
+        await showClarificationDialog(localConfig, userInput, dataInfo, totalStartTime);
+        return;
+    }
+    
     let chartConfigs;
     let aiResponse = null;
     
@@ -3125,13 +5206,50 @@ async function handleNLPChart(userInput, dataInfo, totalStartTime, detailedInten
         addProcessingLog('success', '本地生成图表配置成功', `配置: ${JSON.stringify(localConfig[0]).substring(0, 100)}...`);
         endOperationTiming();
         
+        // 显示处理中的消息
+        const processingMessage = addMessage('system', '正在生成图表...');
+        
         // 使用配置生成图表
         await handleNLPChartWithConfig(userInput, dataInfo, totalStartTime, chartConfigs);
+        
+        // 更新处理消息为完成状态
+        if (processingMessage) {
+            const messageContent = processingMessage.querySelector('.message-content');
+            if (messageContent) {
+                messageContent.innerHTML = '<p>图表生成完成，请在下方"数据可视化"区域查看</p>';
+            }
+        }
+        
         return;
     }
     
     // 本地生成失败，调用大模型API
     addProcessingLog('info', '本地无法生成配置，调用大模型API...');
+    
+    // V4.1新增：如果大模型也未配置，提示用户
+    if (!config.ai.apiKey || config.ai.apiKey === 'your-api-key-here') {
+        addProcessingLog('warning', '大模型API未配置，无法生成配置');
+        
+        // 显示用户确认对话框
+        const userConfirmed = confirm(
+            `系统无法自动理解您的需求："${userInput}"\n\n` +
+            `可能原因：\n` +
+            `1. 需求表达不够明确\n` +
+            `2. 缺少大模型API配置\n\n` +
+            `建议：\n` +
+            `• 尝试更明确的表达，如"绘制柱状图显示各省份的销售额"\n` +
+            `• 在设置中配置大模型API密钥\n\n` +
+            `是否查看帮助文档？`
+        );
+        
+        if (userConfirmed) {
+            // 显示帮助信息
+            showNotification('请尝试使用以下格式：\n1. 绘制[图表类型]显示[列名]的分布\n2. 统计[列名]的[求和/平均值]\n3. 筛选[条件]的数据', 'info', 8000);
+        }
+        
+        hideNLPProgress();
+        throw new Error('配置生成失败：本地模型无法理解需求，且大模型API未配置');
+    }
     
     // V3.0优化：使用优化的大模型提示词
     let chartPrompt;
@@ -3152,27 +5270,101 @@ async function handleNLPChart(userInput, dataInfo, totalStartTime, detailedInten
     }
     
     setNLPProgress(50, '正在调用AI生成图表配置...');
-    // V3.0优化：减少超时时间到30秒（简单查询不需要60秒）
-    aiResponse = await callLLMAPI(chartPrompt, currentQueryController.signal, 30000);
+    // V4.1修复：增加超时时间到60秒，避免大模型调用超时
+    aiResponse = await callLLMAPI(chartPrompt, currentQueryController.signal, 60000);
     endOperationTiming();
     
-    // 解析图表配置
+    // V5.0修复：增强JSON解析逻辑，更健壮地处理大模型返回的JSON
     try {
-        const jsonArrayMatch = aiResponse.match(/\[[\s\S]*\]/);
-        if (jsonArrayMatch) {
-            chartConfigs = JSON.parse(jsonArrayMatch[0]);
-        } else {
-            const jsonMatch = aiResponse.match(/\{[\s\S]*\]/);
-            if (jsonMatch) {
-                chartConfigs = [JSON.parse(jsonMatch[0])];
+        // 1. 清理响应内容，移除可能的Markdown代码块和额外文本
+        let cleanedResponse = aiResponse.trim();
+        
+        // 移除Markdown代码块标记
+        cleanedResponse = cleanedResponse.replace(/^```json\n|^```\n|\n```$/g, '');
+        
+        // 2. 尝试解析完整响应
+        try {
+            const parsed = JSON.parse(cleanedResponse);
+            chartConfigs = Array.isArray(parsed) ? parsed : [parsed];
+            addProcessingLog('info', `直接解析成功，共${chartConfigs.length}个图表`);
+        } catch (e1) {
+            // 3. 如果直接解析失败，尝试匹配JSON数组
+            const jsonArrayMatch = cleanedResponse.match(/\[[\s\S]*\]/);
+            if (jsonArrayMatch) {
+                try {
+                    const parsed = JSON.parse(jsonArrayMatch[0]);
+                    chartConfigs = Array.isArray(parsed) ? parsed : [parsed];
+                    addProcessingLog('info', `解析到数组配置，共${chartConfigs.length}个图表`);
+                } catch (e2) {
+                    // 4. 尝试匹配JSON对象
+                    const jsonMatch = cleanedResponse.match(/\{[\s\S]*?\}/);
+                    if (jsonMatch) {
+                        try {
+                            const parsed = JSON.parse(jsonMatch[0]);
+                            chartConfigs = [parsed];
+                            addProcessingLog('info', `解析到对象配置，1个图表`);
+                        } catch (e3) {
+                            // 5. 尝试修复常见的JSON格式问题
+                            try {
+                                const fixedJson = fixJSON(cleanedResponse);
+                                const parsed = JSON.parse(fixedJson);
+                                chartConfigs = Array.isArray(parsed) ? parsed : [parsed];
+                                addProcessingLog('info', `修复JSON格式后解析成功，共${chartConfigs.length}个图表`);
+                            } catch (e4) {
+                                throw new Error('无法解析JSON配置');
+                            }
+                        }
+                    } else {
+                        throw new Error('未找到JSON配置');
+                    }
+                }
+            } else {
+                throw new Error('未找到JSON配置');
             }
         }
+        
+        // 验证配置有效性
+        if (!chartConfigs || chartConfigs.length === 0) {
+            throw new Error('配置为空');
+        }
+        
+        // 记录解析后的配置
+        addProcessingLog('info', `图表配置解析成功`, JSON.stringify(chartConfigs[0]).substring(0, 200));
     } catch (e) {
-        throw new Error('无法解析图表配置');
+        addProcessingLog('error', '图表配置解析失败', e.message);
+        console.error('[图表配置解析]', e);
+        console.error('[原始响应]', aiResponse);
+        throw new Error(`无法解析图表配置: ${e.message}`);
     }
+
+    // 辅助函数：修复常见的JSON格式问题
+    function fixJSON(jsonStr) {
+        // 移除多余的逗号
+        jsonStr = jsonStr.replace(/,\s*}/g, '}');
+        jsonStr = jsonStr.replace(/,\s*]/g, ']');
+        
+        // 修复缺少引号的键
+        jsonStr = jsonStr.replace(/([{,\s])([a-zA-Z0-9_]+)(\s*:)/g, '$1"$2"$3');
+        
+        // 修复单引号为双引号
+        jsonStr = jsonStr.replace(/'([^']+)'/g, '"$1"');
+        
+        return jsonStr;
+    }
+    
+    // 显示处理中的消息
+    const processingMessage = addMessage('system', '正在生成图表...');
     
     // 使用配置生成图表
     await handleNLPChartWithConfig(userInput, dataInfo, totalStartTime, chartConfigs);
+    
+    // 更新处理消息为完成状态
+    if (processingMessage) {
+        const messageContent = processingMessage.querySelector('.message-content');
+        if (messageContent) {
+            messageContent.innerHTML = '<p>图表生成完成，请在下方"数据可视化"区域查看</p>';
+        }
+    }
 }
 
 // 显示NLP查询结果
@@ -3217,6 +5409,11 @@ function displayNLPQueryResults(userInput, results, queryLogics, aiResponse) {
 function displayNLPChartResults(userInput, chartConfigs) {
     const nlpResult = document.getElementById('nlp-result');
     
+    if (!nlpResult) {
+        console.warn('[displayNLPChartResults] 未找到nlp-result元素');
+        return;
+    }
+    
     let html = `
         <div style="background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-top: 20px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #667eea;">
@@ -3236,6 +5433,1085 @@ function displayNLPChartResults(userInput, chartConfigs) {
     nlpResult.innerHTML = html;
 }
 
+// ==================== V6.0新增：统一意图识别与需求分类系统 ====================
+
+// 意图类别定义
+const INTENT_CATEGORIES = {
+    QUERY_FILTER: '筛选查询',          // 筛选特定条件的数据
+    QUERY_AGGREGATE: '聚合查询',       // 汇总统计（求和、平均、计数）
+    QUERY_EXTRACT: '提取查询',         // 提取特定字段或最大值/最小值
+    CHART_BAR: '柱状图需求',           // 创建柱状图
+    CHART_PIE: '饼图需求',             // 创建饼图
+    CHART_LINE: '折线图需求',          // 创建折线图
+    STATS_SUMMARY: '统计分析',         // 数据统计摘要
+    PREDICTION: '预测分析',            // 趋势预测
+    CLUSTERING: '聚类分析',            // 数据分组分类
+    COMPARISON: '对比分析',            // 多维度对比
+    TREND_ANALYSIS: '趋势分析'         // 时间趋势分析
+};
+
+// 需求优先级定义
+const REQUIREMENT_PRIORITY = {
+    HIGH: '高优先级',     // 核心业务需求、高频率查询
+    MEDIUM: '中优先级',   // 常规分析需求
+    LOW: '低优先级'       // 探索性、辅助性需求
+};
+
+// 需求复杂度定义  
+const REQUIREMENT_COMPLEXITY = {
+    SIMPLE: '简单',       // 单一查询，明确列名和条件
+    MEDIUM: '中等',       // 组合查询，涉及2-3个维度
+    COMPLEX: '复杂'       // 复杂分析，涉及多个维度、聚合、排序和嵌套逻辑
+};
+
+/**
+ * 统一意图识别与需求分类器
+ * 结合本地模型和大模型API，实现精准意图识别和需求分类
+ */
+class UnifiedIntentClassifier {
+    constructor() {
+        this.localModelEnabled = true;
+        this.llmApiEnabled = false;
+        this.lastAnalysis = null;
+        
+        // 关键词匹配表
+        // V6.0优化：修复意图识别问题
+        this.keywordPatterns = {
+            // 查询类意图 - 注意顺序很重要，先匹配更具体的模式
+            [INTENT_CATEGORIES.QUERY_FILTER]: [
+                /只显示.*/, /筛选.*/, /过滤.*/, /查找.*满足.*条件/, /筛选.*等于.*/, /属于.*/
+            ],
+            [INTENT_CATEGORIES.QUERY_AGGREGATE]: [
+                /统计.*数量/, /计算.*总和/, /平均.*/, /总共.*/, /合计.*/, /统计.*总和/, /计算.*平均/
+            ],
+            // 提取查询 - 包含最大值/最小值/最高/最低等
+            [INTENT_CATEGORIES.QUERY_EXTRACT]: [
+                /最大.*值/, /最小.*值/, /最高.*/, /最低.*/, /哪个.*最/, 
+                /最大值/, /最小值/, /找出.*最小/, /找出.*最大/, /找出.*最低/, /找出.*最高/,
+                /最大.*记录/, /最小.*记录/, /最低.*记录/, /最高.*记录/
+            ],
+            
+            // 图表类意图
+            [INTENT_CATEGORIES.CHART_BAR]: [/柱状图/, /柱图/, /bar.*chart/, /条形图/],
+            [INTENT_CATEGORIES.CHART_PIE]: [/饼图/, /pie.*chart/, /比例图/, /占比图/],
+            [INTENT_CATEGORIES.CHART_LINE]: [/折线图/, /line.*chart/, /趋势图/],
+            
+            // 分析类意图
+            [INTENT_CATEGORIES.STATS_SUMMARY]: [/统计.*特征/, /数据.*分布/, /描述.*统计/, /分析.*数据/],
+            [INTENT_CATEGORIES.PREDICTION]: [/预测.*值/, /未来.*趋势/, /预估.*/],
+            [INTENT_CATEGORIES.COMPARISON]: [/比较.*/, /对比.*/, /不同.*之间/],
+            [INTENT_CATEGORIES.TREND_ANALYSIS]: [/增长.*趋势/, /变化.*趋势/, /历史.*趋势/]
+        };
+        
+        // 实体提取正则
+        this.entityPatterns = {
+            column: /"([^"]+)"列|列"([^"]+)"|在([^列]+)列中?|([^，,]+)列(?:中)?/g,
+            value: /等于"([^"]+)"|为"([^"]+)"|值"([^"]+)"|([0-9]+)(?:个|项|次)/g,
+            comparison: /大(?:于|过)|小(?:于|过)|等于|不等于|包含|不包含/g,
+            aggregation: /求和|平均值|平均数|平均|总和|总计|总数|最大|最小|最高|最低|个数|数量/g
+        };
+    }
+    
+    /**
+     * 检查本地模型可用性
+     */
+    async checkLocalModelAvailability() {
+        try {
+            // 检查本地意图模型是否可用
+            if (window.intentRecognizer && typeof window.intentRecognizer.checkLocalModelAvailability === 'function') {
+                return await window.intentRecognizer.checkLocalModelAvailability();
+            }
+            return { modelAvailable: false, reason: '本地模型未初始化' };
+        } catch (error) {
+            console.warn('[UnifiedIntentClassifier] 检查本地模型失败:', error);
+            return { modelAvailable: false, reason: error.message };
+        }
+    }
+    
+    /**
+     * 检查大模型API可用性
+     */
+    async checkLLMAvailability() {
+        try {
+            // 检查config配置
+            if (typeof config !== 'undefined' && config.api && config.api.llmApiUrl && config.api.llmApiKey) {
+                // 尝试调用健康检查接口
+                const response = await fetch(`${config.api.llmApiUrl}/health`, { 
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${config.api.llmApiKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    timeout: 5000
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    this.llmApiEnabled = result.status === 'healthy' || result.message === 'OK';
+                    return {
+                        available: this.llmApiEnabled,
+                        model: config.api.llmModel || 'unknown',
+                        url: config.api.llmApiUrl
+                    };
+                }
+            }
+            
+            this.llmApiEnabled = false;
+            return { available: false, reason: '大模型API未配置或不可用' };
+        } catch (error) {
+            console.warn('[UnifiedIntentClassifier] 检查大模型API失败:', error);
+            this.llmApiEnabled = false;
+            return { available: false, reason: error.message };
+        }
+    }
+    
+    /**
+     * 核心：统一意图识别与需求分类
+     * @param {string} userInput 用户输入文本
+     * @param {Array} columns 数据列名
+     * @param {Array} sampleData 样本数据
+     * @returns {Object} 包含意图、分类、优先级、复杂度等信息
+     */
+    async classify(userInput, columns, sampleData = []) {
+        const startTime = Date.now();
+        const lowerInput = userInput.toLowerCase();
+        
+        console.log('[UnifiedIntentClassifier] 开始意图识别:', userInput, '列数:', columns.length);
+        
+        // 步骤1: 本地关键词匹配（快速路径）
+        const localResult = await this.localKeywordClassify(lowerInput, columns);
+        if (localResult.confidence > 0.8) {
+            console.log('[UnifiedIntentClassifier] 本地关键词匹配成功:', localResult);
+            this.lastAnalysis = { ...localResult, method: 'local_keyword', time: Date.now() - startTime };
+            return localResult;
+        }
+        
+        // 步骤2: 本地模型识别（如果可用）
+        if (this.localModelEnabled && window.intentRecognizer) {
+            try {
+                const localModelResult = await this.localModelClassify(lowerInput, columns);
+                if (localModelResult.confidence > 0.7) {
+                    console.log('[UnifiedIntentClassifier] 本地模型识别成功:', localModelResult);
+                    this.lastAnalysis = { ...localModelResult, method: 'local_model', time: Date.now() - startTime };
+                    return localModelResult;
+                }
+            } catch (error) {
+                console.warn('[UnifiedIntentClassifier] 本地模型识别失败:', error);
+            }
+        }
+        
+        // 步骤3: 大模型API识别（兜底和复杂场景）
+        if (this.llmApiEnabled) {
+            try {
+                const llmResult = await this.llmClassify(userInput, columns, sampleData);
+                console.log('[UnifiedIntentClassifier] 大模型识别成功:', llmResult);
+                this.lastAnalysis = { ...llmResult, method: 'llm_api', time: Date.now() - startTime };
+                return llmResult;
+            } catch (error) {
+                console.warn('[UnifiedIntentClassifier] 大模型识别失败，降级到本地增强:', error);
+            }
+        }
+        
+        // 步骤4: 本地增强识别（兜底）
+        const enhancedResult = this.enhancedLocalClassify(lowerInput, columns, localResult);
+        console.log('[UnifiedIntentClassifier] 使用增强本地识别:', enhancedResult);
+        this.lastAnalysis = { ...enhancedResult, method: 'enhanced_local', time: Date.now() - startTime };
+        
+        return enhancedResult;
+    }
+    
+    // ========== 本地识别方法 ==========
+    
+    async localKeywordClassify(lowerInput, columns) {
+        const result = {
+            mode: 'accurate',
+            confidence: 0,
+            reason: '',
+            intentCategory: '',
+            priority: REQUIREMENT_PRIORITY.MEDIUM,
+            complexity: REQUIREMENT_COMPLEXITY.SIMPLE,
+            matchedColumns: []
+        };
+        
+        // 检查每个意图类别的关键词
+        let bestMatch = null;
+        let bestScore = 0;
+        
+        for (const [category, patterns] of Object.entries(this.keywordPatterns)) {
+            for (const pattern of patterns) {
+                if (pattern.test(lowerInput)) {
+                    const score = this.calculateMatchScore(lowerInput, pattern);
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestMatch = category;
+                    }
+                }
+            }
+        }
+        
+        if (bestMatch) {
+            result.intentCategory = bestMatch;
+            result.confidence = Math.min(0.5 + bestScore, 0.9); // 关键词匹配置信度在0.5-0.9之间
+            result.reason = `关键词匹配到${bestMatch}`;
+            
+            // 提取匹配到的列名
+            result.matchedColumns = this.extractMatchedColumns(lowerInput, columns);
+            
+            // 设置优先级和复杂度
+            result.priority = this.determinePriority(lowerInput, bestMatch, columns);
+            result.complexity = this.determineComplexity(lowerInput, columns, result.matchedColumns);
+            
+            // 添加实体提取
+            result.entityExtraction = this.extractEntities(lowerInput, columns);
+        }
+        
+        return result;
+    }
+    
+    async localModelClassify(lowerInput, columns) {
+        try {
+            if (window.intentRecognizer && typeof window.intentRecognizer.classify === 'function') {
+                const recognition = await window.intentRecognizer.classify(lowerInput, columns);
+                if (recognition.success) {
+                    return {
+                        mode: 'accurate',
+                        intentCategory: this.mapIntentToCategory(recognition.intent),
+                        detailedIntent: recognition.detailedIntent,
+                        confidence: recognition.confidence || 0.7,
+                        reason: `本地模型识别: ${recognition.reason || '基于语义分析'}`,
+                        priority: this.determinePriority(lowerInput, recognition.intent, columns),
+                        complexity: recognition.complexity || REQUIREMENT_COMPLEXITY.SIMPLE,
+                        matchedColumns: recognition.matchedColumns || [],
+                        entityExtraction: recognition.entities || []
+                    };
+                }
+            }
+        } catch (error) {
+            // 静默失败，返回空结果
+        }
+        
+        return null;
+    }
+    
+    // ========== 大模型API方法 ==========
+    
+    async llmClassify(userInput, columns, sampleData) {
+        try {
+            // 构建大模型提示词
+            const prompt = this.buildLLMClassificationPrompt(userInput, columns, sampleData);
+            
+            // 调用大模型API
+            const response = await window.callLLMAPI(prompt, null, 30000);
+            
+            // 解析大模型响应
+            const parsedResult = this.parseLLMClassificationResponse(response);
+            
+            if (parsedResult) {
+                return {
+                    mode: 'intelligent',
+                    ...parsedResult,
+                    confidence: parsedResult.confidence || 0.85,
+                    useLLM: true // 标记使用了大模型
+                };
+            }
+        } catch (error) {
+            console.warn('[llmClassify] 大模型分类失败:', error);
+            throw error;
+        }
+        
+        return null;
+    }
+    
+    buildLLMClassificationPrompt(userInput, columns, sampleData) {
+        return `请分析用户的查询需求并进行智能分类。
+
+用户查询："${userInput}"
+可用字段：${columns.join(', ')}
+示例数据：${JSON.stringify(sampleData.slice(0, 3), null, 2)}
+
+请返回JSON格式的识别结果，包含以下字段：
+- mode: 处理模式 (accurate/intelligent/exploratory)
+- intentCategory: 意图类别 (从下列选择: ${Object.values(INTENT_CATEGORIES).join(', ')})
+- priority: 需求优先级 (high/medium/low)
+- complexity: 需求复杂度 (simple/medium/complex)
+- matchedColumns: 匹配到的列名数组
+- entityExtraction: 实体提取结果 {}
+- confidence: 置信度 (0.0-1.0)
+- reason: 识别理由
+- processingStrategy: 建议处理策略
+
+请分析用户意图并返回相应的JSON对象。`;
+    }
+    
+    parseLLMClassificationResponse(response) {
+        try {
+            // 尝试提取JSON内容
+            const jsonMatch = response.match(/{[\s\S]*}/) || response.match(/\[[\s\S]*\]/);
+            if (jsonMatch) {
+                return JSON.parse(jsonMatch[0]);
+            }
+        } catch (error) {
+            console.warn('[parseLLMClassificationResponse] 解析大模型响应失败:', error);
+        }
+        return null;
+    }
+    
+    // ========== 辅助方法 ==========
+    
+    calculateMatchScore(input, pattern) {
+        // V6.0优化：改进匹配分数计算
+        const match = input.match(pattern);
+        if (!match) return 0;
+        
+        const matchLength = match[0].length;
+        const inputLength = input.length;
+        
+        // 基础分数：匹配部分越长，分数越高
+        let score = matchLength / inputLength;
+        
+        // V6.0新增：给予特定关键词更高的权重
+        const highPriorityKeywords = ['最大', '最小', '最高', '最低', '最'];
+        const matchedText = match[0];
+        
+        // 如果匹配内容包含高优先级关键词，加分
+        for (const keyword of highPriorityKeywords) {
+            if (matchedText.includes(keyword)) {
+                score += 0.3; // 高优先级关键词额外加分
+                break;
+            }
+        }
+        
+        // 如果是完整匹配而非部分匹配，加分
+        if (matchedText.length === inputLength) {
+            score += 0.2;
+        }
+        
+        return score;
+    }
+    
+    extractMatchedColumns(input, columns) {
+        const matched = [];
+        for (const column of columns) {
+            if (input.includes(column.toLowerCase())) {
+                matched.push(column);
+            }
+        }
+        return matched;
+    }
+    
+    determinePriority(input, intent, columns) {
+        // 基于常见业务优先级规则
+        const businessKeywords = ['销量', '销售额', '收入', '利润', '成本', '客户', '订单'];
+        const hasBusinessKeyword = businessKeywords.some(keyword => input.includes(keyword));
+        
+        if (hasBusinessKeyword) {
+            return REQUIREMENT_PRIORITY.HIGH;
+        }
+        
+        if (intent === INTENT_CATEGORIES.PREDICTION || intent === INTENT_CATEGORIES.CLUSTERING) {
+            return REQUIREMENT_PRIORITY.MEDIUM;
+        }
+        
+        return REQUIREMENT_PRIORITY.LOW;
+    }
+    
+    determineComplexity(input, columns, matchedColumns) {
+        // 分析需求复杂度
+        const hasMultipleConditions = (input.match(/并且|同时|另外|还需/g) || []).length > 0;
+        const hasNestedQueries = input.includes('其中') || input.includes('中的');
+        const hasComparisons = /比较|对比|不同|差异|区别/.test(input);
+        
+        if (matchedColumns.length >= 3 || hasMultipleConditions || hasNestedQueries || hasComparisons) {
+            return REQUIREMENT_COMPLEXITY.COMPLEX;
+        }
+        
+        if (matchedColumns.length >= 2 || /\d+个/.test(input)) {
+            return REQUIREMENT_COMPLEXITY.MEDIUM;
+        }
+        
+        return REQUIREMENT_COMPLEXITY.SIMPLE;
+    }
+    
+    extractEntities(input, columns) {
+        const entities = {
+            columns: [],
+            values: [],
+            comparisons: [],
+            aggregations: [],
+            conditions: {}
+        };
+        
+        // 提取列实体
+        for (const column of columns) {
+            if (input.includes(column)) {
+                entities.columns.push(column);
+            }
+        }
+        
+        // 提取数值实体
+        const valuePatterns = [
+            /\d+(?:\.\d+)?/g,  // 数字
+            /"[^"]+"/g,        // 引号内的值
+            /'[^']+?'/g        // 单引号内的值
+        ];
+        
+        for (const pattern of valuePatterns) {
+            const matches = input.match(pattern) || [];
+            entities.values.push(...matches.map(m => m.replace(/["']/g, '')));
+        }
+        
+        // 提取比较操作符
+        const comparisonMatches = input.match(this.entityPatterns.comparison);
+        if (comparisonMatches) {
+            entities.comparisons = comparisonMatches;
+        }
+        
+        // 提取聚合函数
+        const aggregationMatches = input.match(this.entityPatterns.aggregation);
+        if (aggregationMatches) {
+            entities.aggregations = aggregationMatches;
+        }
+        
+        return entities;
+    }
+    
+    mapIntentToCategory(intent) {
+        const intentMap = {
+            'filter': INTENT_CATEGORIES.QUERY_FILTER,
+            'aggregate': INTENT_CATEGORIES.QUERY_AGGREGATE,
+            'extract': INTENT_CATEGORIES.QUERY_EXTRACT,
+            'chart': INTENT_CATEGORIES.CHART_BAR,
+            'chart_pie': INTENT_CATEGORIES.CHART_PIE,
+            'chart_line': INTENT_CATEGORIES.CHART_LINE,
+            'stats': INTENT_CATEGORIES.STATS_SUMMARY,
+            'prediction': INTENT_CATEGORIES.PREDICTION,
+            'comparison': INTENT_CATEGORIES.COMPARISON,
+            'trend': INTENT_CATEGORIES.TREND_ANALYSIS
+        };
+        
+        return intentMap[intent] || INTENT_CATEGORIES.QUERY_FILTER;
+    }
+    
+    enhancedLocalClassify(lowerInput, columns, previousResult = null) {
+        // 增强本地分类逻辑
+        const result = previousResult || {
+            mode: 'accurate',
+            confidence: 0.4,  // 基础置信度
+            reason: '',
+            intentCategory: INTENT_CATEGORIES.QUERY_FILTER,
+            priority: REQUIREMENT_PRIORITY.MEDIUM,
+            complexity: REQUIREMENT_COMPLEXITY.SIMPLE,
+            matchedColumns: [],
+            entityExtraction: {}
+        };
+        
+        // 进一步分析输入
+        const hasSearch = /查找|查询|搜索|找/.test(lowerInput);
+        const hasChart = /图|表|可视化|展示|显示/.test(lowerInput);
+        const hasAnalysis = /分析|统计|研究|查看/.test(lowerInput);
+        
+        if (hasChart && !result.intentCategory.startsWith('CHART')) {
+            // 检测到图表关键词
+            result.intentCategory = INTENT_CATEGORIES.CHART_BAR;
+            result.confidence = Math.max(result.confidence, 0.6);
+            result.reason = '检测到图表相关关键词，推测为图表需求';
+        } else if (hasAnalysis && result.intentCategory === INTENT_CATEGORIES.QUERY_FILTER) {
+            // 检测到分析关键词
+            result.intentCategory = INTENT_CATEGORIES.STATS_SUMMARY;
+            result.confidence = Math.max(result.confidence, 0.5);
+            result.reason = '检测到分析相关关键词，推测为统计分析需求';
+        }
+        
+        // 提取更多列名
+        if (result.matchedColumns.length === 0) {
+            result.matchedColumns = this.extractMatchedColumns(lowerInput, columns);
+        }
+        
+        // 重新评估复杂度
+        if (result.matchedColumns.length > 0) {
+            result.complexity = this.determineComplexity(lowerInput, columns, result.matchedColumns);
+        }
+        
+        return result;
+    }
+    
+    /**
+     * 获取分类器的状态信息
+     */
+    getStatus() {
+        return {
+            localModelEnabled: this.localModelEnabled,
+            llmApiEnabled: this.llmApiEnabled,
+            lastAnalysis: this.lastAnalysis,
+            categories: Object.values(INTENT_CATEGORIES),
+            priorities: Object.values(REQUIREMENT_PRIORITY),
+            complexities: Object.values(REQUIREMENT_COMPLEXITY)
+        };
+    }
+    
+    /**
+     * 获取处理建议
+     */
+    getProcessingSuggestion(classification) {
+        const suggestions = {
+            [INTENT_CATEGORIES.QUERY_FILTER]: '使用筛选查询处理',
+            [INTENT_CATEGORIES.QUERY_AGGREGATE]: '使用聚合函数计算',
+            [INTENT_CATEGORIES.QUERY_EXTRACT]: '查找最大值/最小值',
+            [INTENT_CATEGORIES.CHART_BAR]: '生成柱状图展示数据',
+            [INTENT_CATEGORIES.CHART_PIE]: '生成饼图展示占比',
+            [INTENT_CATEGORIES.CHART_LINE]: '生成折线图展示趋势',
+            [INTENT_CATEGORIES.STATS_SUMMARY]: '计算数据统计摘要',
+            [INTENT_CATEGORIES.PREDICTION]: '使用预测算法进行分析',
+            [INTENT_CATEGORIES.CLUSTERING]: '使用聚类算法分组',
+            [INTENT_CATEGORIES.COMPARISON]: '进行多维度对比分析',
+            [INTENT_CATEGORIES.TREND_ANALYSIS]: '分析历史趋势变化'
+        };
+        
+        return suggestions[classification.intentCategory] || '执行标准数据分析';
+    }
+}
+
+// 创建全局统一分类器实例
+let unifiedIntentClassifier = null;
+
+/**
+ * 初始化统一意图分类器
+ */
+async function initUnifiedIntentClassifier() {
+    try {
+        unifiedIntentClassifier = new UnifiedIntentClassifier();
+        
+        // 检查模型可用性（异步执行，不阻塞主流程）
+        setTimeout(async () => {
+            const localStatus = await unifiedIntentClassifier.checkLocalModelAvailability();
+            const llmStatus = await unifiedIntentClassifier.checkLLMAvailability();
+            
+            console.log('[UnifiedIntentClassifier] 初始化完成:', {
+                localModel: localStatus.modelAvailable ? '可用' : '不可用',
+                llmApi: llmStatus.available ? '可用' : '不可用'
+            });
+            
+            addProcessingLog('success', '统一意图分类器初始化完成', 
+                `本地模型: ${localStatus.modelAvailable ? '✅可用' : '❌不可用'}, 大模型API: ${llmStatus.available ? '✅可用' : '❌不可用'}`);
+        }, 1000);
+        
+        return unifiedIntentClassifier;
+    } catch (error) {
+        console.error('初始化统一意图分类器失败:', error);
+        addProcessingLog('error', '统一意图分类器初始化失败', error.message);
+        return null;
+    }
+}
+
+// ==================== V5.0新增：追问机制 ====================
+
+/**
+ * 显示追问对话框
+ * 产品意义：当用户需求不明确时，通过追问获取更多信息
+ */
+async function showClarificationDialog(clarificationInfo, originalInput, dataInfo, totalStartTime) {
+    const { clarificationType, mentionedColumn, availableDimensions, chartType, message, choices } = clarificationInfo;
+    
+    console.log('[showClarificationDialog] 显示追问对话框:', clarificationInfo);
+    
+    // 隐藏进度条
+    hideNLPProgress();
+    
+    // 获取对话消息容器
+    const messagesContainer = document.getElementById('conversation-messages');
+    if (!messagesContainer) {
+        console.error('[showClarificationDialog] 未找到对话消息容器');
+        return;
+    }
+    
+    // 构建选项按钮（优先使用choices，没有则使用availableDimensions）
+    let optionsHtml = '';
+    let optionsList = [];
+    
+    if (choices && choices.length > 0) {
+        optionsList = choices;
+    } else if (availableDimensions && availableDimensions.length > 0) {
+        optionsList = availableDimensions;
+    }
+    
+    if (optionsList.length > 0) {
+        optionsHtml = optionsList.map((option, index) => {
+            const optionId = option.id || index;
+            const optionLabel = option.label || option;
+            const optionDesc = option.description || '';
+            const isHighlighted = option.highlight || false;
+            
+            return `
+                <button class="clarification-option" data-id="${optionId}" title="${optionDesc}" style="
+                    background: ${isHighlighted ? 'linear-gradient(135deg, #4CAF50 0%, #8BC34A 100%)' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'};
+                    color: white;
+                    border: none;
+                    padding: 12px 24px;
+                    border-radius: 25px;
+                    margin: 8px;
+                    cursor: pointer;
+                    font-size: 14px;
+                    font-weight: 500;
+                    transition: all 0.3s ease;
+                    box-shadow: 0 3px 10px rgba(102, 126, 234, 0.3);
+                    display: flex;
+                    align-items: center;
+                " onclick="handleClarificationClick('${optionId}')">
+                    <span style="margin-right: 8px;">${index + 1}.</span>
+                    <span>${optionLabel}</span>
+                </button>
+            `;
+        }).join('');
+    }
+    
+    // 如果没有提供选项或选择"其他"选项的按钮
+    optionsHtml += `
+        <button class="clarification-option" data-id="__other__" style="
+            background: #f8f9fa;
+            color: #666;
+            border: 2px solid #ddd;
+            padding: 12px 24px;
+            border-radius: 25px;
+            margin: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+        " onclick="handleClarificationClick('__other__')">
+            <span style="margin-right: 8px;">${optionsList.length + 1}.</span>
+            <span>自定义其他选项...</span>
+        </button>
+        
+        <button class="clarification-option" data-id="__cancel__" style="
+            background: #fff;
+            color: #dc3545;
+            border: 2px solid #dc3545;
+            padding: 12px 24px;
+            border-radius: 25px;
+            margin: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+        " onclick="handleClarificationClick('__cancel__')">
+            <span style="margin-right: 8px;">取消</span>
+        </button>
+    `;
+    
+    // 构建追问消息卡片
+    const clarificationHtml = `
+        <div class="message system clarification-message" id="clarification-card" style="
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            border-radius: 16px;
+            padding: 25px;
+            margin: 15px 0;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border: 1px solid #e9ecef;
+        ">
+            <div class="clarification-header" style="
+                display: flex;
+                align-items: center;
+                margin-bottom: 20px;
+                padding-bottom: 15px;
+                border-bottom: 2px solid #667eea;
+            ">
+                <span style="font-size: 28px; margin-right: 12px; color: #667eea;">🔍</span>
+                <div>
+                    <div style="font-weight: bold; color: #333; font-size: 18px;">需要确认或提供更多信息</div>
+                    <div style="color: #6c757d; font-size: 13px; margin-top: 4px;">为了给您提供最准确的分析结果</div>
+                </div>
+            </div>
+            
+            <div class="clarification-body" style="
+                color: #495057;
+                margin-bottom: 25px;
+                line-height: 1.6;
+                font-size: 15px;
+                padding: 15px;
+                background: #f8f9fa;
+                border-radius: 10px;
+                border-left: 4px solid #4CAF50;
+            ">
+                <strong>📝 问题：</strong> ${message || '请选择您想分析的具体维度'}
+            </div>
+            
+            <div class="clarification-options-header" style="
+                display: flex;
+                align-items: center;
+                margin-bottom: 15px;
+                color: #343a40;
+                font-size: 14px;
+                font-weight: 500;
+            ">
+                <span style="margin-right: 8px;">👇</span> 请选择下列选项之一：
+            </div>
+            
+            <div class="clarification-options" id="clarification-options-list" style="
+                display: flex;
+                flex-wrap: wrap;
+                gap: 12px;
+                margin-bottom: 20px;
+            ">
+                ${optionsHtml}
+            </div>
+            
+            <div class="clarification-footer" style="
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding-top: 15px;
+                border-top: 1px solid #dee2e6;
+                font-size: 12px;
+                color: #6c757d;
+            ">
+                <div>
+                    <span style="margin-right: 10px;">💡 提示：点击选项继续分析</span>
+                    <span>🔍 自动识别您的意图中...</span>
+                </div>
+                <div>
+                    交互式AI数据分析助手
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // 添加到消息队列
+    window.clarificationContext = {
+        clarificationInfo,
+        originalInput,
+        dataInfo,
+        totalStartTime
+    };
+    
+    // 添加到对话窗口
+    addMessage('system', clarificationHtml);
+    
+    // 滚动到底部
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    
+    // 绑定全局点击事件处理器
+    window.handleClarificationClick = async function(optionId) {
+        await handleClarificationSelection(optionId, originalInput, dataInfo, totalStartTime, clarificationInfo);
+    };
+    
+    // 绑定事件监听器（支持直接点击）
+    setTimeout(() => {
+        const optionButtons = document.querySelectorAll('.clarification-option');
+        optionButtons.forEach(btn => {
+            if (!btn.hasAttribute('data-bound')) {
+                btn.setAttribute('data-bound', 'true');
+                const optionId = btn.getAttribute('data-id');
+                btn.addEventListener('click', () => window.handleClarificationClick(optionId));
+            }
+        });
+    }, 100);
+    
+    // 记录追问事件
+    addProcessingLog('info', '用户需求不明确，触发追问机制', clarificationType || 'general');
+}
+
+/**
+ * 处理追问选择
+ */
+async function handleClarificationSelection(optionId, originalInput, dataInfo, totalStartTime, clarificationInfo) {
+    console.log('[handleClarificationSelection] 用户选择选项:', optionId, clarificationInfo);
+    
+    const { clarificationType, mentionedColumn, chartType, message, choices, availableDimensions } = clarificationInfo;
+    
+    // 找到追问卡片
+    const clarificationCard = document.getElementById('clarification-card');
+    if (clarificationCard) {
+        clarificationCard.style.opacity = '0.7';
+        clarificationCard.style.filter = 'grayscale(60%)';
+        // 禁用所有按钮
+        const buttons = clarificationCard.querySelectorAll('.clarification-option');
+        buttons.forEach(btn => {
+            btn.disabled = true;
+            btn.style.pointerEvents = 'none';
+            btn.style.cursor = 'default';
+            btn.style.boxShadow = 'none';
+            btn.style.transform = 'none';
+        });
+    }
+    
+    // 处理不同的选择
+    if (optionId === '__cancel__') {
+        // 用户取消
+        addMessage('user', '取消分析');
+        addMessage('system', '已取消当前分析，您可以输入其他查询需求。');
+        completeConversation();
+        return;
+    }
+    
+    if (optionId === '__other__') {
+        // 用户选择"以上都不是"，触发大模型兜底
+        addMessage('user', '以上都不是，让AI帮我理解');
+        
+        // 显示正在调用大模型的消息
+        const processingMsg = addMessage('system', '正在使用AI深度理解您的需求...');
+        
+        try {
+            // 获取原始输入和数据信息
+            const clarificationContext = window.clarificationContext || {};
+            const userInput = clarificationContext.originalInput || originalInput;
+            const dataInfo = clarificationContext.dataInfo || dataInfo;
+            
+            addProcessingLog('info', '用户选择"以上都不是"，触发大模型兜底', userInput);
+            
+            // 调用大模型API进行语义理解
+            if (window.requirementClassifier && config.ai && config.ai.apiKey) {
+                const columnInfo = window.requirementClassifier.getContextForLLM(
+                    dataInfo.columns || [],
+                    dataInfo.sampleData || [],
+                    []
+                );
+                
+                const llmPrompt = `用户的需求是："${userInput}"，但系统无法理解。请根据以下数据列信息：${columnInfo}，生成一个合理的图表配置或查询配置。`;
+                
+                const llmResponse = await callLLMAPI(llmPrompt);
+                
+                // 尝试解析大模型返回的配置
+                const configMatch = llmResponse.match(/\{[\s\S]*\}/);
+                if (configMatch) {
+                    const llmConfig = JSON.parse(configMatch[0]);
+                    
+                    // 检查返回的是否是图表配置
+                    if (llmConfig.chartType || llmConfig.type === 'chart') {
+                        await handleNLPChartWithConfig(userInput, dataInfo, totalStartTime, [llmConfig]);
+                    } else {
+                        // 尝试作为查询配置处理
+                        await executeLocalQuery(userInput, dataInfo, totalStartTime, llmConfig);
+                    }
+                    
+                    if (processingMsg) processingMsg.remove();
+                    addMessage('system', 'AI已理解您的需求并生成了分析结果');
+                } else {
+                    // 大模型也无法理解，触发拒识
+                    if (processingMsg) processingMsg.remove();
+                    showRejectionMessage('抱歉，经过AI深度分析仍无法理解您的需求', 
+                        '请尝试更明确地描述您的分析需求，如"按省份统计销售额"或"绘制柱状图"');
+                }
+            } else {
+                // 没有配置大模型API，显示友好提示
+                if (processingMsg) processingMsg.remove();
+                addMessage('system', '大模型API未配置，请在设置中配置API Key后重试，或尝试更明确地描述您的需求。');
+            }
+        } catch (error) {
+            console.error('[handleClarificationSelection] 大模型兜底失败:', error);
+            if (processingMsg) processingMsg.remove();
+            // 大模型调用失败，触发拒识
+            showRejectionMessage('抱歉，AI服务暂时不可用', 
+                '请稍后再试，或尝试更明确地描述您的分析需求');
+        }
+        
+        completeConversation();
+        return;
+    }
+    
+    // 找到选择的选项
+    let selectedOption = null;
+    if (choices && choices.length > 0) {
+        selectedOption = choices.find(c => (c.id || c.label) === optionId) || choices.find(c => c.label === optionId);
+    } else if (availableDimensions && availableDimensions.length > 0) {
+        selectedOption = availableDimensions.find(dim => dim === optionId || dim.includes(optionId));
+    }
+    
+    // 添加用户选择消息
+    const selectedLabel = selectedOption ? (selectedOption.label || selectedOption) : optionId;
+    const selectedDesc = selectedOption ? (selectedOption.description || '') : '';
+    addMessage('user', `选择: ${selectedLabel}${selectedDesc ? ` (${selectedDesc})` : ''}`);
+    
+    // 根据追问类型处理
+    switch (clarificationType) {
+        case 'missing_dimension':
+            // 缺少维度信息（如"按什么分组"）
+            await handleMissingDimensionClarification(selectedLabel, originalInput, dataInfo, totalStartTime, clarificationInfo);
+            break;
+            
+        case 'missing_metric':
+            // 缺少指标信息（如"分析什么指标"）
+            await handleMissingMetricClarification(selectedLabel, originalInput, dataInfo, totalStartTime, clarificationInfo);
+            break;
+            
+        case 'chart_type':
+            // 缺少图表类型
+            await handleChartTypeClarification(selectedLabel, originalInput, dataInfo, totalStartTime, clarificationInfo);
+            break;
+            
+        case 'filter_value':
+            // 缺少筛选值
+            await handleFilterValueClarification(selectedLabel, originalInput, dataInfo, totalStartTime, clarificationInfo);
+            break;
+            
+        default:
+            // 默认处理：重新分析用户完整需求
+            const enhancedInput = originalInput + ' ' + selectedLabel;
+            await callGeneralAnalysis(enhancedInput, dataInfo, totalStartTime);
+            break;
+    }
+}
+
+/**
+ * 处理缺少维度信息的追问
+ */
+async function handleMissingDimensionClarification(selectedDimension, originalInput, dataInfo, totalStartTime, clarificationInfo) {
+    const { mentionedColumn, chartType } = clarificationInfo;
+    
+    // 检测排序需求
+    const hasSortDesc = /从高到低|从大到小|降序|倒序|排序.*高|排序.*大/.test(originalInput);
+    const hasSortAsc = /从低到高|从小到大|升序|正序|排序.*低|排序.*小/.test(originalInput);
+    const sortOrder = hasSortDesc ? 'desc' : (hasSortAsc ? 'asc' : null);
+    
+    // 重新生成图表配置
+    const newChartConfig = [{
+        chartType: chartType || 'bar',
+        xAxisColumn: selectedDimension,
+        yAxisColumn: mentionedColumn,
+        labelColumn: selectedDimension,
+        valueColumn: mentionedColumn,
+        title: `各${selectedDimension}的${mentionedColumn}${sortOrder ? (sortOrder === 'desc' ? '从高到低' : '从低到高') : ''}`,
+        description: `${chartType || 'bar'}图表: 显示${selectedDimension}的${mentionedColumn}分布${sortOrder ? (sortOrder === 'desc' ? '（从高到低排序）' : '（从低到高排序）') : ''}`,
+        aggregateFunction: 'sum',
+        sortOrder: sortOrder
+    }];
+    
+    // 添加处理消息
+    addProcessingLog('info', '用户选择了分组维度', selectedDimension);
+    
+    try {
+        // 使用新配置生成图表
+        await handleNLPChartWithConfig(originalInput, dataInfo, totalStartTime, newChartConfig);
+        
+        // 图表生成成功，添加完成消息
+        addMessage('system', '图表生成完成，请在下方"数据可视化"区域查看');
+    } catch (error) {
+        console.error('[handleMissingDimensionClarification] 生成图表失败:', error);
+        addMessage('system', `生成图表失败: ${error.message}`);
+    } finally {
+        // 完成对话，更新状态
+        completeConversation();
+        
+        // 滚动到数据可视化区域
+        setTimeout(() => {
+            const vizSection = document.getElementById('data-visualization');
+            if (vizSection) {
+                vizSection.scrollIntoView({ behavior: 'smooth' });
+            }
+        }, 500);
+    }
+}
+
+/**
+ * 通用分析函数（调用主分析流程）
+ */
+async function callGeneralAnalysis(userInput, dataInfo, totalStartTime) {
+    // 直接调用主分析流程
+    addProcessingLog('info', '用户完成追问，继续分析', userInput);
+    await generalAnalysis(userInput, dataInfo, totalStartTime);
+}
+
+// 这是一个废弃的代码块，注释掉以避免语法错误
+// 下面这段代码应该是某个函数的残留，但缺少函数定义
+// 将其注释掉以解决语法错误
+/*
+    addMessage('system', clarificationHtml);
+    
+    // 滚动到底部
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    
+    // 绑定选项点击事件
+    const optionButtons = messagesContainer.querySelectorAll('.clarification-option:not([data-bound])');
+    optionButtons.forEach(btn => {
+        btn.setAttribute('data-bound', 'true');
+        btn.addEventListener('click', async function() {
+            const selectedDimension = this.getAttribute('data-dimension');
+            
+            if (selectedDimension === '__other__') {
+                // 用户选择"其他列"，提示用户输入
+                const nlpInput = document.getElementById('nlp-input');
+                if (nlpInput) {
+                    nlpInput.placeholder = '请输入您想按哪一列分组...';
+                    nlpInput.focus();
+                }
+                return;
+            }
+            
+            // 用户选择了维度列，重新生成图表
+            console.log('[showClarificationDialog] 用户选择维度:', selectedDimension);
+            
+            // 不要移除追问消息，而是将其置灰
+            const clarificationMsg = messagesContainer.querySelector('.clarification-message');
+            if (clarificationMsg) {
+                clarificationMsg.style.opacity = '0.6';
+                clarificationMsg.style.filter = 'grayscale(50%)';
+                // 禁用所有按钮
+                const buttons = clarificationMsg.querySelectorAll('.clarification-option');
+                buttons.forEach(btn => {
+                    btn.disabled = true;
+                    btn.style.cursor = 'default';
+                    btn.style.boxShadow = 'none';
+                });
+            }
+            
+            // 先添加用户选择的消息（在系统处理完成之前）
+            addMessage('user', `按${selectedDimension}分组`);
+            
+            // 检测排序需求
+            const hasSortDesc = /从高到低|从大到小|降序|倒序|排序.*高|排序.*大/.test(originalInput);
+            const hasSortAsc = /从低到高|从小到大|升序|正序|排序.*低|排序.*小/.test(originalInput);
+            const sortOrder = hasSortDesc ? 'desc' : (hasSortAsc ? 'asc' : null);
+            
+            // 重新生成图表配置
+            const newChartConfig = [{
+                chartType: chartType,
+                xAxisColumn: selectedDimension,
+                yAxisColumn: mentionedColumn,
+                labelColumn: selectedDimension,
+                valueColumn: mentionedColumn,
+                title: `各${selectedDimension}的${mentionedColumn}${sortOrder ? (sortOrder === 'desc' ? '从高到低' : '从低到高') : ''}`,
+                description: `${chartType}图表: 显示${selectedDimension}的${mentionedColumn}分布${sortOrder ? (sortOrder === 'desc' ? '（从高到低排序）' : '（从低到高排序）') : ''}`,
+                aggregateFunction: 'sum',
+                sortOrder: sortOrder
+            }];
+            
+            // 显示处理中的消息
+            addProcessingLog('info', '用户选择了分组维度', selectedDimension);
+            const processingMessage = addMessage('system', '正在生成图表...');
+            
+            try {
+                // 使用新配置生成图表
+                await handleNLPChartWithConfig(originalInput, dataInfo, totalStartTime, newChartConfig);
+                
+                // 图表生成成功，添加完成消息
+                addMessage('system', '图表生成完成，请在下方"数据可视化"区域查看');
+            } catch (error) {
+                console.error('[showClarificationDialog] 生成图表失败:', error);
+                addMessage('system', `生成图表失败: ${error.message}`);
+            } finally {
+                // 完成对话，更新状态
+                completeConversation();
+                
+                // 滚动到数据可视化区域
+                scrollToVisualization();
+            }
+        });
+        
+        // 添加悬停效果
+        btn.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-2px)';
+            this.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.4)';
+        });
+        btn.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+            this.style.boxShadow = '0 2px 8px rgba(102, 126, 234, 0.3)';
+        });
+    });
+}
+*/
 // ==================== 多字段筛选功能 ====================
 
 // 添加筛选条件
@@ -3243,21 +6519,48 @@ function addFilterCondition() {
     const container = document.getElementById('filter-conditions');
     if (!container) return;
     
+    // 检查 headers 是否可用
+    if (!headers || !Array.isArray(headers) || headers.length === 0) {
+        console.warn('[addFilterCondition] 未检测到列信息，请先上传数据文件');
+        
+        // 显示友好提示
+        const existingHint = container.querySelector('.filter-hint');
+        if (!existingHint) {
+            const hintDiv = document.createElement('div');
+            hintDiv.className = 'filter-hint';
+            hintDiv.style.cssText = 'padding: 12px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; margin-bottom: 10px; color: #856404; font-size: 0.9em;';
+            hintDiv.innerHTML = '<strong>提示：</strong>请先上传数据文件，然后再添加筛选条件';
+            container.appendChild(hintDiv);
+            
+            // 3秒后自动移除提示
+            setTimeout(() => {
+                if (hintDiv.parentElement) {
+                    hintDiv.remove();
+                }
+            }, 3000);
+        }
+        return;
+    }
+    
     const filterRow = document.createElement('div');
     filterRow.className = 'filter-row';
-    filterRow.style.cssText = 'display: flex; gap: 10px; margin-bottom: 10px; align-items: center; flex-wrap: wrap;';
+    filterRow.style.cssText = 'display: flex; gap: 10px; margin-bottom: 10px; align-items: center; flex-wrap: wrap; padding: 10px; background: #f8f9fa; border-radius: 4px;';
+    
+    // 移除可能存在的提示
+    const existingHint = container.querySelector('.filter-hint');
+    if (existingHint) {
+        existingHint.remove();
+    }
     
     // 构建列选项
-    const columnOptions = headers.length > 0 
-        ? headers.map(h => `<option value="${h}">${h}</option>`).join('')
-        : '<option value="">请先上传数据</option>';
+    const columnOptions = headers.map(h => `<option value="${h}">${h}</option>`).join('');
     
     filterRow.innerHTML = `
-        <select class="filter-column" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; min-width: 150px; font-size: 0.9em;">
+        <select class="filter-column" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; min-width: 150px; font-size: 0.9em; background: white;">
             <option value="">选择列</option>
             ${columnOptions}
         </select>
-        <select class="filter-operator" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; min-width: 100px; font-size: 0.9em;">
+        <select class="filter-operator" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; min-width: 100px; font-size: 0.9em; background: white;">
             <option value="eq">等于</option>
             <option value="neq">不等于</option>
             <option value="gt">大于</option>
@@ -3265,18 +6568,58 @@ function addFilterCondition() {
             <option value="gte">大于等于</option>
             <option value="lte">小于等于</option>
             <option value="contains">包含</option>
+            <option value="startsWith">开头是</option>
+            <option value="endsWith">结尾是</option>
         </select>
         <input type="text" class="filter-value" placeholder="输入筛选值" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; flex: 1; min-width: 150px; font-size: 0.9em;">
-        <button onclick="this.parentElement.remove()" style="background: #dc3545; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 0.9em; white-space: nowrap;">删除</button>
+        <button class="remove-filter-btn" style="background: #dc3545; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 0.9em; white-space: nowrap;">删除</button>
     `;
     
+    // 绑定删除按钮事件
+    const removeBtn = filterRow.querySelector('.remove-filter-btn');
+    if (removeBtn) {
+        removeBtn.addEventListener('click', () => {
+            filterRow.remove();
+        });
+    }
+    
+    // 绑定列选择事件，用于显示建议值
+    const columnSelect = filterRow.querySelector('.filter-column');
+    if (columnSelect && data && Array.isArray(data) && data.length > 0) {
+        columnSelect.addEventListener('change', () => {
+            const selectedColumn = columnSelect.value;
+            if (selectedColumn) {
+                const columnIndex = headers.indexOf(selectedColumn);
+                if (columnIndex >= 0) {
+                    const uniqueValues = [...new Set(data.map(row => row[columnIndex]))].slice(0, 10);
+                    const valueInput = filterRow.querySelector('.filter-value');
+                    if (valueInput && uniqueValues.length > 0 && uniqueValues.length <= 10) {
+                        valueInput.placeholder = `建议值: ${uniqueValues.join(', ')}`;
+                    }
+                }
+            }
+        });
+    }
+    
+    // 添加动画效果
+    filterRow.style.opacity = '0';
+    filterRow.style.transform = 'translateY(-10px)';
+    filterRow.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+    
     container.appendChild(filterRow);
+    
+    requestAnimationFrame(() => {
+        filterRow.style.opacity = '1';
+        filterRow.style.transform = 'translateY(0)';
+    });
+    
+    console.log('[addFilterCondition] 筛选条件已添加，当前可用列:', headers);
 }
 
 // 更新所有筛选条件的列选项
 function updateFilterColumnOptions() {
     const container = document.getElementById('filter-conditions');
-    if (!container || headers.length === 0) return;
+    if (!container || !headers || !Array.isArray(headers) || headers.length === 0) return;
     
     const filterRows = container.querySelectorAll('.filter-row');
     filterRows.forEach(row => {
@@ -3295,6 +6638,8 @@ function updateFilterColumnOptions() {
             }
         }
     });
+    
+    console.log('[updateFilterColumnOptions] 筛选条件列选项已更新，可用列:', headers);
 }
 
 // 应用多字段筛选
@@ -3409,19 +6754,28 @@ function handleFileSelect(e) {
 
 // 处理文件
 function processFile(file) {
+    console.log('[文件上传] 开始处理文件:', file.name, file.size);
     const loading = document.getElementById('loading');
     loading.classList.remove('hidden');
     
     // 重置智能查询与可视化区域
     resetNLPAreas();
     
-    setTimeout(() => {
+    try {
+        // 立即开始文件处理，不延迟
         if (file.name.endsWith('.csv')) {
             parseCSV(file);
-        } else if (file.name.endsWith('.xlsx')) {
+        } else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
             parseExcel(file);
+        } else {
+            throw new Error('不支持的文件格式，请上传CSV或Excel文件');
         }
-    }, 500);
+    } catch (error) {
+        console.error('[文件上传] 处理失败:', error);
+        addProcessingLog('error', '文件处理失败', error.message);
+        showNotification(`文件处理失败: ${error.message}`, 'error');
+        loading.classList.add('hidden');
+    }
 }
 
 // 更新文件上下文（文件名、Sheet名称、关键词）
@@ -3540,6 +6894,25 @@ function resetNLPAreas() {
         filterContainer.innerHTML = '';
     }
     
+    // 清空对话内容
+    const conversationMessages = document.getElementById('conversation-messages');
+    if (conversationMessages) {
+        // 保留系统欢迎消息
+        conversationMessages.innerHTML = `
+            <div class="message system">
+                <div class="message-content">
+                    <p>你好！我是智能数据洞察助手，有什么可以帮助你的吗？</p>
+                </div>
+            </div>
+        `;
+    }
+    
+    // 清空对话输入
+    const conversationInput = document.getElementById('conversation-input');
+    if (conversationInput) {
+        conversationInput.value = '';
+    }
+    
     // 重置数据库模式
     useDatabaseMode = false;
     if (dbManager) {
@@ -3551,92 +6924,224 @@ function resetNLPAreas() {
 
 // 解析CSV文件
 function parseCSV(file) {
-    // 检查PapaParse库是否可用
-    if (typeof Papa === 'undefined') {
-        console.error('PapaParse库未加载');
-        alert('CSV解析库加载失败，请刷新页面重试');
-        document.getElementById('loading').classList.add('hidden');
-        return;
-    }
-    
     // 更新文件上下文
     updateFileContext(file.name, '');
     
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        try {
-            const text = e.target.result;
-            
-            // 检测并处理BOM（字节顺序标记）
-            let cleanText = text;
-            if (text.charCodeAt(0) === 0xFEFF) {
-                cleanText = text.substring(1);
-            }
-            
-            // 使用 PapaParse 解析 CSV
-            Papa.parse(cleanText, {
-                header: true,           // 第一行作为表头
-                skipEmptyLines: true,   // 跳过空行
-                trimHeaders: true,      // 去除表头空白
-                dynamicTyping: false,   // 保持所有值为字符串类型
-                encoding: 'UTF-8',      // 指定编码
-                complete: function(results) {
-                    if (results.errors && results.errors.length > 0) {
-                        console.warn('CSV 解析警告:', results.errors);
-                        // 只显示严重错误
-                        const seriousErrors = results.errors.filter(e => e.code !== 'TooFewFields' && e.code !== 'TooManyFields');
-                        if (seriousErrors.length > 0) {
-                            console.error('CSV 严重错误:', seriousErrors);
+    // 尝试不同的编码
+    const encodings = ['UTF-8', 'GBK', 'GB2312'];
+    let currentEncodingIndex = 0;
+    
+    function tryReadWithEncoding(encoding) {
+        console.log(`尝试使用编码 ${encoding} 读取CSV文件...`);
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const arrayBuffer = e.target.result;
+                
+                // 使用TextDecoder进行更可靠的编码解码
+                let text;
+                try {
+                    // 尝试使用TextDecoder解码
+                    const decoder = new TextDecoder(encoding);
+                    text = decoder.decode(arrayBuffer);
+                } catch (decoderError) {
+                    // 如果TextDecoder失败，回退到FileReader的readAsText
+                    console.warn('TextDecoder失败，使用FileReader.readAsText:', decoderError);
+                    // 重新读取为文本
+                    const textReader = new FileReader();
+                    textReader.onload = function(e2) {
+                        try {
+                            processText(e2.target.result, encoding);
+                        } catch (error) {
+                            handleEncodingError(error);
                         }
-                    }
-                    
-                    if (!results.data || results.data.length === 0) {
-                        alert('CSV文件为空或没有有效数据');
-                        document.getElementById('loading').classList.add('hidden');
-                        return;
-                    }
-                    
-                    // 过滤掉完全空白的行
-                    originalData = results.data.filter(row => {
-                        return Object.values(row).some(val => val !== '' && val !== null && val !== undefined);
-                    });
-                    
-                    if (originalData.length === 0) {
-                        alert('CSV文件没有有效数据行');
-                        document.getElementById('loading').classList.add('hidden');
-                        return;
-                    }
-                    
-                    headers = results.meta.fields || Object.keys(originalData[0]);
-                    data = [...originalData]; // 初始化显示数据
-                    
-                    addProcessingLog('success', 'CSV文件解析完成', `共 ${originalData.length} 行，${headers.length} 列`);
-                    
-                    // 更新筛选列选项
-                    updateFilterColumns();
-                    
-                    processData();
-                },
-                error: function(error) {
-                    console.error('CSV 解析失败:', error);
-                    alert('CSV文件解析失败: ' + (error.message || '未知错误'));
-                    document.getElementById('loading').classList.add('hidden');
+                    };
+                    textReader.onerror = handleEncodingError;
+                    textReader.readAsText(file, encoding);
+                    return;
                 }
-            });
-        } catch (error) {
-            console.error('CSV处理异常:', error);
-            alert('CSV文件处理失败: ' + error.message);
+                
+                processText(text, encoding);
+            } catch (error) {
+                handleEncodingError(error);
+            }
+        };
+        
+        reader.onerror = handleEncodingError;
+        
+        // 先读取为ArrayBuffer，再使用TextDecoder解码
+        reader.readAsArrayBuffer(file);
+    }
+    
+    function processText(text, encoding) {
+        // 检测并处理BOM（字节顺序标记）
+        let cleanText = text;
+        if (text.charCodeAt(0) === 0xFEFF) {
+            cleanText = text.substring(1);
+        }
+        
+        // 手动解析CSV
+        const lines = cleanText.split(/\r?\n/);
+        
+        if (lines.length === 0) {
+            // 尝试下一个编码
+            tryNextEncoding();
+            return;
+        }
+        
+        // 第一行作为表头
+        const headerLine = lines[0].trim();
+        if (!headerLine) {
+            // 尝试下一个编码
+            tryNextEncoding();
+            return;
+        }
+        
+        // 解析表头（支持逗号分隔）
+        const headersArray = parseCSVLine(headerLine);
+        console.log('解析的表头:', headersArray);
+        
+        if (headersArray.length === 0) {
+            // 尝试下一个编码
+            tryNextEncoding();
+            return;
+        }
+        
+        // 解析数据行
+        const dataArray = [];
+        for (let i = 1; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line) continue;
+            
+            const values = parseCSVLine(line);
+            if (values.length > 0) {
+                const row = {};
+                for (let j = 0; j < headersArray.length; j++) {
+                    row[headersArray[j]] = values[j] || '';
+                }
+                dataArray.push(row);
+            }
+        }
+        
+        if (dataArray.length === 0) {
+            // 尝试下一个编码
+            tryNextEncoding();
+            return;
+        }
+        
+        // 检查是否有乱码（简单检测：如果包含大量非ASCII字符但不是有效的中文字符）
+        const firstRow = dataArray[0];
+        const firstValue = Object.values(firstRow)[0];
+        if (firstValue && containsInvalidChars(firstValue)) {
+            console.warn('检测到可能的乱码，尝试下一个编码');
+            tryNextEncoding();
+            return;
+        }
+        
+        // 赋值给全局变量
+        headers = headersArray;
+        originalData = dataArray;
+        data = [...originalData];
+        
+        console.log('成功使用编码:', encoding);
+        console.log('表头数量:', headers.length);
+        console.log('数据行数:', originalData.length);
+        console.log('第一行数据:', originalData[0]);
+        
+        addProcessingLog('success', 'CSV文件解析完成', `共 ${originalData.length} 行，${headers.length} 列，编码: ${encoding}`);
+                
+                // 更新筛选列选项
+                updateFilterColumns();
+                
+                // CSV向量化
+                if (vectorizationEnabled) {
+                    // 更新向量化状态为"正在向量化"
+                    updateVectorizationStatus('processing');
+                    updateDetailVectorizationStatus('processing');
+                    
+                    // 准备向量化数据
+                    const vectorizationData = {
+                        headers: headers,
+                        rows: originalData.map(row => {
+                            const rowArray = [];
+                            for (const header of headers) {
+                                rowArray.push(row[header] || '');
+                            }
+                            return rowArray;
+                        })
+                    };
+                    
+                    // 调用向量化API
+                    vectorizeExcelData(vectorizationTable, vectorizationData).then(result => {
+                        // 更新向量化状态
+                        updateVectorizationStatus();
+                        updateDetailVectorizationStatus();
+                    });
+                }
+                
+                processData();
+    }
+    
+    function handleEncodingError(error) {
+        console.error('编码处理失败:', error);
+        tryNextEncoding();
+    }
+    
+    function tryNextEncoding() {
+        currentEncodingIndex++;
+        if (currentEncodingIndex < encodings.length) {
+            tryReadWithEncoding(encodings[currentEncodingIndex]);
+        } else {
+            alert('无法正确解析CSV文件，请检查文件编码或尝试转换为UTF-8编码');
             document.getElementById('loading').classList.add('hidden');
         }
-    };
-    reader.onerror = function(error) {
-        console.error('文件读取失败:', error);
-        alert('文件读取失败，请检查文件是否损坏');
-        document.getElementById('loading').classList.add('hidden');
-    };
+    }
     
-    // 尝试使用UTF-8编码读取
-    reader.readAsText(file, 'UTF-8');
+    function containsInvalidChars(str) {
+        // 检测是否包含大量无效字符（可能是乱码）
+        let invalidCount = 0;
+        let totalChars = 0;
+        
+        for (let i = 0; i < str.length; i++) {
+            const charCode = str.charCodeAt(i);
+            totalChars++;
+            
+            // 检查是否是有效的ASCII或中文字符
+            if (charCode < 32 || (charCode > 126 && (charCode < 19968 || charCode > 40869))) {
+                invalidCount++;
+            }
+        }
+        
+        // 如果无效字符比例超过30%，认为是乱码
+        return totalChars > 0 && (invalidCount / totalChars) > 0.3;
+    }
+    
+    // 开始尝试第一个编码
+    tryReadWithEncoding(encodings[currentEncodingIndex]);
+}
+
+// 辅助函数：解析CSV行（支持引号包围的字段）
+function parseCSVLine(line) {
+    const result = [];
+    let current = '';
+    let inQuotes = false;
+    
+    for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        
+        if (char === '"') {
+            inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+            result.push(current.trim());
+            current = '';
+        } else {
+            current += char;
+        }
+    }
+    
+    result.push(current.trim());
+    return result;
 }
 
 // 解析Excel文件
@@ -3650,6 +7155,12 @@ function parseExcel(file) {
     }
     
     console.log('开始解析Excel文件:', file.name);
+    console.log('XLSX库版本:', XLSX.version);
+    console.log('文件类型:', file.type);
+    
+    // 判断是.xlsx还是.xls格式
+    const isXLS = file.name.toLowerCase().endsWith('.xls') && !file.name.toLowerCase().endsWith('.xlsx');
+    console.log('文件格式:', isXLS ? 'XLS (旧版)' : 'XLSX (新版)');
     
     // 更新文件上下文
     updateFileContext(file.name, '');
@@ -3657,24 +7168,39 @@ function parseExcel(file) {
     const reader = new FileReader();
     reader.onload = function(e) {
         try {
-            const fileData = new Uint8Array(e.target.result);
+            const fileData = e.target.result;
             
-            // 使用XLSX库解析 - 尝试多种编码
-            console.log('使用XLSX库解析...');
             let workbook;
             
-            // 首先尝试使用默认编码（自动检测）
-            try {
-                workbook = XLSX.read(fileData, { 
-                    type: 'array'
-                });
-            } catch (e1) {
-                console.warn('默认编码解析失败，尝试UTF-8编码...');
-                // 如果失败，尝试UTF-8编码
-                workbook = XLSX.read(fileData, { 
-                    type: 'array',
-                    codepage: 65001
-                });
+            // 统一使用array方式读取，尝试不同的codepage选项
+            // 对于中文Windows生成的XLS文件，通常使用GBK编码（codepage 936）
+            console.log('使用array方式读取Excel文件...');
+            
+            // 尝试不同的codepage选项
+            const readOptions = [
+                { type: 'array' },  // 默认
+                { type: 'array', codepage: 936 },  // GBK（中文Windows默认编码）
+                { type: 'array', codepage: 65001 }  // UTF-8
+            ];
+            
+            for (let i = 0; i < readOptions.length; i++) {
+                try {
+                    console.log(`尝试读取选项 ${i + 1}:`, readOptions[i]);
+                    workbook = XLSX.read(fileData, readOptions[i]);
+                    if (workbook && workbook.SheetNames && workbook.SheetNames.length > 0) {
+                        console.log(`读取选项 ${i + 1} 成功！`);
+                        break;
+                    }
+                } catch (err) {
+                    console.warn(`读取选项 ${i + 1} 失败:`, err);
+                    continue;
+                }
+            }
+            
+            if (!workbook) {
+                alert('Excel文件解析失败，请检查文件格式');
+                document.getElementById('loading').classList.add('hidden');
+                return;
             }
             
             if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
@@ -3692,83 +7218,47 @@ function parseExcel(file) {
             
             const worksheet = workbook.Sheets[firstSheetName];
             
-            // 获取工作表范围
-            const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
-            console.log('工作表范围:', range);
+            // 获取所有数据，使用defval选项处理空值
+            const allData = XLSX.utils.sheet_to_json(worksheet, { 
+                header: 1,
+                defval: ''
+            });
             
-            // 手动读取表头（第一行）
-            headers = [];
-            for (let C = range.s.c; C <= range.e.c; ++C) {
-                const cellAddress = XLSX.utils.encode_cell({ r: 0, c: C });
-                const cell = worksheet[cellAddress];
-                let headerValue = '';
-                if (cell && cell.v !== undefined) {
-                    headerValue = String(cell.v).trim();
-                }
-                headers.push(headerValue);
+            console.log('原始数据预览 (前3行):', allData.slice(0, 3));
+            
+            if (!allData || allData.length === 0) {
+                alert('Excel文件为空');
+                document.getElementById('loading').classList.add('hidden');
+                return;
             }
             
+            // 第一行作为表头
+            headers = allData[0] || [];
             console.log('表头:', headers);
             
-            // 检查是否有乱码
-            const hasGarbled = headers.some(h => /[\ufffd\u0000-\u001f]/.test(h));
-            if (hasGarbled) {
-                console.error('检测到编码问题，表头包含乱码字符');
-                // 尝试使用不同的编码重新读取
-                console.log('尝试使用GBK编码重新读取...');
-                
-                // 使用codepage 936 (GBK) 重新读取
-                const workbookGBK = XLSX.read(fileData, { 
-                    type: 'array',
-                    codepage: 936
-                });
-                const worksheetGBK = workbookGBK.Sheets[workbookGBK.SheetNames[0]];
-                
-                // 重新读取表头
-                headers = [];
-                const rangeGBK = XLSX.utils.decode_range(worksheetGBK['!ref'] || 'A1');
-                for (let C = rangeGBK.s.c; C <= rangeGBK.e.c; ++C) {
-                    const cellAddress = XLSX.utils.encode_cell({ r: 0, c: C });
-                    const cell = worksheetGBK[cellAddress];
-                    let headerValue = '';
-                    if (cell && cell.v !== undefined) {
-                        headerValue = String(cell.v).trim();
-                    }
-                    headers.push(headerValue);
-                }
-                
-                console.log('GBK编码表头:', headers);
-                
-                // 检查是否还有乱码
-                const stillGarbled = headers.some(h => /[\ufffd\u0000-\u001f]/.test(h));
-                if (stillGarbled) {
-                    console.error('GBK编码仍然有乱码');
-                }
-            }
-            
-            // 读取数据行
+            // 剩余行作为数据
             originalData = [];
-            const dataRange = hasGarbled ? 
-                XLSX.utils.decode_range(workbook.Sheets[workbook.SheetNames[0]]['!ref'] || 'A1') :
-                range;
-            const dataWorksheet = hasGarbled ? 
-                workbook.Sheets[workbook.SheetNames[0]] : worksheet;
-            
-            for (let R = 1; R <= dataRange.e.r; ++R) {
+            for (let i = 1; i < allData.length; i++) {
+                const rowData = allData[i];
                 const row = {};
                 let hasData = false;
-                for (let C = dataRange.s.c; C <= dataRange.e.c; ++C) {
-                    const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
-                    const cell = dataWorksheet[cellAddress];
-                    const header = headers[C - dataRange.s.c] || `列${C + 1}`;
+                
+                for (let j = 0; j < headers.length; j++) {
+                    const header = headers[j] || `列${j + 1}`;
+                    const value = rowData[j];
                     
-                    let value = '';
-                    if (cell && cell.v !== undefined) {
-                        value = cell.v;
+                    // 直接使用原始值，不强制转换
+                    if (value !== null && value !== undefined) {
+                        row[header] = value;
+                    } else {
+                        row[header] = '';
+                    }
+                    
+                    if (row[header] !== '') {
                         hasData = true;
                     }
-                    row[header] = value;
                 }
+                
                 if (hasData) {
                     originalData.push(row);
                 }
@@ -3777,11 +7267,38 @@ function parseExcel(file) {
             data = [...originalData];
             
             console.log('数据行数:', originalData.length);
+            console.log('第一行数据:', originalData[0]);
             
-            addProcessingLog('success', 'Excel文件解析完成', `共 ${originalData.length} 行，${headers.length} 列`);
+            addProcessingLog('success', 'Excel文件解析完成', `共 ${originalData.length} 行，${headers.length} 列，格式: ${isXLS ? 'XLS' : 'XLSX'}`);
             
             // 更新筛选列选项
             updateFilterColumns();
+            
+            // Excel向量化
+            if (vectorizationEnabled) {
+                // 更新向量化状态为"正在向量化"
+                updateVectorizationStatus('processing');
+                updateDetailVectorizationStatus('processing');
+                
+                // 准备向量化数据
+                const vectorizationData = {
+                    headers: headers,
+                    rows: originalData.map(row => {
+                        const rowArray = [];
+                        for (const header of headers) {
+                            rowArray.push(row[header] || '');
+                        }
+                        return rowArray;
+                    })
+                };
+                
+                // 调用向量化API
+                vectorizeExcelData(vectorizationTable, vectorizationData).then(result => {
+                    // 更新向量化状态
+                    updateVectorizationStatus();
+                    updateDetailVectorizationStatus();
+                });
+            }
             
             processData();
         } catch (error) {
@@ -3795,61 +7312,94 @@ function parseExcel(file) {
         alert('文件读取失败');
         document.getElementById('loading').classList.add('hidden');
     };
+    
+    // 统一使用ArrayBuffer方式读取
     reader.readAsArrayBuffer(file);
 }
 
 // 处理数据
 async function processData() {
-    const loading = document.getElementById('loading');
-    loading.classList.add('hidden');
-    
-    // 判断是否需要启用数据库模式（数据量大于10000行）
-    const LARGE_DATA_THRESHOLD = 10000;
-    console.log('检查数据库模式:', {
-        dataLength: originalData.length,
-        threshold: LARGE_DATA_THRESHOLD,
-        dbManagerExists: !!dbManager,
-        dbManagerInitialized: dbManager?.isInitialized
-    });
-    
-    if (originalData.length > LARGE_DATA_THRESHOLD && dbManager) {
-        useDatabaseMode = true;
-        addProcessingLog('info', `数据量较大 (${originalData.length} 行)，启用数据库模式`, '使用SQL.js进行高效查询');
+    try {
+        console.log('[数据处理] 开始处理数据，行数:', originalData.length, '列数:', headers.length);
         
-        try {
-            // 初始化数据库并导入数据
-            const initResult = await dbManager.init();
-            console.log('数据库初始化结果:', initResult);
+        const loading = document.getElementById('loading');
+        
+        // 检查数据是否为空
+        if (!originalData || originalData.length === 0) {
+            throw new Error('没有数据可供处理');
+        }
+        
+        if (!headers || headers.length === 0) {
+            throw new Error('没有表头信息');
+        }
+        
+        // 判断是否需要启用数据库模式（数据量大于10000行）
+        const LARGE_DATA_THRESHOLD = 10000;
+        console.log('检查数据库模式:', {
+            dataLength: originalData.length,
+            threshold: LARGE_DATA_THRESHOLD,
+            dbManagerExists: !!dbManager,
+            dbManagerInitialized: dbManager?.isInitialized
+        });
+        
+        if (originalData.length > LARGE_DATA_THRESHOLD && dbManager) {
+            useDatabaseMode = true;
+            addProcessingLog('info', `数据量较大 (${originalData.length} 行)，启用数据库模式`, '使用SQL.js进行高效查询');
             
-            if (initResult) {
-                await dbManager.createTableFromData(originalData, headers);
-                addProcessingLog('success', '数据库初始化完成', `已创建数据表，共 ${originalData.length} 行`);
-            } else {
-                throw new Error('数据库初始化返回false');
+            try {
+                // 初始化数据库并导入数据
+                const initResult = await dbManager.init();
+                console.log('数据库初始化结果:', initResult);
+                
+                if (initResult) {
+                    await dbManager.createTableFromData(originalData, headers);
+                    addProcessingLog('success', '数据库初始化完成', `已创建数据表，共 ${originalData.length} 行`);
+                } else {
+                    throw new Error('数据库初始化返回false');
+                }
+            } catch (error) {
+                console.error('数据库初始化失败:', error);
+                addProcessingLog('warning', '数据库初始化失败，降级使用内存模式', error.message);
+                useDatabaseMode = false;
             }
-        } catch (error) {
-            console.error('数据库初始化失败:', error);
-            addProcessingLog('warning', '数据库初始化失败，降级使用内存模式', error.message);
+        } else {
             useDatabaseMode = false;
+            if (originalData.length > LARGE_DATA_THRESHOLD && !dbManager) {
+                addProcessingLog('warning', `数据量较大 (${originalData.length} 行) 但数据库管理器未初始化`, '使用内存模式');
+            } else if (originalData.length > 1000) {
+                addProcessingLog('info', `数据量: ${originalData.length} 行，使用内存模式`);
+            }
         }
-    } else {
-        useDatabaseMode = false;
-        if (originalData.length > LARGE_DATA_THRESHOLD && !dbManager) {
-            addProcessingLog('warning', `数据量较大 (${originalData.length} 行) 但数据库管理器未初始化`, '使用内存模式');
-        } else if (originalData.length > 1000) {
-            addProcessingLog('info', `数据量: ${originalData.length} 行，使用内存模式`);
-        }
+        
+        // ========== V4.0新增：生成数据画像 ==========
+        generateDataProfile();
+        
+        // 显示数据预览
+        showDataPreview();
+        
+        // 显示可视化和AI分析区域（但不自动生成图表）
+        document.getElementById('data-visualization').classList.remove('hidden');
+        document.getElementById('ai-analysis').classList.remove('hidden');
+        
+        // 隐藏加载动画
+        loading.classList.remove('hidden');
+        setTimeout(() => {
+            loading.classList.add('hidden');
+        }, 100);
+        
+        console.log('[数据处理] 处理完成');
+        
+    } catch (error) {
+        console.error('[数据处理] 失败:', error);
+        addProcessingLog('error', '数据处理失败', error.message);
+        
+        // 确保加载动画被隐藏
+        const loading = document.getElementById('loading');
+        if (loading) loading.classList.add('hidden');
+        
+        // 显示错误信息
+        showNotification(`数据处理失败: ${error.message}`, 'error');
     }
-    
-    // ========== V4.0新增：生成数据画像 ==========
-    generateDataProfile();
-    
-    // 显示数据预览
-    showDataPreview();
-    
-    // 显示可视化和AI分析区域（但不自动生成图表）
-    document.getElementById('data-visualization').classList.remove('hidden');
-    document.getElementById('ai-analysis').classList.remove('hidden');
 }
 
 // V4.0新增：生成数据画像
@@ -3874,31 +7424,198 @@ function generateDataProfile() {
     }
 }
 
-// V4.0新增：渲染数据画像面板
-function renderDataProfilePanel(profile) {
-    const panel = document.getElementById('data-profile-panel');
-    if (!panel || !profile) return;
+// V5.0重构：渲染数据画像面板
+async function renderDataProfilePanel(profile) {
+    if (!profile) return;
     
-    // 显示面板
-    panel.classList.remove('hidden');
+    // V5.0：更新概要信息（只更新数字，不渲染卡片）
+    const totalRows = document.getElementById('total-rows');
+    const totalCols = document.getElementById('total-cols');
+    const numericCols = document.getElementById('numeric-cols');
+    const textCols = document.getElementById('text-cols');
+    const dateCols = document.getElementById('date-cols');
+    const qualityGrade = document.getElementById('quality-grade');
     
-    // 渲染摘要
-    renderProfileSummary(profile);
+    if (totalRows) totalRows.textContent = profile.shape?.rows || 0;
+    if (totalCols) totalCols.textContent = profile.shape?.cols || 0;
+    if (numericCols) numericCols.textContent = profile.schema?.numericCols?.length || 0;
+    if (textCols) textCols.textContent = profile.schema?.textCols?.length || 0;
+    if (dateCols) dateCols.textContent = profile.schema?.dateCols?.length || 0;
+    if (qualityGrade) qualityGrade.textContent = profile.quality?.grade || 'A';
     
-    // 渲染列信息
-    renderProfileColumns(profile);
+    // 添加向量化状态信息
+    const vectorizationStatus = document.getElementById('vectorization-status');
+    if (vectorizationStatus) {
+        const collections = await getVectorizedCollections();
+        const isVectorized = collections.includes(vectorizationTable);
+        vectorizationStatus.textContent = isVectorized ? '✅ 已向量化' : '❌ 未向量化';
+        vectorizationStatus.style.color = isVectorized ? '#28a745' : '#dc3545';
+    }
     
-    // 渲染数据质量
-    renderProfileQuality(profile);
-    
-    // 绑定折叠按钮事件
-    const toggleBtn = document.getElementById('toggle-profile');
-    if (toggleBtn) {
-        toggleBtn.onclick = () => {
-            panel.classList.toggle('collapsed');
+    // V5.0：绑定"查看详情"按钮事件
+    const viewDetailBtn = document.getElementById('view-profile-detail-btn');
+    if (viewDetailBtn) {
+        viewDetailBtn.onclick = () => {
+            openProfileDetailModal(profile);
         };
     }
 }
+
+// V5.0新增：打开数据画像详细弹窗
+async function openProfileDetailModal(profile) {
+    const modal = document.getElementById('profile-detail-modal');
+    const content = document.getElementById('profile-detail-content');
+    if (!modal || !content || !profile) return;
+    
+    // 渲染详细内容
+    content.innerHTML = `
+        <div class="profile-detail-section">
+            <h4>📊 数据概览</h4>
+            <div class="profile-detail-grid">
+                <div class="detail-item">
+                    <span class="detail-label">总行数</span>
+                    <span class="detail-value">${profile.shape?.rows || 0}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">总列数</span>
+                    <span class="detail-value">${profile.shape?.cols || 0}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">数值列</span>
+                    <span class="detail-value">${profile.schema?.numericCols?.length || 0}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">文本列</span>
+                    <span class="detail-value">${profile.schema?.textCols?.length || 0}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">日期列</span>
+                    <span class="detail-value">${profile.schema?.dateCols?.length || 0}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">分类列</span>
+                    <span class="detail-value">${profile.schema?.categoricalCols?.length || 0}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">向量化状态</span>
+                    <span class="detail-value" id="detail-vectorization-status">❌ 未向量化</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">向量化表名</span>
+                    <span class="detail-value">${vectorizationTable}</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="profile-detail-section">
+            <h4>📋 字段类型分布</h4>
+            <div class="profile-columns-detail">
+                ${renderProfileColumnsDetail(profile)}
+            </div>
+        </div>
+        
+        <div class="profile-detail-section">
+            <h4>✅ 数据质量评估</h4>
+            <div class="profile-quality-detail">
+                ${renderProfileQualityDetail(profile)}
+            </div>
+        </div>
+    `;
+    
+    // 更新向量化状态
+    updateDetailVectorizationStatus();
+    
+    // 显示弹窗
+    modal.classList.remove('hidden');
+}
+
+// 更新数据画像详情页面的向量化状态
+function updateDetailVectorizationStatus(status = 'check') {
+    const vectorizationStatus = document.getElementById('detail-vectorization-status');
+    if (!vectorizationStatus) return;
+    
+    if (status === 'processing') {
+        vectorizationStatus.textContent = '⏳ 正在向量化';
+        vectorizationStatus.style.color = '#ffc107';
+    } else if (status === 'check') {
+        // 检查实际状态
+        getVectorizedCollections().then(collections => {
+            const isVectorized = collections.includes(vectorizationTable);
+            vectorizationStatus.textContent = isVectorized ? '✅ 已向量化' : '❌ 未向量化';
+            vectorizationStatus.style.color = isVectorized ? '#28a745' : '#dc3545';
+        });
+    }
+}
+
+// V5.0新增：渲染字段类型详细列表
+function renderProfileColumnsDetail(profile) {
+    if (!profile.columns) return '<p>暂无字段信息</p>';
+    
+    const columns = Object.entries(profile.columns).map(([name, info]) => ({
+        name,
+        type: info.type,
+        isCategorical: info.isCategorical,
+        icon: info.type === 'numeric' ? '🔢' : info.type === 'datetime' ? '📅' : info.isCategorical ? '🏷️' : '📝'
+    }));
+    
+    return columns.map(col => `
+        <div class="column-detail-item">
+            <span class="column-icon">${col.icon}</span>
+            <span class="column-name">${col.name}</span>
+            <span class="column-type">${col.type}${col.isCategorical ? ' (分类)' : ''}</span>
+        </div>
+    `).join('');
+}
+
+// V5.0新增：渲染数据质量详细信息
+function renderProfileQualityDetail(profile) {
+    if (!profile.quality) return '<p>暂无质量评估信息</p>';
+    
+    const quality = profile.quality;
+    return `
+        <div class="quality-score">
+            <span class="quality-grade">${quality.grade || 'A'}</span>
+            <span class="quality-label">质量评级</span>
+        </div>
+        <div class="quality-metrics">
+            <div class="quality-metric">
+                <span class="metric-label">完整度</span>
+                <span class="metric-value">${quality.completeness.toFixed(1)}%</span>
+            </div>
+            <div class="quality-metric">
+                <span class="metric-label">唯一性</span>
+                <span class="metric-value">${quality.uniqueness ? quality.uniqueness.toFixed(1) : 'N/A'}%</span>
+            </div>
+            <div class="quality-metric">
+                <span class="metric-label">空值数</span>
+                <span class="metric-value">${quality.nullCount || 0}</span>
+            </div>
+            <div class="quality-metric">
+                <span class="metric-label">重复行</span>
+                <span class="metric-value">${quality.duplicateCount || 0}</span>
+            </div>
+        </div>
+    `;
+}
+
+// V5.0：绑定关闭弹窗事件
+document.addEventListener('DOMContentLoaded', () => {
+    const closeBtn = document.getElementById('close-profile-detail-modal');
+    const modal = document.getElementById('profile-detail-modal');
+    
+    if (closeBtn && modal) {
+        closeBtn.onclick = () => {
+            modal.classList.add('hidden');
+        };
+    }
+    
+    // 点击遮罩关闭
+    if (modal) {
+        modal.querySelector('.modal-overlay')?.addEventListener('click', () => {
+            modal.classList.add('hidden');
+        });
+    }
+});
 
 // 渲染摘要统计
 function renderProfileSummary(profile) {
@@ -6031,7 +9748,7 @@ function createChartFromConfig(config, container, aiResponse = null) {
         // 找到实际的Y轴列
         let actualYColumn = yAxisColumn;
         if (yAxisColumn && !headers.includes(yAxisColumn)) {
-            actualYColumn = headers.find(h => h.includes(yAxisColumn) || yAxisColumn.includes(h));
+            actualYColumn = headers.find(h => h.includes(yAxisColumn) || (yAxisColumn && yAxisColumn.includes(h)));
         }
         
         if (!actualYColumn) {
@@ -6260,8 +9977,8 @@ function createChartFromConfig(config, container, aiResponse = null) {
         
         // 找到实际的X轴列
         let actualXColumn = xAxisColumn;
-        if (!headers.includes(xAxisColumn)) {
-            actualXColumn = headers.find(h => h.includes(xAxisColumn) || xAxisColumn.includes(h));
+        if (xAxisColumn && !headers.includes(xAxisColumn)) {
+            actualXColumn = headers.find(h => h.includes(xAxisColumn) || (xAxisColumn && xAxisColumn.includes(h)));
         }
         
         if (!actualXColumn) {
@@ -6272,7 +9989,7 @@ function createChartFromConfig(config, container, aiResponse = null) {
         // 找到实际的Y轴列
         let actualYColumn = yAxisColumn;
         if (yAxisColumn && !headers.includes(yAxisColumn)) {
-            actualYColumn = headers.find(h => h.includes(yAxisColumn) || yAxisColumn.includes(h));
+            actualYColumn = headers.find(h => h.includes(yAxisColumn) || (yAxisColumn && yAxisColumn.includes(h)));
         }
         
         // 统计数据 - 支持聚合函数
@@ -6371,21 +10088,21 @@ function createChartFromConfig(config, container, aiResponse = null) {
         var showingGroups = sorted.length;
         
     } else if (chartType === 'pie' || chartType === 'doughnut') {
-        // 找到实际的标签列
-        let actualLabelColumn = labelColumn;
-        if (!headers.includes(labelColumn)) {
-            actualLabelColumn = headers.find(h => h.includes(labelColumn) || labelColumn.includes(h));
+        // 找到实际的标签列（优先使用labelColumn，其次使用xAxisColumn）
+        let actualLabelColumn = labelColumn || xAxisColumn;
+        if (actualLabelColumn && !headers.includes(actualLabelColumn)) {
+            actualLabelColumn = headers.find(h => h.includes(actualLabelColumn) || (actualLabelColumn && actualLabelColumn.includes(h)));
         }
         
         if (!actualLabelColumn) {
-            container.innerHTML = `<div style="color: #666; padding: 20px;">错误：标签列"${labelColumn}"不存在</div>`;
+            container.innerHTML = `<div style="color: #666; padding: 20px;">错误：标签列不存在</div>`;
             return;
         }
         
-        // 找到实际的数值列（如果有）
-        let actualValueColumn = valueColumn;
-        if (valueColumn && !headers.includes(valueColumn)) {
-            actualValueColumn = headers.find(h => h.includes(valueColumn) || valueColumn.includes(h));
+        // 找到实际的数值列（优先使用valueColumn，其次使用yAxisColumn）
+        let actualValueColumn = valueColumn || yAxisColumn;
+        if (actualValueColumn && !headers.includes(actualValueColumn)) {
+            actualValueColumn = headers.find(h => h.includes(actualValueColumn) || actualValueColumn.includes(h));
         }
         
         // 统计数据
@@ -6450,8 +10167,8 @@ function createChartFromConfig(config, container, aiResponse = null) {
     } else if (chartType === 'scatter') {
         // 散点图处理
         let actualXColumn = xAxisColumn;
-        if (!headers.includes(xAxisColumn)) {
-            actualXColumn = headers.find(h => h.includes(xAxisColumn) || xAxisColumn.includes(h));
+        if (xAxisColumn && !headers.includes(xAxisColumn)) {
+            actualXColumn = headers.find(h => h.includes(xAxisColumn) || (xAxisColumn && xAxisColumn.includes(h)));
         }
         
         if (!actualXColumn) {
@@ -6462,7 +10179,7 @@ function createChartFromConfig(config, container, aiResponse = null) {
         // 找到实际的Y轴列（如果有）
         let actualYColumn = yAxisColumn;
         if (yAxisColumn && !headers.includes(yAxisColumn)) {
-            actualYColumn = headers.find(h => h.includes(yAxisColumn) || yAxisColumn.includes(h));
+            actualYColumn = headers.find(h => h.includes(yAxisColumn) || (yAxisColumn && yAxisColumn.includes(h)));
         }
         
         // 准备散点图数据，处理千分位逗号
@@ -6958,11 +10675,92 @@ function exportQueryResult() {
     printWindow.document.close();
 }
 
-// V3.0新增：调用BERT语义匹配配置生成API
-async function callBERTConfigAPI(userInput, intent, columns) {
+// V4.2新增：前端智能匹配配置生成
+// 根据用户输入和列值智能生成筛选配置
+function generateSmartFilterConfig(userInput, columns, columnValues) {
+    console.log('[V4.2] 前端智能匹配:', { userInput, columns, columnValues });
+    
+    // 从文本中提取可能的筛选值
+    // 模式1: XX的YY（上海的销售额）
+    const match1 = userInput.match(/(.+?)的/);
+    // 模式2: XX是YY时（省份是上海时）
+    const match2 = userInput.match(/(.+?)是(.+?)(?:时|的|，)/);
+    
+    let potentialValues = [];
+    if (match1) potentialValues.push(match1[1].trim());
+    if (match2) potentialValues.push(match2[2].trim());
+    
+    console.log('[V4.2] 潜在筛选值:', potentialValues);
+    
+    // 检查每个潜在值是否在columnValues中
+    for (const value of potentialValues) {
+        for (const [colName, values] of Object.entries(columnValues)) {
+            if (values.includes(value)) {
+                console.log(`[V4.2] 智能匹配成功: '${value}' 属于列 '${colName}'`);
+                
+                // 找到数值列（销售额、数量等）
+                let valueCol = null;
+                for (const col of columns) {
+                    if (col.includes('销售额') || col.includes('金额') || col.includes('数量')) {
+                        valueCol = col;
+                        break;
+                    }
+                }
+                
+                if (valueCol) {
+                    return {
+                        queryType: 'filter_aggregate',
+                        filterColumn: colName,
+                        filterValue: value,
+                        valueColumn: valueCol,
+                        aggregateFunction: 'sum',
+                        title: `${value}的${valueCol}总和`,
+                        description: `筛选${colName}包含"${value}"的数据，计算${valueCol}的sum`,
+                        intentType: 'QUERY_AGGREGATE',
+                        userInput: userInput
+                    };
+                }
+            }
+        }
+    }
+    
+    return null;
+}
+
+// V4.2新增：获取每列的唯一值，用于帮助模型识别筛选列
+// V4.2修复：使用sampleData而不是data（dataInfo结构中没有data属性）
+function getColumnUniqueValues(dataInfo) {
+    // V4.2修复：使用sampleData而不是data
+    const data = dataInfo.sampleData || dataInfo.data;
+    if (!dataInfo || !data || !dataInfo.columns) {
+        console.warn('[V4.2] getColumnUniqueValues: 数据不足', dataInfo);
+        return null;
+    }
+    
+    const columnValues = {};
+    const maxValues = 10; // 每列最多返回10个值，避免数据过大
+    
+    dataInfo.columns.forEach(col => {
+        const values = new Set();
+        data.forEach(row => {
+            if (row[col] !== undefined && row[col] !== null) {
+                values.add(String(row[col]));
+            }
+        });
+        // 转换为数组并限制数量
+        columnValues[col] = Array.from(values).slice(0, maxValues);
+    });
+    
+    console.log('[V4.2] 列唯一值:', columnValues);
+    return columnValues;
+}
+
+// V4.2改进：调用BERT语义匹配配置生成API
+// 关键改进：增加columnValues参数，让模型知道每列有哪些值
+async function callBERTConfigAPI(userInput, intent, columns, columnValues = null) {
     const apiUrl = `${API_BASE_URL}/api/generate-config`;
     
-    console.log('[V3.0] 调用BERT语义匹配API:', { apiUrl, intent, columns });
+    console.log('[V4.2] 调用BERT语义匹配API:', { apiUrl, intent, columns, columnValues });
     
     try {
         const response = await fetch(apiUrl, {
@@ -6973,7 +10771,8 @@ async function callBERTConfigAPI(userInput, intent, columns) {
             body: JSON.stringify({
                 text: userInput,
                 intent: intent,
-                columns: columns
+                columns: columns,
+                columnValues: columnValues  // V4.2新增：列的唯一值
             })
         });
         
@@ -7506,10 +11305,1155 @@ function displayAgentQueryResult(userInput, config, analysisResult, explanationR
     }, 500);
 }
 
+// V4.0新增：更新查询建议按钮
+function updateQuerySuggestions() {
+    if (!window.queryHistoryManager) return;
+    
+    const suggestions = window.queryHistoryManager.getSuggestions();
+    const examplesContainer = document.querySelector('.nlp-examples');
+    
+    if (!examplesContainer) return;
+    
+    // 保留"试试这些："标签
+    const label = examplesContainer.querySelector('.example-label');
+    if (!label) return;
+    
+    // 清空现有按钮
+    const existingButtons = examplesContainer.querySelectorAll('.example-btn');
+    existingButtons.forEach(btn => btn.remove());
+    
+    // 添加新的建议按钮
+    suggestions.forEach(suggestion => {
+        const btn = document.createElement('button');
+        btn.className = 'example-btn';
+        btn.textContent = suggestion.label;
+        btn.setAttribute('data-query', suggestion.query);
+        btn.addEventListener('click', () => {
+            const nlpInput = document.getElementById('nlp-input');
+            if (nlpInput) {
+                nlpInput.value = suggestion.query;
+                nlpInput.focus();
+            }
+        });
+        examplesContainer.appendChild(btn);
+    });
+    
+    console.log('[QueryHistory] 更新查询建议:', suggestions.map(s => s.label).join(', '));
+}
+
+// V4.0新增：初始化查询历史管理器
+async function initQueryHistory() {
+    try {
+        const { default: queryHistoryManager } = await import('./js/queryHistory.js');
+        window.queryHistoryManager = queryHistoryManager;
+        console.log('[QueryHistory] 查询历史管理器初始化成功');
+        
+        // 更新查询建议
+        updateQuerySuggestions();
+    } catch (error) {
+        console.warn('[QueryHistory] 初始化查询历史管理器失败:', error);
+    }
+}
+
+// 对话窗口消息处理函数
+async function handleSendMessage() {
+    const conversationInput = document.getElementById('conversation-input');
+    const conversationMessages = document.getElementById('conversation-messages');
+    const sendMessageBtn = document.getElementById('send-message');
+    const conversationProgress = document.getElementById('conversation-progress');
+    const conversationStatus = document.getElementById('conversation-status');
+    
+    if (!conversationInput || !conversationMessages) return;
+    
+    const userMessage = conversationInput.value.trim();
+    if (!userMessage) {
+        return;
+    }
+    
+    // 添加用户消息到对话窗口
+    addMessage('user', userMessage);
+    
+    // 清空输入框
+    conversationInput.value = '';
+    
+    // 显示处理状态
+    if (conversationStatus) {
+        const statusText = conversationStatus.querySelector('.status-text');
+        const statusDot = conversationStatus.querySelector('.status-dot');
+        if (statusText) {
+            statusText.textContent = '处理中';
+        }
+        if (statusDot) {
+            statusDot.style.background = '#ffc107';
+        }
+    }
+    
+    // 隐藏外部进度条，使用聊天对话框中的进度展示
+    if (conversationProgress) {
+        conversationProgress.classList.add('hidden');
+    }
+    
+    // 禁用发送按钮
+    if (sendMessageBtn) {
+        sendMessageBtn.disabled = true;
+    }
+    
+    try {
+        // 检查是否有数据
+        if (data.length === 0) {
+            addMessage('system', '请先上传数据文件，然后再告诉我您的分析需求。');
+            completeConversation();
+            return;
+        }
+        
+        // 记录开始时间
+        const totalStartTime = Date.now();
+        addProcessingLog('info', '开始处理对话消息', `用户输入: "${userMessage}"`);
+        
+        // V5.0修复：初始化Agent工作流可视化（不自动弹出面板，只更新状态）
+        updateAgentWorkflow('intent_recognition', 'running');
+        
+        // 首先尝试使用原有的本地意图识别逻辑（V4.0修复：优先使用原有的精准模式）
+        if (window.requirementClassifier) {
+            addProcessingLog('info', '尝试使用原有的需求分类模块');
+            
+            const dataInfo = {
+                columns: headers,
+                rowCount: data.length,
+                sampleData: data.slice(0, 10)
+            };
+            
+            // 使用需求分类模块进行智能路由
+            const classification = await window.requirementClassifier.classify(
+                userMessage, 
+                dataInfo.columns, 
+                dataInfo.sampleData
+            );
+            
+            addProcessingLog('info', `需求分类结果: ${classification.mode}`, 
+                `理由: ${classification.reason}, 置信度: ${classification.confidence.toFixed(2)}`);
+            
+            // 如果是精准模式，直接使用原有的处理逻辑
+            if (classification.mode === 'precise') {
+                addProcessingLog('info', '进入精准模式，使用原有的本地意图识别');
+                
+                // 创建临时的输入元素来复用原有的处理逻辑
+                const tempInput = document.createElement('input');
+                tempInput.id = 'nlp-input';
+                tempInput.value = userMessage;
+                document.body.appendChild(tempInput);
+                
+                // 保存原始的 nlp-result 元素
+                const originalNlpResult = document.getElementById('nlp-result');
+                
+                // 创建临时的 nlp-result 元素
+                const tempNlpResult = document.createElement('div');
+                tempNlpResult.id = 'nlp-result';
+                document.body.appendChild(tempNlpResult);
+                
+                // 调用原有的统一NLP处理函数
+                await handleUnifiedNLP();
+                
+                // 检查是否发生了追问（通过检查是否存在clarification-message）
+                const hasClarification = document.querySelector('.clarification-message');
+                
+                // 如果发生了追问，直接返回，不添加处理完成消息
+                if (hasClarification) {
+                    // 移除临时元素
+                    document.body.removeChild(tempInput);
+                    document.body.removeChild(tempNlpResult);
+                    
+                    // 恢复原始元素
+                    if (originalNlpResult) {
+                        originalNlpResult.id = 'nlp-result';
+                    }
+                    
+                    return;
+                }
+                
+                // 获取处理结果
+                const resultContent = tempNlpResult.innerHTML;
+                
+                // 移除临时元素
+                document.body.removeChild(tempInput);
+                document.body.removeChild(tempNlpResult);
+                
+                // 恢复原始元素
+                if (originalNlpResult) {
+                    originalNlpResult.id = 'nlp-result';
+                }
+                
+                // 将结果显示在聊天窗口中作为卡片
+                if (resultContent) {
+                    // 处理结果内容，移除不需要的部分
+                    let processedContent = resultContent;
+                    
+                    // 移除用户需求部分
+                    processedContent = processedContent.replace(/您的需求：.*?<\/div>/s, '');
+                    
+                    // 移除成功提示部分
+                    processedContent = processedContent.replace(/✓ 成功生成.*?区域查看/s, '');
+                    
+                    // 如果是图表生成，只显示图表生成完成和查看按钮
+                    if (processedContent.includes('查看图表') || resultContent.includes('图表')) {
+                        let cardContent = `
+                            <div class="result-card">
+                                <div class="result-card-header">
+                                    <h4>处理结果</h4>
+                                </div>
+                                <div class="result-card-body">
+                                    <p>图表生成完成</p>
+                                    <button class="view-chart-btn" onclick="scrollToVisualization()">查看图表</button>
+                                </div>
+                            </div>
+                        `;
+                        addMessage('system', cardContent);
+                    } else {
+                        let cardContent = `
+                            <div class="result-card">
+                                <div class="result-card-header">
+                                    <h4>处理结果</h4>
+                                </div>
+                                <div class="result-card-body">
+                                    ${processedContent}
+                                </div>
+                            </div>
+                        `;
+                        addMessage('system', cardContent);
+                    }
+                } else {
+                    addMessage('system', '处理完成，结果已生成。');
+                }
+                completeConversation();
+                return;
+            }
+            
+            // 如果是智能模式或拒识，使用新的对话管理器
+            addProcessingLog('info', '进入智能模式或拒识，使用对话管理器');
+            
+            // V5.0修复：更新Agent工作流状态
+            updateAgentWorkflow('intent_recognition', 'completed', {
+                mode: classification.mode,
+                confidence: classification.confidence
+            });
+            updateAgentWorkflow('entity_extraction', 'completed', {
+                entities: classification.entityExtraction,
+                matchedColumns: classification.matchedColumns
+            });
+            updateAgentWorkflow('generate_config', 'running');
+        }
+        
+        // 初始化对话管理器（如果还没有）
+        if (!window.conversationManager) {
+            try {
+                const module = await import('./js/conversationManager.js');
+                window.conversationManager = module.default;
+            } catch (error) {
+                console.error('加载对话管理器失败:', error);
+                addMessage('system', '系统初始化失败，请刷新页面重试。');
+                completeConversation();
+                return;
+            }
+        }
+        
+        // 设置数据信息
+        window.conversationManager.setDataInfo(headers, data);
+        
+        // 使用对话管理器处理用户输入
+        const response = await window.conversationManager.processUserInput(userMessage);
+        
+        addProcessingLog('info', '对话管理器响应', `类型: ${response.type}`);
+        
+        // 根据响应类型处理
+        if (response.type === 'clarification') {
+            // 需要澄清，显示追问消息
+            addMessage('system', response.message);
+            
+            // 生成追问选项
+            if (response.missingElements && response.missingElements.length > 0) {
+                const missingElement = response.missingElements[0];
+                const options = [];
+                
+                if (missingElement.includes('维度')) {
+                    // 生成维度列选项
+                    const dimensionColumns = headers.filter(col => {
+                        const dimensionKeywords = ['地区', '省份', '省', '城市', '产品', '商品', '客户', '类型', '类别', '状态', '日期', '时间'];
+                        return dimensionKeywords.some(kw => col.toLowerCase().includes(kw.toLowerCase()));
+                    });
+                    dimensionColumns.slice(0, 5).forEach(col => {
+                        options.push({ label: col, value: col });
+                    });
+                } else if (missingElement.includes('指标')) {
+                    // 生成度量列选项
+                    const measureColumns = headers.filter(col => {
+                        const measureKeywords = ['销售额', '金额', '数量', '价格', '成本', '利润', '营收', '收入', '增长', '率', '额', '量'];
+                        return measureKeywords.some(kw => col.toLowerCase().includes(kw.toLowerCase()));
+                    });
+                    measureColumns.slice(0, 5).forEach(col => {
+                        options.push({ label: col, value: col });
+                    });
+                }
+                
+                options.push({ label: '补充说明更多细节', value: 'more_details' });
+                options.push({ label: '以上都不是，让AI帮我理解', value: 'llm_fallback' });
+                
+                // 显示追问选项
+                addConfirmationButtons(options, null, null);
+            }
+            
+            completeConversation();
+            
+        } else if (response.type === 'column_confirmation') {
+            // 需要确认列名映射
+            addMessage('system', response.message);
+            addConfirmationButtons(response.options, response.term, response.suggested);
+            completeConversation();
+            
+        } else if (response.type === 'column_alternatives') {
+            // 显示其他列名选项
+            addMessage('system', response.message);
+            addConfirmationButtons(response.options, null, null);
+            completeConversation();
+            
+        } else if (response.type === 'choice') {
+            // 需要用户选择，显示选项
+            addMessage('system', response.message);
+            addChoiceButtons(response.choices);
+            completeConversation();
+            
+        } else if (response.type === 'more_details') {
+            // 需要用户补充更多细节
+            addMessage('system', response.message);
+            completeConversation();
+            
+        } else if (response.type === 'execute') {
+            // 直接执行
+            addMessage('system', response.message);
+            
+            // 执行查询或图表生成
+            if (response.config) {
+                await executeConversationAction(response.config, totalStartTime);
+            }
+            completeConversation();
+            
+        } else if (response.type === 'llm_fallback') {
+            // V5.0：使用大模型兜底，显示详细原因
+            console.log('[V5.0] 本地模型完整度不足，调用大模型:', response);
+            
+            // 检查属性是否存在
+            if (response.completeness !== undefined && response.reason && response.missingElements) {
+                addProcessingLog('info', '本地模型完整度不足', `完整度: ${(response.completeness * 100).toFixed(1)}%，原因: ${response.reason}`);
+                addProcessingLog('info', '缺失要素', response.missingElements.join(', '));
+                addMessage('system', `需求理解完整度 ${(response.completeness * 100).toFixed(0)}%，正在调用大模型进行深度理解...`);
+            } else {
+                addProcessingLog('info', '本地模型无法理解需求', '正在调用大模型进行深度理解...');
+                addMessage('system', '正在调用大模型进行深度理解...');
+            }
+            
+            // 调用大模型
+            await handleLLMFallback(userMessage, totalStartTime);
+            completeConversation();
+            
+        } else if (response.type === 'retry') {
+            // 重试
+            addMessage('system', response.message);
+            completeConversation();
+        }
+        
+    } catch (error) {
+        addMessage('system', `处理失败: ${error.message}`);
+        addProcessingLog('error', '对话处理失败', error.message);
+        completeConversation();
+    }
+}
+
+// 添加列名确认按钮到对话窗口
+function addConfirmationButtons(options, term, suggested) {
+    const conversationMessages = document.getElementById('conversation-messages');
+    if (!conversationMessages) return;
+    
+    // 移除之前的确认按钮（如果有）
+    const existingConfirmation = conversationMessages.querySelector('.confirmation-buttons');
+    if (existingConfirmation) {
+        existingConfirmation.remove();
+    }
+    
+    const confirmationDiv = document.createElement('div');
+    confirmationDiv.className = 'confirmation-buttons';
+    confirmationDiv.style.cssText = 'margin-top: 15px; display: flex; flex-direction: column; gap: 10px; padding: 15px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e0e0e0;';
+    
+    // 添加提示文字
+    const hintText = document.createElement('div');
+    hintText.style.cssText = 'font-size: 0.9em; color: #666; margin-bottom: 5px;';
+    hintText.textContent = '请点击选项或输入编号（1、2、3...）进行选择：';
+    confirmationDiv.appendChild(hintText);
+    
+    options.forEach((option, index) => {
+        const button = document.createElement('button');
+        button.className = 'confirmation-btn';
+        button.textContent = `${index + 1}. ${option.label}`;
+        
+        // 根据选项类型设置不同样式
+        if (option.value === 'none') {
+            // "以上都不是"选项使用不同样式
+            button.style.cssText = `
+                background: #fff3cd;
+                border: 1px solid #ffc107;
+                padding: 12px 16px;
+                border-radius: 8px;
+                cursor: pointer;
+                text-align: left;
+                transition: all 0.3s ease;
+                color: #856404;
+                font-size: 0.95em;
+            `;
+        } else {
+            button.style.cssText = `
+                background: white;
+                border: 2px solid #667eea;
+                padding: 12px 16px;
+                border-radius: 8px;
+                cursor: pointer;
+                text-align: left;
+                transition: all 0.3s ease;
+                color: #333;
+                font-size: 0.95em;
+            `;
+        }
+        
+        button.addEventListener('click', () => handleConfirmationSelection(option, term));
+        button.addEventListener('mouseenter', () => {
+            if (option.value === 'none') {
+                button.style.background = '#ffeeba';
+            } else {
+                button.style.background = '#f0f4ff';
+                button.style.borderColor = '#764ba2';
+                button.style.transform = 'translateX(5px)';
+            }
+        });
+        button.addEventListener('mouseleave', () => {
+            if (option.value === 'none') {
+                button.style.background = '#fff3cd';
+            } else {
+                button.style.background = 'white';
+                button.style.borderColor = '#667eea';
+                button.style.transform = 'translateX(0)';
+            }
+        });
+        
+        confirmationDiv.appendChild(button);
+    });
+    
+    conversationMessages.appendChild(confirmationDiv);
+    conversationMessages.scrollTop = conversationMessages.scrollHeight;
+}
+
+// 处理列名确认选择
+async function handleConfirmationSelection(option, originalTerm) {
+    // 移除确认按钮
+    const conversationMessages = document.getElementById('conversation-messages');
+    const confirmationDiv = conversationMessages.querySelector('.confirmation-buttons');
+    if (confirmationDiv) {
+        confirmationDiv.remove();
+    }
+    
+    // 添加用户选择到对话
+    addMessage('user', option.label);
+    
+    const conversationProgress = document.getElementById('conversation-progress');
+    const conversationStatus = document.getElementById('conversation-status');
+    const sendMessageBtn = document.getElementById('send-message');
+    
+    // 显示处理状态
+    if (conversationStatus) {
+        const statusText = conversationStatus.querySelector('.status-text');
+        const statusDot = conversationStatus.querySelector('.status-dot');
+        if (statusText) {
+            statusText.textContent = '处理中';
+        }
+        if (statusDot) {
+            statusDot.style.background = '#ffc107';
+        }
+    }
+    
+    // 显示进度条
+    if (conversationProgress) {
+        conversationProgress.classList.remove('hidden');
+    }
+    
+    // 禁用发送按钮
+    if (sendMessageBtn) {
+        sendMessageBtn.disabled = true;
+    }
+    
+    try {
+        const totalStartTime = Date.now();
+        
+        if (option.value === 'none') {
+            // 用户说以上都不是，交给大模型处理
+            addMessage('system', '好的，我将使用AI深度理解您的需求，请稍候...');
+            
+            // 获取原始输入（从 currentContext 中保存的 originalInput）
+            const originalInput = window.conversationManager.currentContext?.originalInput;
+            
+            if (originalInput) {
+                // 重置状态
+                window.conversationManager.resetContext();
+                await handleLLMFallback(originalInput, totalStartTime);
+            }
+        } else if (option.value === 'more_details') {
+            // 用户选择补充更多细节
+            addMessage('system', '请补充说明您的需求细节，例如：\n- 您想分析哪些数据列？\n- 您希望进行什么操作（统计、图表、筛选）？\n- 有什么筛选条件吗？');
+            completeConversation();
+            return;
+        } else if (option.value === 'llm_fallback') {
+            // 用户选择让AI处理
+            addMessage('system', '好的，我将使用AI深度理解您的需求...');
+            const originalInput = window.conversationManager.currentContext?.originalInput;
+            if (originalInput) {
+                await handleLLMFallback(originalInput, totalStartTime);
+            }
+            completeConversation();
+            return;
+        } else {
+            // 检查是否是列名确认
+            if (originalTerm) {
+                // 用户确认了列名映射
+                // 记录确认
+                window.conversationManager.semanticMatcher.recordConfirmation(originalTerm, option.value);
+                
+                // 获取原始输入（从 currentContext 中保存的 originalInput）
+                const originalInput = window.conversationManager.currentContext?.originalInput;
+                
+                if (originalInput) {
+                    // 替换术语为确认的列名
+                    const updatedInput = originalInput.replace(originalTerm, option.value);
+                    
+                    addProcessingLog('info', '列名确认后重新处理', `原始输入: "${originalInput}" → 更新后: "${updatedInput}"`);
+                    
+                    // 重置状态（但保留 currentContext，因为 processUserInput 需要它）
+                    window.conversationManager.state = 'idle';
+                    window.conversationManager.currentContext.pendingIntent = null;
+                    
+                    // 直接将更新后的输入作为新的用户消息处理
+                    const response = await window.conversationManager.processUserInput(updatedInput);
+                    
+                    addProcessingLog('info', '重新处理后的响应类型', response.type);
+                    
+                    // 处理响应
+                    if (response.type === 'execute') {
+                        addMessage('system', response.message);
+                        if (response.config) {
+                            await executeConversationAction(response.config, totalStartTime);
+                        }
+                        completeConversation();
+                    } else if (response.type === 'llm_fallback') {
+                        addMessage('system', response.message);
+                        await handleLLMFallback(updatedInput, totalStartTime);
+                        completeConversation();
+                    } else if (response.type === 'column_confirmation') {
+                        // 还有其他的列名需要确认
+                        addMessage('system', response.message);
+                        addConfirmationButtons(response.options, response.term, response.suggested);
+                        completeConversation();
+                    } else if (response.type === 'choice') {
+                        // 需要用户选择操作
+                        addMessage('system', response.message);
+                        if (response.choices && response.choices.length > 0) {
+                            addChoiceButtons(response.choices);
+                        } else {
+                            addMessage('system', '抱歉，没有可用的选项。请尝试重新描述您的需求。');
+                        }
+                        completeConversation();
+                    } else {
+                        // 其他类型的响应
+                        addMessage('system', response.message || '已收到您的确认，正在处理...');
+                        completeConversation();
+                    }
+                } else {
+                    addMessage('system', '抱歉，无法获取原始输入，请重新描述您的需求。');
+                    addProcessingLog('error', '列名确认失败', '无法获取原始输入或术语');
+                    completeConversation();
+                }
+            } else {
+                // 非列名确认，可能是图表需求的维度选择
+                const originalInput = window.conversationManager.currentContext?.originalInput;
+                if (originalInput) {
+                    // 将选择的维度添加到原始输入中
+                    const updatedInput = `${originalInput}，按${option.value}分组`;
+                    
+                    addProcessingLog('info', '维度选择后重新处理', `原始输入: "${originalInput}" → 更新后: "${updatedInput}"`);
+                    
+                    // 重置状态（但保留 currentContext，因为 processUserInput 需要它）
+                    window.conversationManager.state = 'idle';
+                    window.conversationManager.currentContext.pendingIntent = null;
+                    
+                    // 直接将更新后的输入作为新的用户消息处理
+                    const response = await window.conversationManager.processUserInput(updatedInput);
+                    
+                    addProcessingLog('info', '重新处理后的响应类型', response.type);
+                    
+                    // 处理响应
+                    if (response.type === 'execute') {
+                        addMessage('system', response.message);
+                        if (response.config) {
+                            await executeConversationAction(response.config, totalStartTime);
+                        }
+                        completeConversation();
+                    } else if (response.type === 'llm_fallback') {
+                        addMessage('system', response.message);
+                        await handleLLMFallback(updatedInput, totalStartTime);
+                        completeConversation();
+                    } else if (response.type === 'column_confirmation') {
+                        // 还有其他的列名需要确认
+                        addMessage('system', response.message);
+                        addConfirmationButtons(response.options, response.term, response.suggested);
+                        completeConversation();
+                    } else if (response.type === 'choice') {
+                        // 需要用户选择操作
+                        addMessage('system', response.message);
+                        if (response.choices && response.choices.length > 0) {
+                            addChoiceButtons(response.choices);
+                        } else {
+                            addMessage('system', '抱歉，没有可用的选项。请尝试重新描述您的需求。');
+                        }
+                        completeConversation();
+                    } else {
+                        // 其他类型的响应
+                        addMessage('system', response.message || '已收到您的确认，正在处理...');
+                        completeConversation();
+                    }
+                } else {
+                    // 非列名确认，可能是其他类型的选择
+                    addMessage('system', `已选择：${option.label}`);
+                    completeConversation();
+                }
+            }
+        }
+        
+    } catch (error) {
+        addMessage('system', `处理失败: ${error.message}`);
+        addProcessingLog('error', '确认处理失败', error.message);
+        completeConversation();
+    }
+}
+
+// 添加选择按钮到对话窗口
+function addChoiceButtons(choices) {
+    const conversationMessages = document.getElementById('conversation-messages');
+    if (!conversationMessages) return;
+    
+    // 如果选项为空，显示默认消息
+    if (!choices || choices.length === 0) {
+        addMessage('system', '抱歉，没有可用的选项。请尝试重新描述您的需求。');
+        return;
+    }
+    
+    const choicesDiv = document.createElement('div');
+    choicesDiv.className = 'conversation-choices';
+    choicesDiv.style.cssText = 'margin-top: 10px; display: flex; flex-direction: column; gap: 8px;';
+    
+    choices.forEach((choice, index) => {
+        const button = document.createElement('button');
+        button.className = 'choice-btn';
+        button.textContent = `${index + 1}. ${choice.label}`;
+        button.style.cssText = `
+            background: white;
+            border: 1px solid #667eea;
+            padding: 10px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.3s ease;
+            color: #333;
+        `;
+        
+        button.addEventListener('click', () => handleChoiceSelection(choice));
+        button.addEventListener('mouseenter', () => {
+            button.style.background = '#f0f4ff';
+            button.style.borderColor = '#764ba2';
+        });
+        button.addEventListener('mouseleave', () => {
+            button.style.background = 'white';
+            button.style.borderColor = '#667eea';
+        });
+        
+        choicesDiv.appendChild(button);
+    });
+    
+    conversationMessages.appendChild(choicesDiv);
+    conversationMessages.scrollTop = conversationMessages.scrollHeight;
+}
+
+// 处理用户选择
+async function handleChoiceSelection(choice) {
+    addMessage('user', choice.label);
+    
+    const conversationProgress = document.getElementById('conversation-progress');
+    const conversationStatus = document.getElementById('conversation-status');
+    const sendMessageBtn = document.getElementById('send-message');
+    
+    // 显示处理状态
+    if (conversationStatus) {
+        const statusText = conversationStatus.querySelector('.status-text');
+        const statusDot = conversationStatus.querySelector('.status-dot');
+        if (statusText) {
+            statusText.textContent = '处理中';
+        }
+        if (statusDot) {
+            statusDot.style.background = '#ffc107';
+        }
+    }
+    
+    // 显示进度条
+    if (conversationProgress) {
+        conversationProgress.classList.remove('hidden');
+    }
+    
+    // 禁用发送按钮
+    if (sendMessageBtn) {
+        sendMessageBtn.disabled = true;
+    }
+    
+    try {
+        const totalStartTime = Date.now();
+        
+        if (choice.id === 'llm_fallback') {
+            // 使用大模型兜底
+            addMessage('system', '好的，我将使用AI深度理解您的需求，请稍候...');
+            await handleLLMFallback(choice.label, totalStartTime);
+        } else {
+            // 执行选择的操作
+            addMessage('system', `好的，我将为您${choice.description}。`);
+            await executeConversationAction(choice.config, totalStartTime);
+        }
+        
+    } catch (error) {
+        addMessage('system', `处理失败: ${error.message}`);
+        addProcessingLog('error', '选择处理失败', error.message);
+    } finally {
+        completeConversation();
+    }
+}
+
+// 执行对话操作
+async function executeConversationAction(config, totalStartTime) {
+    if (!config) {
+        addMessage('system', '配置信息不完整，无法执行操作。');
+        return;
+    }
+    
+    addProcessingLog('info', '执行对话操作', JSON.stringify(config).substring(0, 100));
+    
+    // V5.0调试：检查排序参数
+    console.log('[executeConversationAction] 配置详情:', {
+        chartType: config.chartType,
+        sortOrder: config.sortOrder,
+        sortBy: config.sortBy,
+        description: config.description
+    });
+    
+    // V5.0修复：更新Agent工作流状态
+    updateAgentWorkflow('generate_config', 'completed', {
+        configType: config.chartType ? 'chart' : (config.queryType || 'unknown'),
+        description: config.description || '执行操作'
+    });
+    updateAgentWorkflow('execute_query', 'running');
+    
+    const dataInfo = {
+        columns: headers,
+        rowCount: data.length,
+        sampleData: data.slice(0, 10)
+    };
+    
+    // 创建临时的 DOM 元素用于显示结果
+    const originalNlpResult = document.getElementById('nlp-result');
+    const tempNlpResult = document.createElement('div');
+    tempNlpResult.id = 'nlp-result';
+    document.body.appendChild(tempNlpResult);
+    
+    try {
+        if (config.chartType) {
+            // 显示处理中的消息
+            const processingMessage = addMessage('system', '正在生成图表...');
+            
+            // 生成图表
+            await handleNLPChartWithConfig(config.userInput || '用户需求', dataInfo, totalStartTime, [config]);
+            
+            // 更新处理消息为完成状态
+            if (processingMessage) {
+                const messageContent = processingMessage.querySelector('.message-content');
+                if (messageContent) {
+                    messageContent.innerHTML = '<p>图表生成完成，请在下方"数据可视化"区域查看</p>';
+                }
+            }
+        } else if (config.queryType === 'aggregate_groupby') {
+            // 执行聚合查询
+            await executeAggregateQuery(config.userInput || '用户需求', dataInfo, totalStartTime, config);
+        } else if (config.queryType) {
+            // 执行其他查询
+            await executeLocalQuery(config.userInput || '用户需求', dataInfo, totalStartTime, config);
+        }
+        
+        // 获取处理结果
+        const resultContent = tempNlpResult.innerHTML;
+        
+        // 以卡片形式显示结果在聊天窗口内
+            if (resultContent) {
+                // 处理结果内容，移除不需要的部分
+                let processedContent = resultContent;
+                
+                // 移除用户需求部分
+                processedContent = processedContent.replace(/您的需求：.*?<\/div>/s, '');
+                
+                // 移除成功提示部分
+                processedContent = processedContent.replace(/✓ 成功生成.*?区域查看/s, '');
+                
+                // 如果是图表生成，只显示图表生成完成和查看按钮
+                if (processedContent.includes('查看图表') || config.chartType) {
+                    let cardContent = `
+                        <div class="result-card">
+                            <div class="result-card-header">
+                                <h4>处理结果</h4>
+                            </div>
+                            <div class="result-card-body">
+                                <p>图表生成完成</p>
+                                <button class="view-chart-btn" onclick="scrollToVisualization()">查看图表</button>
+                            </div>
+                        </div>
+                    `;
+                    addMessage('system', cardContent);
+                } else {
+                    let cardContent = `
+                        <div class="result-card">
+                            <div class="result-card-header">
+                                <h4>处理结果</h4>
+                            </div>
+                            <div class="result-card-body">
+                                ${processedContent}
+                            </div>
+                        </div>
+                    `;
+                    addMessage('system', cardContent);
+                }
+            } else {
+                addMessage('system', '查询已完成，但未生成结果。');
+            }
+        
+        // 同时更新原始的 nlp-result 区域（如果存在）
+        if (originalNlpResult && resultContent) {
+            originalNlpResult.innerHTML = resultContent;
+            originalNlpResult.classList.remove('hidden');
+        }
+        
+        // V5.0修复：更新Agent工作流为完成状态
+        updateAgentWorkflow('execute_query', 'completed');
+        updateAgentWorkflow('render_result', 'completed', {
+            resultType: config.chartType ? 'chart' : (config.queryType || 'unknown')
+        });
+        
+    } catch (error) {
+        addMessage('system', `执行失败: ${error.message}`);
+        addProcessingLog('error', '执行对话操作失败', error.message);
+        // V5.0修复：更新Agent工作流为失败状态
+        updateAgentWorkflow('execute_query', 'error', { error: error.message });
+    } finally {
+        // 移除临时元素
+        if (tempNlpResult.parentNode) {
+            document.body.removeChild(tempNlpResult);
+        }
+        // 恢复原始元素 ID
+        if (originalNlpResult) {
+            originalNlpResult.id = 'nlp-result';
+        }
+    }
+}
+
+// 大模型兜底处理
+async function handleLLMFallback(userMessage, totalStartTime) {
+    addProcessingLog('info', '使用大模型兜底处理', userMessage);
+    
+    try {
+        // 调用现有的统一NLP处理函数
+        const tempInput = document.createElement('input');
+        tempInput.id = 'nlp-input';
+        tempInput.value = userMessage;
+        document.body.appendChild(tempInput);
+        
+        const originalNlpResult = document.getElementById('nlp-result');
+        const tempNlpResult = document.createElement('div');
+        tempNlpResult.id = 'nlp-result';
+        document.body.appendChild(tempNlpResult);
+        
+        const originalNlpProgress = document.getElementById('nlp-progress');
+        const tempNlpProgress = document.createElement('div');
+        tempNlpProgress.id = 'nlp-progress';
+        tempNlpProgress.className = 'query-progress hidden';
+        tempNlpProgress.innerHTML = `
+            <div class="progress-container">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="nlp-progress-fill"></div>
+                </div>
+                <div class="progress-info">
+                    <span class="progress-percent" id="nlp-progress-percent">0%</span>
+                    <span class="progress-text">正在分析您的需求...</span>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(tempNlpProgress);
+        
+        await handleUnifiedNLP();
+        
+        const resultContent = tempNlpResult.innerHTML;
+        
+        document.body.removeChild(tempInput);
+        document.body.removeChild(tempNlpResult);
+        document.body.removeChild(tempNlpProgress);
+        
+        if (originalNlpResult) {
+            originalNlpResult.id = 'nlp-result';
+        }
+        // 不恢复原始nlp-progress元素的ID，始终使用新的进度卡片
+        // if (originalNlpProgress) {
+        //     originalNlpProgress.id = 'nlp-progress';
+        // }
+        
+        if (resultContent) {
+            addMessage('system', 'AI已处理您的需求，结果已显示在下方。');
+        } else {
+            addMessage('system', '抱歉，AI无法理解您的需求，请尝试换一种表达方式。');
+        }
+        
+    } catch (error) {
+        addMessage('system', `AI处理失败: ${error.message}`);
+        addProcessingLog('error', '大模型兜底处理失败', error.message);
+    }
+}
+
+// 显示Toast提示
+function showToast(message, type = 'info') {
+    const toastId = 'toast-' + Date.now();
+    const toast = document.createElement('div');
+    toast.id = toastId;
+    toast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: ${type === 'success' ? '#28a745' : type === 'error' ? '#dc3545' : '#17a2b8'};
+        color: white;
+        padding: 12px 20px;
+        border-radius: 4px;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+        z-index: 9999;
+        max-width: 300px;
+        font-size: 14px;
+        animation: slideIn 0.3s ease-out;
+    `;
+    
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    
+    // 3秒后自动移除
+    setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease-out';
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
+        }, 300);
+    }, 3000);
+}
+
+// 添加消息到对话窗口
+function addMessage(type, content) {
+    const conversationMessages = document.getElementById('conversation-messages');
+    if (!conversationMessages) return null;
+    
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${type}`;
+    
+    const messageContent = document.createElement('div');
+    messageContent.className = 'message-content';
+    messageContent.innerHTML = `<p>${content}</p>`;
+    
+    const messageTime = document.createElement('div');
+    messageTime.className = 'message-time';
+    messageTime.textContent = new Date().toLocaleTimeString();
+    
+    messageDiv.appendChild(messageContent);
+    messageDiv.appendChild(messageTime);
+    conversationMessages.appendChild(messageDiv);
+    
+    // 滚动到底部
+    conversationMessages.scrollTop = conversationMessages.scrollHeight;
+    
+    return messageDiv;
+}
+
+// 完成对话处理
+function completeConversation() {
+    const sendMessageBtn = document.getElementById('send-message');
+    const conversationProgress = document.getElementById('conversation-progress');
+    const conversationStatus = document.getElementById('conversation-status');
+    const conversationProgressPercent = document.getElementById('conversation-progress-percent');
+    const conversationProgressFill = document.getElementById('conversation-progress-fill');
+    
+    // 重置进度条
+    if (conversationProgressPercent) {
+        conversationProgressPercent.textContent = '0%';
+    }
+    if (conversationProgressFill) {
+        conversationProgressFill.style.width = '0%';
+    }
+    
+    // 隐藏进度条
+    if (conversationProgress) {
+        conversationProgress.classList.add('hidden');
+    }
+    
+    // 启用发送按钮
+    if (sendMessageBtn) {
+        sendMessageBtn.disabled = false;
+    }
+    
+    // 恢复状态
+    if (conversationStatus) {
+        const statusText = conversationStatus.querySelector('.status-text');
+        const statusDot = conversationStatus.querySelector('.status-dot');
+        if (statusText) {
+            statusText.textContent = '就绪';
+        }
+        if (statusDot) {
+            statusDot.style.background = '#28a745';
+        }
+    }
+}
+
+// 滚动到数据可视化区域
+function scrollToVisualization() {
+    const visualizationSection = document.getElementById('data-visualization');
+    if (visualizationSection) {
+        visualizationSection.scrollIntoView({ behavior: 'smooth' });
+    }
+}
+
+/**
+ * 显示拒识消息
+ * 当用户输入与数据分析无关或无法理解时调用
+ */
+function showRejectionMessage(title, suggestion, examples = null) {
+    const nlpResult = document.getElementById('nlp-result');
+    if (!nlpResult) return;
+    
+    let examplesHtml = '';
+    if (examples) {
+        examplesHtml = `
+            <div class="rejection-examples">
+                <strong>您可以尝试：</strong>
+                <ul>
+                    ${examples.map(ex => `<li>"${ex}"</li>`).join('')}
+                </ul>
+            </div>
+        `;
+    } else {
+        examplesHtml = `
+            <div class="rejection-examples">
+                <strong>您可以尝试：</strong>
+                <ul>
+                    <li>"统计各省份的平均值"</li>
+                    <li>"绘制销售额柱状图"</li>
+                    <li>"查找最大的险情确认时长"</li>
+                    <li>"按地区分组统计数量"</li>
+                </ul>
+            </div>
+        `;
+    }
+    
+    const rejectionHtml = `
+        <div class="rejection-notice">
+            <div class="rejection-icon">🤔</div>
+            <div class="rejection-title">${title}</div>
+            <div class="rejection-suggestion">
+                <strong>建议：</strong>${suggestion}
+            </div>
+            ${examplesHtml}
+        </div>
+    `;
+    
+    nlpResult.innerHTML = rejectionHtml;
+    
+    // 同时在对话区域显示
+    const rejectionMessage = `
+        <div class="message system rejection-message" style="
+            background: linear-gradient(135deg, #fff3cd 0%, #fff8e1 100%);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 15px 0;
+            border-left: 4px solid #ffc107;
+        ">
+            <div style="font-size: 24px; margin-bottom: 10px;">🤔</div>
+            <div style="font-weight: bold; color: #856404; margin-bottom: 10px;">${title}</div>
+            <div style="color: #856404; margin-bottom: 15px;">${suggestion}</div>
+            <div style="color: #6c757d; font-size: 13px;">
+                <strong>示例：</strong>"统计销售额"、"按地区画柱状图"、"筛选大于1000的数据"
+            </div>
+        </div>
+    `;
+    
+    addMessage('system', rejectionMessage);
+}
+
+/**
+ * PRD V5.0: 统一泛分析函数 (General Analysis)
+ * 整合意图识别、需求分类、本地模型和LLM API调用
+ * 符合PRD要求，完整覆盖所有分析场景
+ * 
+ * 注意：这是一个简化的实现框架，需要与实际代码中的函数集成
+ */
+async function generalAnalysis(userInput, dataInfo, totalStartTime) {
+    try {
+        // 1. 使用统一意图分类器进行意图识别和需求分类
+        if (!unifiedIntentClassifier) {
+            await initUnifiedIntentClassifier();
+        }
+        
+        // 更新Agent工作流
+        updateAgentWorkflow('intent_recognition', 'running');
+        
+        // 2. 进行分类
+        const classification = await unifiedIntentClassifier.classify(
+            userInput, 
+            dataInfo.columns,
+            dataInfo.sampleData || []
+        );
+        
+        // 记录分心结果
+        addProcessingLog('success', '统一意图分类完成', 
+            `类别: ${classification.intentCategory}, 优先级: ${classification.priority}, 置信度: ${classification.confidence.toFixed(2)}`);
+        
+        // 3. 根据分类结果选择合适的处理流程
+        if (classification.intentCategory.includes('CHART_')) {
+            await handleNLPChart(userInput, dataInfo, totalStartTime, classification);
+        } else if (classification.intentCategory.includes('QUERY_')) {
+            await handleNLPQuery(userInput, dataInfo, totalStartTime, classification);
+        } else {
+            // 其他分析类型，使用大模型兜底
+            await handleLLMFallback(userInput, totalStartTime);
+        }
+        
+    } catch (error) {
+        addProcessingLog('error', '通用分析流程失败', error.message);
+        addMessage('system', `分析失败: ${error.message}`);
+    }
+}
+
 // 页面加载完成后初始化
 window.addEventListener('DOMContentLoaded', () => {
     init().catch(error => {
         console.error('初始化失败:', error);
         alert('应用初始化失败，请刷新页面重试');
     });
+
+    // V4.0新增：初始化查询历史
+    initQueryHistory();
 });

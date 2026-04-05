@@ -10,12 +10,14 @@
  * 5. 样本值提取
  */
 
+import chartRecommendationEngine from './chartRecommendationEngine.js';
+
 // 立即执行日志，确认文件被加载
 console.log('>>> dataProfiler.js 文件开始执行 <<<');
 
 class DataProfiler {
     constructor() {
-        this.profile = null;
+        this.dataProfile = null;
         this.columnProfiles = {};
     }
 
@@ -53,7 +55,7 @@ class DataProfiler {
         const relationships = this.analyzeRelationships(data, headers);
         
         // 7. 构建完整画像
-        this.profile = {
+        this.dataProfile = {
             shape,
             columns: this.columnProfiles,
             quality,
@@ -65,7 +67,7 @@ class DataProfiler {
             processingTime: Date.now() - startTime
         };
         
-        return this.profile;
+        return this.dataProfile;
     }
 
     /**
@@ -631,56 +633,33 @@ class DataProfiler {
      * @returns {Array} 推荐的图表配置列表
      */
     getRecommendedCharts() {
-        if (!this.profile) return [];
+        if (!this.dataProfile) return [];
         
-        const recommendations = [];
-        const { schema, columns } = this.profile;
+        const { schema, columns, shape } = this.dataProfile;
         
-        // 时间序列数据 → 折线图
-        if (schema.dataType === 'time_series' && schema.dateCols.length > 0 && schema.numericCols.length > 0) {
-            recommendations.push({
-                type: 'line',
-                title: '趋势分析',
-                xAxis: schema.dateCols[0],
-                yAxis: schema.numericCols.slice(0, 2),
-                reason: '时间序列数据适合用折线图展示趋势'
-            });
-        }
+        // 准备数据特征
+        const dataFeatures = {
+            rowCount: shape.rows,
+            columnCount: shape.cols,
+            numericColumns: schema.numericCols,
+            categoricalColumns: schema.categoricalCols,
+            dateColumns: schema.dateCols,
+            columnProfiles: columns
+        };
         
-        // 分类数据 → 柱状图/饼图
-        if (schema.categoricalCols.length > 0 && schema.numericCols.length > 0) {
-            recommendations.push({
-                type: 'bar',
-                title: '分类对比',
-                xAxis: schema.categoricalCols[0],
-                yAxis: schema.numericCols[0],
-                reason: '分类数据适合用柱状图进行对比'
-            });
-            
-            const catProfile = columns[schema.categoricalCols[0]];
-            if (catProfile && catProfile.uniqueCount <= 10) {
-                recommendations.push({
-                    type: 'pie',
-                    title: '占比分布',
-                    label: schema.categoricalCols[0],
-                    value: schema.numericCols[0],
-                    reason: '类别较少时适合用饼图展示占比'
-                });
-            }
-        }
+        // 调用统一的图表推荐引擎
+        const recommendations = chartRecommendationEngine.recommendCharts(dataFeatures);
         
-        // 多个数值列 → 散点图
-        if (schema.numericCols.length >= 2) {
-            recommendations.push({
-                type: 'scatter',
-                title: '相关性分析',
-                xAxis: schema.numericCols[0],
-                yAxis: schema.numericCols[1],
-                reason: '两个数值列可以用散点图分析相关性'
-            });
-        }
-        
-        return recommendations;
+        // 转换格式以保持兼容性
+        return recommendations.map(rec => ({
+            type: rec.type,
+            title: rec.title,
+            xAxis: rec.config.xAxis,
+            yAxis: rec.config.yAxis,
+            label: rec.config.label,
+            value: rec.config.value,
+            reason: rec.reason
+        }));
     }
 }
 

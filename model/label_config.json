@@ -1,0 +1,53 @@
+{
+  "labels": {
+    "QUERY_FIND": 0,
+    "QUERY_AGGREGATE": 1,
+    "QUERY_FILTER": 2,
+    "QUERY_SORT": 3,
+    "CHART_BAR": 4,
+    "CHART_LINE": 5,
+    "CHART_PIE": 6,
+    "CHART_GENERAL": 7,
+    "PIVOT_TABLE": 8,
+    "DATA_CLEAN": 9,
+    "CHART_COMBO": 10,
+    "CHART_RADAR": 11,
+    "CHART_FUNNEL": 12,
+    "CHART_HEATMAP": 13,
+    "DATA_EXPORT": 14
+  },
+  "label_names": {
+    "0": "QUERY_FIND",
+    "1": "QUERY_AGGREGATE",
+    "2": "QUERY_FILTER",
+    "3": "QUERY_SORT",
+    "4": "CHART_BAR",
+    "5": "CHART_LINE",
+    "6": "CHART_PIE",
+    "7": "CHART_GENERAL",
+    "8": "PIVOT_TABLE",
+    "9": "DATA_CLEAN",
+    "10": "CHART_COMBO",
+    "11": "CHART_RADAR",
+    "12": "CHART_FUNNEL",
+    "13": "CHART_HEATMAP",
+    "14": "DATA_EXPORT"
+  },
+  "label_descriptions": {
+    "QUERY_FIND": "查找特定数据，如最大值、最小值、排名等",
+    "QUERY_AGGREGATE": "统计汇总，如求和、计数、平均值、中位数、标准差等",
+    "QUERY_FILTER": "筛选过滤，如按条件筛选数据",
+    "QUERY_SORT": "排序，如升序、降序排列",
+    "CHART_BAR": "柱状图可视化",
+    "CHART_LINE": "折线图可视化",
+    "CHART_PIE": "饼图可视化",
+    "CHART_GENERAL": "通用图表可视化",
+    "PIVOT_TABLE": "数据透视表，多维交叉分析",
+    "DATA_CLEAN": "数据清洗，如去重、空值处理、异常检测等",
+    "CHART_COMBO": "组合图表，柱状图+折线图组合",
+    "CHART_RADAR": "雷达图，多维度对比分析",
+    "CHART_FUNNEL": "漏斗图，转化分析",
+    "CHART_HEATMAP": "热力图，矩阵数据可视化",
+    "DATA_EXPORT": "数据导出，如导出Excel、CSV等"
+  }
+}

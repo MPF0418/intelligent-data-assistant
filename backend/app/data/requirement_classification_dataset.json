@@ -1,0 +1,1556 @@
+{
+  "data": [
+    {
+      "text": "广东省的销售额是多少",
+      "label": "filter"
+    },
+    {
+      "text": "查询华东地区的销售额",
+      "label": "filter"
+    },
+    {
+      "text": "查找销售额最高的省份",
+      "label": "filter"
+    },
+    {
+      "text": "搜索产品A的销量",
+      "label": "filter"
+    },
+    {
+      "text": "筛选销售额大于10000的记录",
+      "label": "filter"
+    },
+    {
+      "text": "统计各省份的平均销售额",
+      "label": "aggregate"
+    },
+    {
+      "text": "汇总所有产品的总销售额",
+      "label": "aggregate"
+    },
+    {
+      "text": "计算每个地区的销售总额",
+      "label": "aggregate"
+    },
+    {
+      "text": "求销售额的平均值",
+      "label": "aggregate"
+    },
+    {
+      "text": "统计各产品的销量",
+      "label": "aggregate"
+    },
+    {
+      "text": "绘制销售额的柱状图",
+      "label": "chart"
+    },
+    {
+      "text": "生成各地区销售额的折线图",
+      "label": "chart"
+    },
+    {
+      "text": "画一个产品销量的饼图",
+      "label": "chart"
+    },
+    {
+      "text": "可视化销售额的趋势",
+      "label": "chart"
+    },
+    {
+      "text": "展示各省份的销售数据",
+      "label": "chart"
+    },
+    {
+      "text": "按销售额从高到低排序",
+      "label": "sort"
+    },
+    {
+      "text": "将销量按降序排列",
+      "label": "sort"
+    },
+    {
+      "text": "排序销售额",
+      "label": "sort"
+    },
+    {
+      "text": "按地区排序",
+      "label": "sort"
+    },
+    {
+      "text": "销售额的变化趋势",
+      "label": "trend"
+    },
+    {
+      "text": "分析销售数据的趋势",
+      "label": "trend"
+    },
+    {
+      "text": "销售额的增长趋势",
+      "label": "trend"
+    },
+    {
+      "text": "各地区销售额的对比",
+      "label": "trend"
+    },
+    {
+      "text": "销售数据的变化情况",
+      "label": "trend"
+    },
+    {
+      "text": "北京市的销售额",
+      "label": "filter"
+    },
+    {
+      "text": "上海市的销量",
+      "label": "filter"
+    },
+    {
+      "text": "江苏省的销售额是多少",
+      "label": "filter"
+    },
+    {
+      "text": "浙江省的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "福建省的销售额",
+      "label": "filter"
+    },
+    {
+      "text": "山东省的销量",
+      "label": "filter"
+    },
+    {
+      "text": "河南省的销售额是多少",
+      "label": "filter"
+    },
+    {
+      "text": "湖北省的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "湖南省的销售额",
+      "label": "filter"
+    },
+    {
+      "text": "广东省的销量",
+      "label": "filter"
+    },
+    {
+      "text": "广西省的销售额是多少",
+      "label": "filter"
+    },
+    {
+      "text": "海南省的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "重庆市的销售额",
+      "label": "filter"
+    },
+    {
+      "text": "四川省的销量",
+      "label": "filter"
+    },
+    {
+      "text": "贵州省的销售额是多少",
+      "label": "filter"
+    },
+    {
+      "text": "云南省的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "西藏省的销售额",
+      "label": "filter"
+    },
+    {
+      "text": "陕西省的销量",
+      "label": "filter"
+    },
+    {
+      "text": "甘肃省的销售额是多少",
+      "label": "filter"
+    },
+    {
+      "text": "青海省的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "宁夏省的销售额",
+      "label": "filter"
+    },
+    {
+      "text": "新疆省的销量",
+      "label": "filter"
+    },
+    {
+      "text": "内蒙古的销售额是多少",
+      "label": "filter"
+    },
+    {
+      "text": "黑龙江的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "吉林省的销售额",
+      "label": "filter"
+    },
+    {
+      "text": "辽宁省的销量",
+      "label": "filter"
+    },
+    {
+      "text": "河北省的销售额是多少",
+      "label": "filter"
+    },
+    {
+      "text": "山西省的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "安徽省的销售额",
+      "label": "filter"
+    },
+    {
+      "text": "江西省的销量",
+      "label": "filter"
+    },
+    {
+      "text": "产品A的销售额",
+      "label": "filter"
+    },
+    {
+      "text": "产品B的销量",
+      "label": "filter"
+    },
+    {
+      "text": "产品C的销售额是多少",
+      "label": "filter"
+    },
+    {
+      "text": "产品D的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "产品E的销售额",
+      "label": "filter"
+    },
+    {
+      "text": "统计各产品的平均销售额",
+      "label": "aggregate"
+    },
+    {
+      "text": "汇总各地区的总销量",
+      "label": "aggregate"
+    },
+    {
+      "text": "计算每个省份的平均销量",
+      "label": "aggregate"
+    },
+    {
+      "text": "求各产品的销售总额",
+      "label": "aggregate"
+    },
+    {
+      "text": "统计各地区的销售额",
+      "label": "aggregate"
+    },
+    {
+      "text": "汇总所有省份的销量",
+      "label": "aggregate"
+    },
+    {
+      "text": "计算每个产品的平均销量",
+      "label": "aggregate"
+    },
+    {
+      "text": "求所有地区的销售总额",
+      "label": "aggregate"
+    },
+    {
+      "text": "统计各省份的销量",
+      "label": "aggregate"
+    },
+    {
+      "text": "汇总各产品的总销售额",
+      "label": "aggregate"
+    },
+    {
+      "text": "绘制各产品的销售额柱状图",
+      "label": "chart"
+    },
+    {
+      "text": "生成各省份销量的折线图",
+      "label": "chart"
+    },
+    {
+      "text": "画一个各地区销售额的饼图",
+      "label": "chart"
+    },
+    {
+      "text": "可视化各产品的销量趋势",
+      "label": "chart"
+    },
+    {
+      "text": "展示各省份的销售额数据",
+      "label": "chart"
+    },
+    {
+      "text": "按销量从高到低排序",
+      "label": "sort"
+    },
+    {
+      "text": "将销售额按降序排列",
+      "label": "sort"
+    },
+    {
+      "text": "排序销量",
+      "label": "sort"
+    },
+    {
+      "text": "按产品排序",
+      "label": "sort"
+    },
+    {
+      "text": "销量的变化趋势",
+      "label": "trend"
+    },
+    {
+      "text": "分析销量数据的趋势",
+      "label": "trend"
+    },
+    {
+      "text": "销量的增长趋势",
+      "label": "trend"
+    },
+    {
+      "text": "各产品销量的对比",
+      "label": "trend"
+    },
+    {
+      "text": "销量数据的变化情况",
+      "label": "trend"
+    },
+    {
+      "text": "查询销售额大于15000的记录",
+      "label": "filter"
+    },
+    {
+      "text": "筛选销量大于100的产品",
+      "label": "filter"
+    },
+    {
+      "text": "查找销售额小于5000的记录",
+      "label": "filter"
+    },
+    {
+      "text": "搜索销量小于50的产品",
+      "label": "filter"
+    },
+    {
+      "text": "筛选销售额在10000到20000之间的记录",
+      "label": "filter"
+    },
+    {
+      "text": "查询销量在50到100之间的产品",
+      "label": "filter"
+    },
+    {
+      "text": "查找华东地区销售额大于15000的记录",
+      "label": "filter"
+    },
+    {
+      "text": "筛选广东省销量大于100的产品",
+      "label": "filter"
+    },
+    {
+      "text": "查询产品A销售额大于15000的记录",
+      "label": "filter"
+    },
+    {
+      "text": "筛选产品B销量大于100的记录",
+      "label": "filter"
+    },
+    {
+      "text": "统计各地区的销售额平均值",
+      "label": "aggregate"
+    },
+    {
+      "text": "汇总各产品的销量总和",
+      "label": "aggregate"
+    },
+    {
+      "text": "计算每个省份的销售额平均值",
+      "label": "aggregate"
+    },
+    {
+      "text": "求各地区的销量总和",
+      "label": "aggregate"
+    },
+    {
+      "text": "统计各产品的销售额",
+      "label": "aggregate"
+    },
+    {
+      "text": "汇总所有地区的销量",
+      "label": "aggregate"
+    },
+    {
+      "text": "计算每个地区的销量平均值",
+      "label": "aggregate"
+    },
+    {
+      "text": "求所有产品的销售额总和",
+      "label": "aggregate"
+    },
+    {
+      "text": "统计各省份的销售额",
+      "label": "aggregate"
+    },
+    {
+      "text": "汇总各地区的总销售额",
+      "label": "aggregate"
+    },
+    {
+      "text": "绘制各地区的销量柱状图",
+      "label": "chart"
+    },
+    {
+      "text": "生成各产品销售额的折线图",
+      "label": "chart"
+    },
+    {
+      "text": "画一个各省份销量的饼图",
+      "label": "chart"
+    },
+    {
+      "text": "可视化各地区的销售额趋势",
+      "label": "chart"
+    },
+    {
+      "text": "展示各产品的销量数据",
+      "label": "chart"
+    },
+    {
+      "text": "按销售额从低到高排序",
+      "label": "sort"
+    },
+    {
+      "text": "将销量按升序排列",
+      "label": "sort"
+    },
+    {
+      "text": "排序销售额从高到低",
+      "label": "sort"
+    },
+    {
+      "text": "按省份排序",
+      "label": "sort"
+    },
+    {
+      "text": "销售额的季度趋势",
+      "label": "trend"
+    },
+    {
+      "text": "分析销售额的年度趋势",
+      "label": "trend"
+    },
+    {
+      "text": "销量的月度增长趋势",
+      "label": "trend"
+    },
+    {
+      "text": "各地区销售额的季度对比",
+      "label": "trend"
+    },
+    {
+      "text": "销售额的月度变化情况",
+      "label": "trend"
+    },
+    {
+      "text": "查询2024年1月的销售额",
+      "label": "filter"
+    },
+    {
+      "text": "筛选2024年2月的销量",
+      "label": "filter"
+    },
+    {
+      "text": "查找2024年3月的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "搜索2024年4月的销售额",
+      "label": "filter"
+    },
+    {
+      "text": "筛选2024年5月的销量",
+      "label": "filter"
+    },
+    {
+      "text": "查询2024年6月的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "查找2024年7月的销售额",
+      "label": "filter"
+    },
+    {
+      "text": "搜索2024年8月的销量",
+      "label": "filter"
+    },
+    {
+      "text": "筛选2024年9月的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "查询2024年10月的销售额",
+      "label": "filter"
+    },
+    {
+      "text": "查找2024年11月的销量",
+      "label": "filter"
+    },
+    {
+      "text": "搜索2024年12月的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "统计2024年第一季度的销售额",
+      "label": "aggregate"
+    },
+    {
+      "text": "汇总2024年第二季度的销量",
+      "label": "aggregate"
+    },
+    {
+      "text": "计算2024年第三季度的销售额平均值",
+      "label": "aggregate"
+    },
+    {
+      "text": "求2024年第四季度的销量总和",
+      "label": "aggregate"
+    },
+    {
+      "text": "统计2024年上半年的销售额",
+      "label": "aggregate"
+    },
+    {
+      "text": "汇总2024年下半年的销量",
+      "label": "aggregate"
+    },
+    {
+      "text": "计算2024年全年的销售额平均值",
+      "label": "aggregate"
+    },
+    {
+      "text": "求2024年全年的销量总和",
+      "label": "aggregate"
+    },
+    {
+      "text": "统计各季度的销售额",
+      "label": "aggregate"
+    },
+    {
+      "text": "汇总各月份的销量",
+      "label": "aggregate"
+    },
+    {
+      "text": "绘制2024年各月份的销售额柱状图",
+      "label": "chart"
+    },
+    {
+      "text": "生成2024年各季度的销量折线图",
+      "label": "chart"
+    },
+    {
+      "text": "画一个2024年各月份的销售额饼图",
+      "label": "chart"
+    },
+    {
+      "text": "可视化2024年的销售趋势",
+      "label": "chart"
+    },
+    {
+      "text": "展示2024年各季度的销售数据",
+      "label": "chart"
+    },
+    {
+      "text": "按月份排序销售额",
+      "label": "sort"
+    },
+    {
+      "text": "将季度销量按降序排列",
+      "label": "sort"
+    },
+    {
+      "text": "排序2024年各月份的销售额",
+      "label": "sort"
+    },
+    {
+      "text": "按季度排序销量",
+      "label": "sort"
+    },
+    {
+      "text": "2024年销售额的月度趋势",
+      "label": "trend"
+    },
+    {
+      "text": "分析2024年销量的季度趋势",
+      "label": "trend"
+    },
+    {
+      "text": "2024年销售额的增长趋势",
+      "label": "trend"
+    },
+    {
+      "text": "各季度销售额的对比",
+      "label": "trend"
+    },
+    {
+      "text": "2024年销量的月度变化情况",
+      "label": "trend"
+    },
+    {
+      "text": "查询产品A在广东省的销售额",
+      "label": "filter"
+    },
+    {
+      "text": "筛选产品B在上海市的销量",
+      "label": "filter"
+    },
+    {
+      "text": "查找产品C在江苏省的销售额",
+      "label": "filter"
+    },
+    {
+      "text": "搜索产品D在浙江省的销量",
+      "label": "filter"
+    },
+    {
+      "text": "筛选产品E在福建省的销售额",
+      "label": "filter"
+    },
+    {
+      "text": "查询产品A在2024年1月的销售额",
+      "label": "filter"
+    },
+    {
+      "text": "筛选产品B在2024年2月的销量",
+      "label": "filter"
+    },
+    {
+      "text": "查找产品C在2024年3月的销售额",
+      "label": "filter"
+    },
+    {
+      "text": "搜索产品D在2024年4月的销量",
+      "label": "filter"
+    },
+    {
+      "text": "筛选产品E在2024年5月的销售额",
+      "label": "filter"
+    },
+    {
+      "text": "统计产品A在各省份的销售额",
+      "label": "aggregate"
+    },
+    {
+      "text": "汇总产品B在各地区的销量",
+      "label": "aggregate"
+    },
+    {
+      "text": "计算产品C在各月份的销售额平均值",
+      "label": "aggregate"
+    },
+    {
+      "text": "求产品D在各季度的销量总和",
+      "label": "aggregate"
+    },
+    {
+      "text": "统计产品E在各省份的销售额",
+      "label": "aggregate"
+    },
+    {
+      "text": "汇总产品A在各地区的销量",
+      "label": "aggregate"
+    },
+    {
+      "text": "计算产品B在各月份的销售额平均值",
+      "label": "aggregate"
+    },
+    {
+      "text": "求产品C在各季度的销量总和",
+      "label": "aggregate"
+    },
+    {
+      "text": "统计产品D在各省份的销售额",
+      "label": "aggregate"
+    },
+    {
+      "text": "汇总产品E在各地区的销量",
+      "label": "aggregate"
+    },
+    {
+      "text": "绘制产品A在各省份的销售额柱状图",
+      "label": "chart"
+    },
+    {
+      "text": "生成产品B在各地区的销量折线图",
+      "label": "chart"
+    },
+    {
+      "text": "画一个产品C在各月份的销售额饼图",
+      "label": "chart"
+    },
+    {
+      "text": "可视化产品D在各季度的销量趋势",
+      "label": "chart"
+    },
+    {
+      "text": "展示产品E在各省份的销售数据",
+      "label": "chart"
+    },
+    {
+      "text": "按销售额排序产品A在各省份的数据",
+      "label": "sort"
+    },
+    {
+      "text": "将产品B在各地区的销量按降序排列",
+      "label": "sort"
+    },
+    {
+      "text": "排序产品C在各月份的销售额",
+      "label": "sort"
+    },
+    {
+      "text": "按销量排序产品D在各季度的数据",
+      "label": "sort"
+    },
+    {
+      "text": "产品A在各省份的销售额趋势",
+      "label": "trend"
+    },
+    {
+      "text": "分析产品B在各地区的销量趋势",
+      "label": "trend"
+    },
+    {
+      "text": "产品C在各月份的销售额增长趋势",
+      "label": "trend"
+    },
+    {
+      "text": "各省份产品D的销量对比",
+      "label": "trend"
+    },
+    {
+      "text": "产品E在各地区的销售额变化情况",
+      "label": "trend"
+    },
+    {
+      "text": "查询华东地区产品A的销售额",
+      "label": "filter"
+    },
+    {
+      "text": "筛选华南地区产品B的销量",
+      "label": "filter"
+    },
+    {
+      "text": "查找华北地区产品C的销售额",
+      "label": "filter"
+    },
+    {
+      "text": "搜索华中地区产品D的销量",
+      "label": "filter"
+    },
+    {
+      "text": "筛选西南地区产品E的销售额",
+      "label": "filter"
+    },
+    {
+      "text": "查询西北地区产品A的销量",
+      "label": "filter"
+    },
+    {
+      "text": "筛选东北地区产品B的销售额",
+      "label": "filter"
+    },
+    {
+      "text": "查找华东地区2024年1月的销售额",
+      "label": "filter"
+    },
+    {
+      "text": "搜索华南地区2024年2月的销量",
+      "label": "filter"
+    },
+    {
+      "text": "筛选华北地区2024年3月的销售额",
+      "label": "filter"
+    },
+    {
+      "text": "统计华东地区各产品的销售额",
+      "label": "aggregate"
+    },
+    {
+      "text": "汇总华南地区各省份的销量",
+      "label": "aggregate"
+    },
+    {
+      "text": "计算华北地区各月份的销售额平均值",
+      "label": "aggregate"
+    },
+    {
+      "text": "求华中地区各季度的销量总和",
+      "label": "aggregate"
+    },
+    {
+      "text": "统计西南地区各产品的销售额",
+      "label": "aggregate"
+    },
+    {
+      "text": "汇总西北地区各省份的销量",
+      "label": "aggregate"
+    },
+    {
+      "text": "计算东北地区各月份的销售额平均值",
+      "label": "aggregate"
+    },
+    {
+      "text": "求华东地区各季度的销量总和",
+      "label": "aggregate"
+    },
+    {
+      "text": "统计华南地区各产品的销售额",
+      "label": "aggregate"
+    },
+    {
+      "text": "汇总华北地区各省份的销量",
+      "label": "aggregate"
+    },
+    {
+      "text": "绘制华东地区各产品的销售额柱状图",
+      "label": "chart"
+    },
+    {
+      "text": "生成华南地区各省份的销量折线图",
+      "label": "chart"
+    },
+    {
+      "text": "画一个华北地区各月份的销售额饼图",
+      "label": "chart"
+    },
+    {
+      "text": "可视化华中地区各季度的销量趋势",
+      "label": "chart"
+    },
+    {
+      "text": "展示西南地区各产品的销售数据",
+      "label": "chart"
+    },
+    {
+      "text": "按销售额排序华东地区各产品的数据",
+      "label": "sort"
+    },
+    {
+      "text": "将华南地区各省份的销量按降序排列",
+      "label": "sort"
+    },
+    {
+      "text": "排序华北地区各月份的销售额",
+      "label": "sort"
+    },
+    {
+      "text": "按销量排序华中地区各季度的数据",
+      "label": "sort"
+    },
+    {
+      "text": "华东地区各产品的销售额趋势",
+      "label": "trend"
+    },
+    {
+      "text": "分析华南地区各省份的销量趋势",
+      "label": "trend"
+    },
+    {
+      "text": "华北地区各月份的销售额增长趋势",
+      "label": "trend"
+    },
+    {
+      "text": "各地区华中地区的销量对比",
+      "label": "trend"
+    },
+    {
+      "text": "西南地区各产品的销售额变化情况",
+      "label": "trend"
+    },
+    {
+      "text": "查询销售额最高的前5个省份",
+      "label": "filter"
+    },
+    {
+      "text": "筛选销量最高的前10个产品",
+      "label": "filter"
+    },
+    {
+      "text": "查找销售额最低的后5个省份",
+      "label": "filter"
+    },
+    {
+      "text": "搜索销量最低的后10个产品",
+      "label": "filter"
+    },
+    {
+      "text": "筛选销售额排名前三的省份",
+      "label": "filter"
+    },
+    {
+      "text": "查询销量排名前三的产品",
+      "label": "filter"
+    },
+    {
+      "text": "查找销售额排名后三的省份",
+      "label": "filter"
+    },
+    {
+      "text": "搜索销量排名后三的产品",
+      "label": "filter"
+    },
+    {
+      "text": "统计销售额排名前10的省份",
+      "label": "aggregate"
+    },
+    {
+      "text": "汇总销量排名前10的产品",
+      "label": "aggregate"
+    },
+    {
+      "text": "计算销售额排名后10的省份的平均值",
+      "label": "aggregate"
+    },
+    {
+      "text": "求销量排名后10的产品的总和",
+      "label": "aggregate"
+    },
+    {
+      "text": "统计销售额排名前三的省份",
+      "label": "aggregate"
+    },
+    {
+      "text": "汇总销量排名前三的产品",
+      "label": "aggregate"
+    },
+    {
+      "text": "计算销售额排名后三的省份的平均值",
+      "label": "aggregate"
+    },
+    {
+      "text": "求销量排名后三的产品的总和",
+      "label": "aggregate"
+    },
+    {
+      "text": "绘制销售额排名前10的省份柱状图",
+      "label": "chart"
+    },
+    {
+      "text": "生成销量排名前10的产品折线图",
+      "label": "chart"
+    },
+    {
+      "text": "画一个销售额排名前三的省份饼图",
+      "label": "chart"
+    },
+    {
+      "text": "可视化销量排名前三的产品趋势",
+      "label": "chart"
+    },
+    {
+      "text": "展示销售额排名后10的省份数据",
+      "label": "chart"
+    },
+    {
+      "text": "按销售额排序前10的省份",
+      "label": "sort"
+    },
+    {
+      "text": "将销量排序前10的产品按降序排列",
+      "label": "sort"
+    },
+    {
+      "text": "排序销售额排名前三的省份",
+      "label": "sort"
+    },
+    {
+      "text": "按销量排序排名前三的产品",
+      "label": "sort"
+    },
+    {
+      "text": "销售额排名前10的省份趋势",
+      "label": "trend"
+    },
+    {
+      "text": "分析销量排名前10的产品趋势",
+      "label": "trend"
+    },
+    {
+      "text": "销售额排名前三的省份增长趋势",
+      "label": "trend"
+    },
+    {
+      "text": "各省份销售额排名的对比",
+      "label": "trend"
+    },
+    {
+      "text": "产品销量排名的变化情况",
+      "label": "trend"
+    },
+    {
+      "text": "查询2024年第一季度的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "筛选2024年第二季度的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "查找2024年第三季度的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "搜索2024年第四季度的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "筛选2024年上半年的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "查询2024年下半年的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "查找2024年全年的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "搜索2024年1月到3月的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "筛选2024年4月到6月的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "查询2024年7月到9月的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "查找2024年10月到12月的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "统计2024年第一季度的销售数据",
+      "label": "aggregate"
+    },
+    {
+      "text": "汇总2024年第二季度的销售数据",
+      "label": "aggregate"
+    },
+    {
+      "text": "计算2024年第三季度的销售数据平均值",
+      "label": "aggregate"
+    },
+    {
+      "text": "求2024年第四季度的销售数据总和",
+      "label": "aggregate"
+    },
+    {
+      "text": "统计2024年上半年的销售数据",
+      "label": "aggregate"
+    },
+    {
+      "text": "汇总2024年下半年的销售数据",
+      "label": "aggregate"
+    },
+    {
+      "text": "计算2024年全年的销售数据平均值",
+      "label": "aggregate"
+    },
+    {
+      "text": "求2024年全年的销售数据总和",
+      "label": "aggregate"
+    },
+    {
+      "text": "统计2024年1月到3月的销售数据",
+      "label": "aggregate"
+    },
+    {
+      "text": "汇总2024年4月到6月的销售数据",
+      "label": "aggregate"
+    },
+    {
+      "text": "绘制2024年各季度的销售数据柱状图",
+      "label": "chart"
+    },
+    {
+      "text": "生成2024年上半年和下半年的销售数据折线图",
+      "label": "chart"
+    },
+    {
+      "text": "画一个2024年各季度的销售数据饼图",
+      "label": "chart"
+    },
+    {
+      "text": "可视化2024年的销售数据趋势",
+      "label": "chart"
+    },
+    {
+      "text": "展示2024年各季度的销售数据",
+      "label": "chart"
+    },
+    {
+      "text": "按销售数据排序2024年各季度",
+      "label": "sort"
+    },
+    {
+      "text": "将2024年上半年和下半年的销售数据按降序排列",
+      "label": "sort"
+    },
+    {
+      "text": "排序2024年各季度的销售数据",
+      "label": "sort"
+    },
+    {
+      "text": "按销售数据排序2024年的时间段",
+      "label": "sort"
+    },
+    {
+      "text": "2024年各季度销售数据的趋势",
+      "label": "trend"
+    },
+    {
+      "text": "分析2024年上半年和下半年销售数据的趋势",
+      "label": "trend"
+    },
+    {
+      "text": "2024年销售数据的增长趋势",
+      "label": "trend"
+    },
+    {
+      "text": "各季度销售数据的对比",
+      "label": "trend"
+    },
+    {
+      "text": "2024年销售数据的变化情况",
+      "label": "trend"
+    },
+    {
+      "text": "查询华东地区2024年第一季度的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "筛选华南地区2024年第二季度的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "查找华北地区2024年第三季度的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "搜索华中地区2024年第四季度的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "筛选西南地区2024年上半年的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "查询西北地区2024年下半年的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "查找东北地区2024年全年的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "搜索华东地区2024年1月到3月的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "筛选华南地区2024年4月到6月的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "查询华北地区2024年7月到9月的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "统计华东地区2024年第一季度的销售数据",
+      "label": "aggregate"
+    },
+    {
+      "text": "汇总华南地区2024年第二季度的销售数据",
+      "label": "aggregate"
+    },
+    {
+      "text": "计算华北地区2024年第三季度的销售数据平均值",
+      "label": "aggregate"
+    },
+    {
+      "text": "求华中地区2024年第四季度的销售数据总和",
+      "label": "aggregate"
+    },
+    {
+      "text": "统计西南地区2024年上半年的销售数据",
+      "label": "aggregate"
+    },
+    {
+      "text": "汇总西北地区2024年下半年的销售数据",
+      "label": "aggregate"
+    },
+    {
+      "text": "计算东北地区2024年全年的销售数据平均值",
+      "label": "aggregate"
+    },
+    {
+      "text": "求华东地区2024年1月到3月的销售数据总和",
+      "label": "aggregate"
+    },
+    {
+      "text": "统计华南地区2024年4月到6月的销售数据",
+      "label": "aggregate"
+    },
+    {
+      "text": "汇总华北地区2024年7月到9月的销售数据",
+      "label": "aggregate"
+    },
+    {
+      "text": "绘制华东地区2024年各季度的销售数据柱状图",
+      "label": "chart"
+    },
+    {
+      "text": "生成华南地区2024年上半年和下半年的销售数据折线图",
+      "label": "chart"
+    },
+    {
+      "text": "画一个华北地区2024年各季度的销售数据饼图",
+      "label": "chart"
+    },
+    {
+      "text": "可视化华中地区2024年的销售数据趋势",
+      "label": "chart"
+    },
+    {
+      "text": "展示西南地区2024年各季度的销售数据",
+      "label": "chart"
+    },
+    {
+      "text": "按销售数据排序华东地区2024年各季度",
+      "label": "sort"
+    },
+    {
+      "text": "将华南地区2024年上半年和下半年的销售数据按降序排列",
+      "label": "sort"
+    },
+    {
+      "text": "排序华北地区2024年各季度的销售数据",
+      "label": "sort"
+    },
+    {
+      "text": "按销售数据排序华中地区2024年的时间段",
+      "label": "sort"
+    },
+    {
+      "text": "华东地区2024年各季度销售数据的趋势",
+      "label": "trend"
+    },
+    {
+      "text": "分析华南地区2024年上半年和下半年销售数据的趋势",
+      "label": "trend"
+    },
+    {
+      "text": "华北地区2024年销售数据的增长趋势",
+      "label": "trend"
+    },
+    {
+      "text": "各地区2024年销售数据的对比",
+      "label": "trend"
+    },
+    {
+      "text": "西南地区2024年销售数据的变化情况",
+      "label": "trend"
+    },
+    {
+      "text": "查询产品A在2024年第一季度的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "筛选产品B在2024年第二季度的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "查找产品C在2024年第三季度的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "搜索产品D在2024年第四季度的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "筛选产品E在2024年上半年的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "查询产品A在2024年下半年的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "查找产品B在2024年全年的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "搜索产品C在2024年1月到3月的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "筛选产品D在2024年4月到6月的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "查询产品E在2024年7月到9月的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "统计产品A在2024年第一季度的销售数据",
+      "label": "aggregate"
+    },
+    {
+      "text": "汇总产品B在2024年第二季度的销售数据",
+      "label": "aggregate"
+    },
+    {
+      "text": "计算产品C在2024年第三季度的销售数据平均值",
+      "label": "aggregate"
+    },
+    {
+      "text": "求产品D在2024年第四季度的销售数据总和",
+      "label": "aggregate"
+    },
+    {
+      "text": "统计产品E在2024年上半年的销售数据",
+      "label": "aggregate"
+    },
+    {
+      "text": "汇总产品A在2024年下半年的销售数据",
+      "label": "aggregate"
+    },
+    {
+      "text": "计算产品B在2024年全年的销售数据平均值",
+      "label": "aggregate"
+    },
+    {
+      "text": "求产品C在2024年1月到3月的销售数据总和",
+      "label": "aggregate"
+    },
+    {
+      "text": "统计产品D在2024年4月到6月的销售数据",
+      "label": "aggregate"
+    },
+    {
+      "text": "汇总产品E在2024年7月到9月的销售数据",
+      "label": "aggregate"
+    },
+    {
+      "text": "绘制产品A在2024年各季度的销售数据柱状图",
+      "label": "chart"
+    },
+    {
+      "text": "生成产品B在2024年上半年和下半年的销售数据折线图",
+      "label": "chart"
+    },
+    {
+      "text": "画一个产品C在2024年各季度的销售数据饼图",
+      "label": "chart"
+    },
+    {
+      "text": "可视化产品D在2024年的销售数据趋势",
+      "label": "chart"
+    },
+    {
+      "text": "展示产品E在2024年各季度的销售数据",
+      "label": "chart"
+    },
+    {
+      "text": "按销售数据排序产品A在2024年各季度",
+      "label": "sort"
+    },
+    {
+      "text": "将产品B在2024年上半年和下半年的销售数据按降序排列",
+      "label": "sort"
+    },
+    {
+      "text": "排序产品C在2024年各季度的销售数据",
+      "label": "sort"
+    },
+    {
+      "text": "按销售数据排序产品D在2024年的时间段",
+      "label": "sort"
+    },
+    {
+      "text": "产品A在2024年各季度销售数据的趋势",
+      "label": "trend"
+    },
+    {
+      "text": "分析产品B在2024年上半年和下半年销售数据的趋势",
+      "label": "trend"
+    },
+    {
+      "text": "产品C在2024年销售数据的增长趋势",
+      "label": "trend"
+    },
+    {
+      "text": "各产品2024年销售数据的对比",
+      "label": "trend"
+    },
+    {
+      "text": "产品D在2024年销售数据的变化情况",
+      "label": "trend"
+    },
+    {
+      "text": "查询广东省产品A在2024年1月的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "筛选上海市产品B在2024年2月的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "查找江苏省产品C在2024年3月的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "搜索浙江省产品D在2024年4月的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "筛选福建省产品E在2024年5月的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "查询山东省产品A在2024年6月的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "查找河南省产品B在2024年7月的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "搜索湖北省产品C在2024年8月的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "筛选湖南省产品D在2024年9月的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "查询广东省产品E在2024年10月的销售数据",
+      "label": "filter"
+    },
+    {
+      "text": "统计广东省产品A在2024年1月的销售数据",
+      "label": "aggregate"
+    },
+    {
+      "text": "汇总上海市产品B在2024年2月的销售数据",
+      "label": "aggregate"
+    },
+    {
+      "text": "计算江苏省产品C在2024年3月的销售数据平均值",
+      "label": "aggregate"
+    },
+    {
+      "text": "求浙江省产品D在2024年4月的销售数据总和",
+      "label": "aggregate"
+    },
+    {
+      "text": "统计福建省产品E在2024年5月的销售数据",
+      "label": "aggregate"
+    },
+    {
+      "text": "汇总山东省产品A在2024年6月的销售数据",
+      "label": "aggregate"
+    },
+    {
+      "text": "计算河南省产品B在2024年7月的销售数据平均值",
+      "label": "aggregate"
+    },
+    {
+      "text": "求湖北省产品C在2024年8月的销售数据总和",
+      "label": "aggregate"
+    },
+    {
+      "text": "统计湖南省产品D在2024年9月的销售数据",
+      "label": "aggregate"
+    },
+    {
+      "text": "汇总广东省产品E在2024年10月的销售数据",
+      "label": "aggregate"
+    },
+    {
+      "text": "绘制广东省产品A在2024年各月份的销售数据柱状图",
+      "label": "chart"
+    },
+    {
+      "text": "生成上海市产品B在2024年各月份的销售数据折线图",
+      "label": "chart"
+    },
+    {
+      "text": "画一个江苏省产品C在2024年各月份的销售数据饼图",
+      "label": "chart"
+    },
+    {
+      "text": "可视化浙江省产品D在2024年的销售数据趋势",
+      "label": "chart"
+    },
+    {
+      "text": "展示福建省产品E在2024年各月份的销售数据",
+      "label": "chart"
+    },
+    {
+      "text": "按销售数据排序广东省产品A在2024年各月份",
+      "label": "sort"
+    },
+    {
+      "text": "将上海市产品B在2024年各月份的销售数据按降序排列",
+      "label": "sort"
+    },
+    {
+      "text": "排序江苏省产品C在2024年各月份的销售数据",
+      "label": "sort"
+    },
+    {
+      "text": "按销售数据排序浙江省产品D在2024年各月份",
+      "label": "sort"
+    },
+    {
+      "text": "广东省产品A在2024年各月份销售数据的趋势",
+      "label": "trend"
+    },
+    {
+      "text": "分析上海市产品B在2024年各月份销售数据的趋势",
+      "label": "trend"
+    },
+    {
+      "text": "江苏省产品C在2024年销售数据的增长趋势",
+      "label": "trend"
+    },
+    {
+      "text": "各省份产品D在2024年销售数据的对比",
+      "label": "trend"
+    },
+    {
+      "text": "福建省产品E在2024年销售数据的变化情况",
+      "label": "trend"
+    }
+  ]
+}

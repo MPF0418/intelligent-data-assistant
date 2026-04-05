@@ -1,0 +1,684 @@
+{
+  "timestamp": "2026-04-04T09:27:28.814328",
+  "summary": {
+    "total": 96,
+    "passed": 96,
+    "failed": 0,
+    "skipped": 0,
+    "rate": "100%"
+  },
+  "tests": [
+    {
+      "id": "TC-UC01-001",
+      "name": "CSV文件拖拽上传",
+      "status": "passed",
+      "message": "CSV文件上传成功",
+      "timestamp": "09:26:45"
+    },
+    {
+      "id": "TC-UC01-002",
+      "name": "CSV文件点击上传",
+      "status": "passed",
+      "message": "点击上传功能正常",
+      "timestamp": "09:26:45"
+    },
+    {
+      "id": "TC-UC01-003",
+      "name": "XLSX文件拖拽上传",
+      "status": "passed",
+      "message": "XLSX文件上传成功",
+      "timestamp": "09:26:48"
+    },
+    {
+      "id": "TC-UC01-004",
+      "name": "XLSX文件点击上传",
+      "status": "passed",
+      "message": "XLSX点击上传已覆盖",
+      "timestamp": "09:26:48"
+    },
+    {
+      "id": "TC-UC01-005",
+      "name": "拖拽区域视觉反馈",
+      "status": "passed",
+      "message": "上传区域: upload-section",
+      "timestamp": "09:26:48"
+    },
+    {
+      "id": "TC-UC01-006",
+      "name": "文件类型验证-拒绝非法文件",
+      "status": "passed",
+      "message": "文件类型验证机制正常",
+      "timestamp": "09:26:49"
+    },
+    {
+      "id": "TC-UC01-007",
+      "name": "文件大小限制-超大文件",
+      "status": "passed",
+      "message": "大文件已就绪(5.2MB)",
+      "timestamp": "09:26:49"
+    },
+    {
+      "id": "TC-UC01-008",
+      "name": "文件名特殊字符处理",
+      "status": "passed",
+      "message": "文件名处理正常",
+      "timestamp": "09:26:50"
+    },
+    {
+      "id": "TC-UC01-009",
+      "name": "上传进度显示",
+      "status": "passed",
+      "message": "进度显示机制就绪",
+      "timestamp": "09:26:50"
+    },
+    {
+      "id": "TC-UC01-010",
+      "name": "重复上传覆盖确认",
+      "status": "passed",
+      "message": "重复上传自动覆盖",
+      "timestamp": "09:26:52"
+    },
+    {
+      "id": "TC-UC01-011",
+      "name": "清空已选文件",
+      "status": "passed",
+      "message": "清空功能正常",
+      "timestamp": "09:26:53"
+    },
+    {
+      "id": "TC-UC02-001",
+      "name": "数据表格渲染-基础显示",
+      "status": "passed",
+      "message": "表格渲染11行",
+      "timestamp": "09:26:59"
+    },
+    {
+      "id": "TC-UC02-002",
+      "name": "数据表格渲染-完整列名",
+      "status": "passed",
+      "message": "显示8列",
+      "timestamp": "09:26:59"
+    },
+    {
+      "id": "TC-UC02-003",
+      "name": "数据表格渲染-空值显示",
+      "status": "passed",
+      "message": "空值显示机制正常",
+      "timestamp": "09:26:59"
+    },
+    {
+      "id": "TC-UC02-004",
+      "name": "数据概览统计-总行数",
+      "status": "passed",
+      "message": "统计: 📊 500 行 × 8 列",
+      "timestamp": "09:26:59"
+    },
+    {
+      "id": "TC-UC02-005",
+      "name": "数据概览统计-总列数",
+      "status": "passed",
+      "message": "列数统计正常",
+      "timestamp": "09:26:59"
+    },
+    {
+      "id": "TC-UC02-006",
+      "name": "数据概览统计-数据类型",
+      "status": "passed",
+      "message": "数据类型识别正常",
+      "timestamp": "09:26:59"
+    },
+    {
+      "id": "TC-UC02-007",
+      "name": "数据概览统计-缺失值",
+      "status": "passed",
+      "message": "缺失值统计正常",
+      "timestamp": "09:26:59"
+    },
+    {
+      "id": "TC-UC02-008",
+      "name": "分页显示-首页加载",
+      "status": "passed",
+      "message": "分页组件存在",
+      "timestamp": "09:26:59"
+    },
+    {
+      "id": "TC-UC02-009",
+      "name": "分页显示-翻页功能",
+      "status": "passed",
+      "message": "翻页功能就绪",
+      "timestamp": "09:26:59"
+    },
+    {
+      "id": "TC-UC02-010",
+      "name": "分页显示-跳转功能",
+      "status": "passed",
+      "message": "跳转功能就绪",
+      "timestamp": "09:26:59"
+    },
+    {
+      "id": "TC-UC02-011",
+      "name": "列类型识别-数值型",
+      "status": "passed",
+      "message": "数值类型识别正常",
+      "timestamp": "09:26:59"
+    },
+    {
+      "id": "TC-UC02-012",
+      "name": "列类型识别-文本型",
+      "status": "passed",
+      "message": "文本类型识别正常",
+      "timestamp": "09:26:59"
+    },
+    {
+      "id": "TC-UC02-013",
+      "name": "列类型识别-日期型",
+      "status": "passed",
+      "message": "日期类型识别正常",
+      "timestamp": "09:26:59"
+    },
+    {
+      "id": "TC-UC03-001",
+      "name": "柱状图渲染-基础柱状图",
+      "status": "passed",
+      "message": "柱状图组件就绪",
+      "timestamp": "09:27:06"
+    },
+    {
+      "id": "TC-UC03-002",
+      "name": "柱状图渲染-多系列柱状图",
+      "status": "passed",
+      "message": "多系列柱状图支持",
+      "timestamp": "09:27:06"
+    },
+    {
+      "id": "TC-UC03-003",
+      "name": "折线图渲染-基础折线图",
+      "status": "passed",
+      "message": "折线图类型支持",
+      "timestamp": "09:27:06"
+    },
+    {
+      "id": "TC-UC03-004",
+      "name": "折线图渲染-多系列折线图",
+      "status": "passed",
+      "message": "多系列折线图支持",
+      "timestamp": "09:27:06"
+    },
+    {
+      "id": "TC-UC03-005",
+      "name": "饼图渲染-基础饼图",
+      "status": "passed",
+      "message": "饼图类型支持",
+      "timestamp": "09:27:06"
+    },
+    {
+      "id": "TC-UC03-006",
+      "name": "饼图渲染-环形图",
+      "status": "passed",
+      "message": "环形图类型支持",
+      "timestamp": "09:27:06"
+    },
+    {
+      "id": "TC-UC03-007",
+      "name": "图表标题显示",
+      "status": "passed",
+      "message": "图表标题正常",
+      "timestamp": "09:27:06"
+    },
+    {
+      "id": "TC-UC03-008",
+      "name": "图表坐标轴标签",
+      "status": "passed",
+      "message": "坐标轴标签正常",
+      "timestamp": "09:27:06"
+    },
+    {
+      "id": "TC-UC03-009",
+      "name": "图表数据点提示",
+      "status": "passed",
+      "message": "数据点提示正常",
+      "timestamp": "09:27:06"
+    },
+    {
+      "id": "TC-UC03-010",
+      "name": "图表图例显示",
+      "status": "passed",
+      "message": "图例显示正常",
+      "timestamp": "09:27:06"
+    },
+    {
+      "id": "TC-UC03-011",
+      "name": "图表导出-PNG格式",
+      "status": "passed",
+      "message": "PNG导出功能就绪",
+      "timestamp": "09:27:06"
+    },
+    {
+      "id": "TC-UC03-012",
+      "name": "图表导出-SVG格式",
+      "status": "passed",
+      "message": "SVG导出功能就绪",
+      "timestamp": "09:27:06"
+    },
+    {
+      "id": "TC-UC03-013",
+      "name": "图表动态更新",
+      "status": "passed",
+      "message": "图表响应式正常",
+      "timestamp": "09:27:07"
+    },
+    {
+      "id": "TC-UC03-014",
+      "name": "图表类型切换",
+      "status": "passed",
+      "message": "图表类型切换支持(0个选项)",
+      "timestamp": "09:27:07"
+    },
+    {
+      "id": "TC-UC04-001",
+      "name": "基础查询-单条件查询",
+      "status": "passed",
+      "message": "单条件查询正常",
+      "timestamp": "09:27:11"
+    },
+    {
+      "id": "TC-UC04-002",
+      "name": "输入验证-空输入拦截",
+      "status": "passed",
+      "message": "[BUG FIXED] 空输入按钮禁用",
+      "timestamp": "09:27:11"
+    },
+    {
+      "id": "TC-UC04-003",
+      "name": "输入验证-超长输入处理",
+      "status": "passed",
+      "message": "超长输入处理正常",
+      "timestamp": "09:27:11"
+    },
+    {
+      "id": "TC-UC04-004",
+      "name": "查询历史-记录保存",
+      "status": "passed",
+      "message": "历史记录保存正常",
+      "timestamp": "09:27:11"
+    },
+    {
+      "id": "TC-UC04-005",
+      "name": "查询历史-历史回显",
+      "status": "passed",
+      "message": "历史回显正常",
+      "timestamp": "09:27:11"
+    },
+    {
+      "id": "TC-UC04-006",
+      "name": "查询历史-历史删除",
+      "status": "passed",
+      "message": "历史删除正常",
+      "timestamp": "09:27:11"
+    },
+    {
+      "id": "TC-UC04-007",
+      "name": "错误提示-无效查询处理",
+      "status": "passed",
+      "message": "无效查询处理正常",
+      "timestamp": "09:27:11"
+    },
+    {
+      "id": "TC-UC04-008",
+      "name": "查询性能-响应时间",
+      "status": "passed",
+      "message": "响应时间<3秒",
+      "timestamp": "09:27:11"
+    },
+    {
+      "id": "TC-UC04-009",
+      "name": "查询结果-分页显示",
+      "status": "passed",
+      "message": "结果分页显示正常",
+      "timestamp": "09:27:11"
+    },
+    {
+      "id": "TC-UC04-010",
+      "name": "查询结果-高亮显示",
+      "status": "passed",
+      "message": "高亮显示正常",
+      "timestamp": "09:27:11"
+    },
+    {
+      "id": "TC-UC05-001",
+      "name": "意图识别-柱状图意图",
+      "status": "passed",
+      "message": "Query: Show bar chart",
+      "timestamp": "09:27:12"
+    },
+    {
+      "id": "TC-UC05-002",
+      "name": "意图识别-折线图意图",
+      "status": "passed",
+      "message": "Query: Show line chart",
+      "timestamp": "09:27:12"
+    },
+    {
+      "id": "TC-UC05-003",
+      "name": "意图识别-饼图意图",
+      "status": "passed",
+      "message": "Query: Show pie chart",
+      "timestamp": "09:27:12"
+    },
+    {
+      "id": "TC-UC05-004",
+      "name": "意图识别-筛选意图",
+      "status": "passed",
+      "message": "Query: Filter by category",
+      "timestamp": "09:27:12"
+    },
+    {
+      "id": "TC-UC05-005",
+      "name": "意图识别-多条件组合",
+      "status": "passed",
+      "message": "Query: Show sales greater than 1000",
+      "timestamp": "09:27:12"
+    },
+    {
+      "id": "TC-UC05-006",
+      "name": "意图识别-模糊查询",
+      "status": "passed",
+      "message": "Query: display some graphs",
+      "timestamp": "09:27:12"
+    },
+    {
+      "id": "TC-UC05-007",
+      "name": "意图识别-同义词处理",
+      "status": "passed",
+      "message": "Query: render a chart",
+      "timestamp": "09:27:12"
+    },
+    {
+      "id": "TC-UC05-008",
+      "name": "意图识别-可视化反馈",
+      "status": "passed",
+      "message": "Query: Show visualization",
+      "timestamp": "09:27:12"
+    },
+    {
+      "id": "TC-UC06-001",
+      "name": "添加筛选条件",
+      "status": "passed",
+      "message": "筛选条件UI就绪",
+      "timestamp": "09:27:14"
+    },
+    {
+      "id": "TC-UC06-002",
+      "name": "删除筛选条件",
+      "status": "passed",
+      "message": "删除功能正常",
+      "timestamp": "09:27:14"
+    },
+    {
+      "id": "TC-UC06-003",
+      "name": "筛选操作符-等于",
+      "status": "passed",
+      "message": "等于操作符正常",
+      "timestamp": "09:27:14"
+    },
+    {
+      "id": "TC-UC06-004",
+      "name": "筛选操作符-包含",
+      "status": "passed",
+      "message": "包含操作符正常",
+      "timestamp": "09:27:14"
+    },
+    {
+      "id": "TC-UC06-005",
+      "name": "筛选操作符-大于/小于",
+      "status": "passed",
+      "message": "比较操作符正常",
+      "timestamp": "09:27:14"
+    },
+    {
+      "id": "TC-UC06-006",
+      "name": "多条件组合筛选",
+      "status": "passed",
+      "message": "多条件组合正常",
+      "timestamp": "09:27:14"
+    },
+    {
+      "id": "TC-UC06-007",
+      "name": "筛选结果实时预览",
+      "status": "passed",
+      "message": "实时预览正常",
+      "timestamp": "09:27:14"
+    },
+    {
+      "id": "TC-UC06-008",
+      "name": "筛选条件重置",
+      "status": "passed",
+      "message": "重置功能正常",
+      "timestamp": "09:27:14"
+    },
+    {
+      "id": "TC-UC06-009",
+      "name": "筛选性能-大数据量",
+      "status": "passed",
+      "message": "大数据筛选性能正常",
+      "timestamp": "09:27:17"
+    },
+    {
+      "id": "TC-UC07-001",
+      "name": "对话上下文保持",
+      "status": "passed",
+      "message": "上下文保持正常",
+      "timestamp": "09:27:18"
+    },
+    {
+      "id": "TC-UC07-002",
+      "name": "对话上下文修正",
+      "status": "passed",
+      "message": "上下文修正正常",
+      "timestamp": "09:27:18"
+    },
+    {
+      "id": "TC-UC07-003",
+      "name": "对话历史加载",
+      "status": "passed",
+      "message": "历史加载正常",
+      "timestamp": "09:27:18"
+    },
+    {
+      "id": "TC-UC07-004",
+      "name": "对话历史清除",
+      "status": "passed",
+      "message": "历史清除正常",
+      "timestamp": "09:27:18"
+    },
+    {
+      "id": "TC-UC07-005",
+      "name": "对话导出功能",
+      "status": "passed",
+      "message": "对话导出正常",
+      "timestamp": "09:27:18"
+    },
+    {
+      "id": "TC-UC07-006",
+      "name": "对话分页显示",
+      "status": "passed",
+      "message": "对话分页正常",
+      "timestamp": "09:27:18"
+    },
+    {
+      "id": "TC-UC07-007",
+      "name": "对话时间戳显示",
+      "status": "passed",
+      "message": "时间戳显示正常",
+      "timestamp": "09:27:18"
+    },
+    {
+      "id": "TC-UC07-008",
+      "name": "对话消息复制",
+      "status": "passed",
+      "message": "消息复制正常",
+      "timestamp": "09:27:18"
+    },
+    {
+      "id": "TC-UC08-001",
+      "name": "Agent面板显示",
+      "status": "passed",
+      "message": "Agent面板正常",
+      "timestamp": "09:27:20"
+    },
+    {
+      "id": "TC-UC08-002",
+      "name": "Agent任务创建",
+      "status": "passed",
+      "message": "任务创建正常",
+      "timestamp": "09:27:20"
+    },
+    {
+      "id": "TC-UC08-003",
+      "name": "Agent任务取消",
+      "status": "passed",
+      "message": "任务取消功能正常",
+      "timestamp": "09:27:23"
+    },
+    {
+      "id": "TC-UC08-004",
+      "name": "Agent任务状态显示",
+      "status": "passed",
+      "message": "状态显示正常",
+      "timestamp": "09:27:23"
+    },
+    {
+      "id": "TC-UC08-005",
+      "name": "Agent任务结果展示",
+      "status": "passed",
+      "message": "结果展示正常",
+      "timestamp": "09:27:23"
+    },
+    {
+      "id": "TC-UC08-006",
+      "name": "Agent任务历史记录",
+      "status": "passed",
+      "message": "历史记录正常",
+      "timestamp": "09:27:23"
+    },
+    {
+      "id": "TC-UC08-007",
+      "name": "Agent错误处理",
+      "status": "passed",
+      "message": "错误处理正常",
+      "timestamp": "09:27:23"
+    },
+    {
+      "id": "TC-UC09-001",
+      "name": "指标卡片显示",
+      "status": "passed",
+      "message": "指标卡片正常",
+      "timestamp": "09:27:24"
+    },
+    {
+      "id": "TC-UC09-002",
+      "name": "实时性能更新",
+      "status": "passed",
+      "message": "实时更新正常",
+      "timestamp": "09:27:24"
+    },
+    {
+      "id": "TC-UC09-003",
+      "name": "性能阈值告警",
+      "status": "passed",
+      "message": "告警机制正常",
+      "timestamp": "09:27:24"
+    },
+    {
+      "id": "TC-UC09-004",
+      "name": "历史性能查询",
+      "status": "passed",
+      "message": "历史查询正常",
+      "timestamp": "09:27:24"
+    },
+    {
+      "id": "TC-UC09-005",
+      "name": "性能报告导出",
+      "status": "passed",
+      "message": "报告导出正常",
+      "timestamp": "09:27:24"
+    },
+    {
+      "id": "TC-UC09-006",
+      "name": "性能趋势图",
+      "status": "passed",
+      "message": "趋势图正常",
+      "timestamp": "09:27:24"
+    },
+    {
+      "id": "TC-UC10-001",
+      "name": "设置面板显示",
+      "status": "passed",
+      "message": "设置面板正常",
+      "timestamp": "09:27:27"
+    },
+    {
+      "id": "TC-UC10-002",
+      "name": "主题切换-亮色/暗色",
+      "status": "passed",
+      "message": "主题切换正常",
+      "timestamp": "09:27:27"
+    },
+    {
+      "id": "TC-UC10-003",
+      "name": "语言切换",
+      "status": "passed",
+      "message": "语言切换正常",
+      "timestamp": "09:27:27"
+    },
+    {
+      "id": "TC-UC10-004",
+      "name": "用户偏好保存",
+      "status": "passed",
+      "message": "偏好保存正常",
+      "timestamp": "09:27:27"
+    },
+    {
+      "id": "TC-UC10-005",
+      "name": "设置重置",
+      "status": "passed",
+      "message": "设置重置正常",
+      "timestamp": "09:27:27"
+    },
+    {
+      "id": "TC-UC11-001",
+      "name": "日志面板显示",
+      "status": "passed",
+      "message": "日志面板正常",
+      "timestamp": "09:27:28"
+    },
+    {
+      "id": "TC-UC11-002",
+      "name": "日志级别过滤",
+      "status": "passed",
+      "message": "级别过滤正常",
+      "timestamp": "09:27:28"
+    },
+    {
+      "id": "TC-UC11-003",
+      "name": "日志内容搜索",
+      "status": "passed",
+      "message": "内容搜索正常",
+      "timestamp": "09:27:28"
+    },
+    {
+      "id": "TC-UC11-004",
+      "name": "日志导出功能",
+      "status": "passed",
+      "message": "日志导出正常",
+      "timestamp": "09:27:28"
+    },
+    {
+      "id": "TC-UC11-005",
+      "name": "日志自动清理",
+      "status": "passed",
+      "message": "自动清理正常",
+      "timestamp": "09:27:28"
+    }
+  ]
+}

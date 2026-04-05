@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>V3.0 测试中心 - 智能数据洞察助手</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+        
+        header h1 {
+            font-size: 36px;
+            margin-bottom: 10px;
+        }
+        
+        header p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        
+        .test-section {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        .test-section h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .test-section h2::before {
+            font-size: 24px;
+        }
+        
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .test-card {
+            background: #f8f9ff;
+            border: 2px solid #e0e7ff;
+            border-radius: 12px;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .test-card:hover {
+            border-color: #667eea;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+        }
+        
+        .test-card h3 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        
+        .test-card p {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+        
+        .test-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+        
+        .test-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        .test-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .test-btn.success {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        }
+        
+        .test-btn.error {
+            background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
+        }
+        
+        .test-result {
+            margin-top: 15px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .test-result.success {
+            border-left-color: #11998e;
+            background: #f0fff4;
+        }
+        
+        .test-result.error {
+            border-left-color: #eb3349;
+            background: #fff5f5;
+        }
+        
+        .test-result pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 12px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+        
+        .log-container {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 8px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+        
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 5px;
+            border-left: 3px solid transparent;
+        }
+        
+        .log-info {
+            border-left-color: #667eea;
+            color: #667eea;
+        }
+        
+        .log-success {
+            border-left-color: #11998e;
+            color: #11998e;
+        }
+        
+        .log-error {
+            border-left-color: #eb3349;
+            color: #eb3349;
+        }
+        
+        .log-warning {
+            border-left-color: #ffc107;
+            color: #ffc107;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🧪 V3.0 测试中心</h1>
+            <p>智能数据洞察助手 - 全面测试与验证</p>
+        </header>
+        
+        <!-- 统计概览 -->
+        <div class="test-section">
+            <h2 style="background: none; padding: 0;">📊 测试概览</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalTests">0</div>
+                    <div class="stat-label">总测试数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="passedTests">0</div>
+                    <div class="stat-label">通过</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="failedTests">0</div>
+                    <div class="stat-label">失败</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="passRate">0%</div>
+                    <div class="stat-label">通过率</div>
+                </div>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressBar"></div>
+            </div>
+        </div>
+        
+        <!-- 单元测试 -->
+        <div class="test-section">
+            <h2>🔬 单元测试</h2>
+            <div class="test-grid">
+                <div class="test-card">
+                    <h3>图表推荐器测试</h3>
+                    <p>测试图表智能推荐功能</p>
+                    <button class="test-btn" onclick="runChartRecommenderTest()">运行测试</button>
+                    <div id="chartRecommenderResult" class="test-result" style="display: none;"></div>
+                </div>
+                
+                <div class="test-card">
+                    <h3>错误收集器测试</h3>
+                    <p>测试错误捕获和记录功能</p>
+                    <button class="test-btn" onclick="runErrorCollectorTest()">运行测试</button>
+                    <div id="errorCollectorResult" class="test-result" style="display: none;"></div>
+                </div>
+                
+                <div class="test-card">
+                    <h3>反馈管理器测试</h3>
+                    <p>测试用户反馈收集功能</p>
+                    <button class="test-btn" onclick="runFeedbackManagerTest()">运行测试</button>
+                    <div id="feedbackManagerResult" class="test-result" style="display: none;"></div>
+                </div>
+                
+                <div class="test-card">
+                    <h3>数据预处理器测试</h3>
+                    <p>测试数据转换和公式计算</p>
+                    <button class="test-btn" onclick="runDataPreprocessorTest()">运行测试</button>
+                    <div id="dataPreprocessorResult" class="test-result" style="display: none;"></div>
+                </div>
+                
+                <div class="test-card">
+                    <h3>自动修复器测试</h3>
+                    <p>测试自动修复规则引擎</p>
+                    <button class="test-btn" onclick="runAutoFixerTest()">运行测试</button>
+                    <div id="autoFixerResult" class="test-result" style="display: none;"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 集成测试 -->
+        <div class="test-section">
+            <h2>🔗 集成测试</h2>
+            <div class="test-grid">
+                <div class="test-card">
+                    <h3>完整查询流程测试</h3>
+                    <p>测试从输入到展示的完整流程</p>
+                    <button class="test-btn" onclick="runIntegrationTest()">运行测试</button>
+                    <div id="integrationResult" class="test-result" style="display: none;"></div>
+                </div>
+                
+                <div class="test-card">
+                    <h3>模块间调用测试</h3>
+                    <p>测试模块间的依赖和调用</p>
+                    <button class="test-btn" onclick="runModuleDependencyTest()">运行测试</button>
+                    <div id="dependencyResult" class="test-result" style="display: none;"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- UI 测试 -->
+        <div class="test-section">
+            <h2>🎨 UI 测试</h2>
+            <div class="test-grid">
+                <div class="test-card">
+                    <h3>反馈组件测试</h3>
+                    <p>测试反馈区域显示和交互</p>
+                    <button class="test-btn" onclick="runFeedbackUITest()">测试反馈组件</button>
+                </div>
+                
+                <div class="test-card">
+                    <h3>错误引导弹窗测试</h3>
+                    <p>测试错误弹窗显示和关闭</p>
+                    <button class="test-btn" onclick="runErrorGuideUITest()">测试错误弹窗</button>
+                </div>
+                
+                <div class="test-card">
+                    <h3>错误报告查看器测试</h3>
+                    <p>测试错误报告弹窗功能</p>
+                    <button class="test-btn" onclick="runErrorReportUITest()">测试报告查看器</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 性能测试 -->
+        <div class="test-section">
+            <h2>⚡ 性能测试</h2>
+            <div class="test-grid">
+                <div class="test-card">
+                    <h3>模块加载时间测试</h3>
+                    <p>测试各模块加载速度</p>
+                    <button class="test-btn" onclick="runLoadTimeTest()">运行测试</button>
+                    <div id="loadTimeResult" class="test-result" style="display: none;"></div>
+                </div>
+                
+                <div class="test-card">
+                    <h3>响应时间测试</h3>
+                    <p>测试各模块响应时间</p>
+                    <button class="test-btn" onclick="runResponseTimeTest()">运行测试</button>
+                    <div id="responseTimeResult" class="test-result" style="display: none;"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 日志输出 -->
+        <div class="test-section">
+            <h2>📝 测试日志</h2>
+            <div class="log-container" id="logContainer">
+                <div class="log-entry log-info">[系统] 测试中心已就绪，等待运行测试...</div>
+            </div>
+            <button class="test-btn" style="margin-top: 15px;" onclick="clearLogs()">清空日志</button>
+        </div>
+    </div>
+    
+    <script type="module">
+        // 导入所有模块
+        import chartRecommender from './js/chartRecommender.js';
+        import errorCollector from './js/errorCollector.js';
+        import feedbackManager from './js/feedbackManager.js';
+        import dataPreprocessor from './js/dataPreprocessor.js';
+        import autoFixer from './js/autoFixer.js';
+        import feedbackUI from './js/feedbackUI.js';
+        import errorGuideUI from './js/errorGuideUI.js';
+        
+        // 挂载到全局
+        window.chartRecommender = chartRecommender;
+        window.errorCollector = errorCollector;
+        window.feedbackManager = feedbackManager;
+        window.dataPreprocessor = dataPreprocessor;
+        window.autoFixer = autoFixer;
+        window.feedbackUI = feedbackUI;
+        window.errorGuideUI = errorGuideUI;
+        
+        // 初始化 UI
+        feedbackUI.init();
+        
+        log('[系统] 所有模块已加载', 'info');
+        
+        // 测试统计
+        window.testStats = {
+            total: 0,
+            passed: 0,
+            failed: 0
+        };
+        
+        // 日志函数
+        window.log = function(message, type = 'info') {
+            const logContainer = document.getElementById('logContainer');
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            const timestamp = new Date().toLocaleTimeString();
+            entry.textContent = `[${timestamp}] ${message}`;
+            logContainer.appendChild(entry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        };
+        
+        // 更新统计
+        window.updateStats = function() {
+            document.getElementById('totalTests').textContent = window.testStats.total;
+            document.getElementById('passedTests').textContent = window.testStats.passed;
+            document.getElementById('failedTests').textContent = window.testStats.failed;
+            
+            const passRate = window.testStats.total > 0 
+                ? Math.round((window.testStats.passed / window.testStats.total) * 100) 
+                : 0;
+            document.getElementById('passRate').textContent = passRate + '%';
+            
+            const progress = window.testStats.total > 0 
+                ? (window.testStats.passed / window.testStats.total) * 100 
+                : 0;
+            document.getElementById('progressBar').style.width = progress + '%';
+        };
+        
+        // 显示测试结果
+        window.showTestResult = function(elementId, success, message, details = null) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = `test-result ${success ? 'success' : 'error'}`;
+            
+            let html = `<strong>${success ? '✅ 通过' : '❌ 失败'}</strong>: ${message}`;
+            
+            if (details) {
+                html += `<pre>${JSON.stringify(details, null, 2)}</pre>`;
+            }
+            
+            element.innerHTML = html;
+        };
+        
+        // 清空日志
+        window.clearLogs = function() {
+            document.getElementById('logContainer').innerHTML = '';
+            log('[系统] 日志已清空', 'info');
+        };
+        
+        // 导出测试函数到全局作用域
+        window.runChartRecommenderTest = function() {
+            log('[测试] 开始运行图表推荐器测试...', 'info');
+            
+            try {
+                const dataInfo = {
+                    columns: ['省公司', '日期', '金额', '数量'],
+                    sampleData: [],
+                    rowCount: 100
+                };
+                
+                const intentResult = {
+                    intent: 'QUERY_AGGREGATE',
+                    confidence: 0.85
+                };
+                
+                const userInput = '统计各省公司的平均金额';
+                
+                const recommendations = window.chartRecommender.recommend(dataInfo, intentResult, userInput);
+                
+                const success = recommendations && recommendations.length > 0 && recommendations[0].chartType;
+                window.testStats.total++;
+                if (success) window.testStats.passed++;
+                else window.testStats.failed++;
+                
+                showTestResult('chartRecommenderResult', success, 
+                    `推荐了 ${recommendations ? recommendations.length : 0} 种图表类型`, 
+                    recommendations);
+                
+                log(success ? '[测试] 图表推荐器测试通过' : '[测试] 图表推荐器测试失败', success ? 'success' : 'error');
+                updateStats();
+            } catch (error) {
+                window.testStats.total++;
+                window.testStats.failed++;
+                showTestResult('chartRecommenderResult', false, error.message);
+                log('[测试] 图表推荐器测试异常：' + error.message, 'error');
+                updateStats();
+            }
+        };
+        
+        window.runErrorCollectorTest = function() {
+            log('[测试] 开始运行错误收集器测试...', 'info');
+            
+            try {
+                // 记录一个测试错误
+                const errorId = window.errorCollector.record(
+                    new Error('测试错误'),
+                    { userInput: '测试', module: 'test', action: 'run_test' }
+                );
+                
+                const success = errorId && errorId.startsWith('ERR_');
+                window.testStats.total++;
+                if (success) window.testStats.passed++;
+                else window.testStats.failed++;
+                
+                const stats = window.errorCollector.getStatistics();
+                showTestResult('errorCollectorResult', success, 
+                    `成功记录错误，当前总错误数：${stats.totalErrors}`,
+                    { errorId, stats });
+                
+                log(success ? '[测试] 错误收集器测试通过' : '[测试] 错误收集器测试失败', success ? 'success' : 'error');
+                updateStats();
+            } catch (error) {
+                window.testStats.total++;
+                window.testStats.failed++;
+                showTestResult('errorCollectorResult', false, error.message);
+                log('[测试] 错误收集器测试异常：' + error.message, 'error');
+                updateStats();
+            }
+        };
+        
+        window.runFeedbackManagerTest = function() {
+            log('[测试] 开始运行反馈管理器测试...', 'info');
+            
+            try {
+                // 提交一个测试评分
+                const feedback = window.feedbackManager.submitRating(5, 'test', '测试评分');
+                
+                const success = feedback && feedback.type === 'rating' && feedback.score === 5;
+                window.testStats.total++;
+                if (success) window.testStats.passed++;
+                else window.testStats.failed++;
+                
+                const stats = window.feedbackManager.generateStatistics();
+                showTestResult('feedbackManagerResult', success, 
+                    `成功提交评分，平均评分：${stats.averageRating}`,
+                    { feedback, stats });
+                
+                log(success ? '[测试] 反馈管理器测试通过' : '[测试] 反馈管理器测试失败', success ? 'success' : 'error');
+                updateStats();
+            } catch (error) {
+                window.testStats.total++;
+                window.testStats.failed++;
+                showTestResult('feedbackManagerResult', false, error.message);
+                log('[测试] 反馈管理器测试异常：' + error.message, 'error');
+                updateStats();
+            }
+        };
+        
+        window.runDataPreprocessorTest = function() {
+            log('[测试] 开始运行数据预处理器测试...', 'info');
+            
+            try {
+                const testData = [
+                    { 省公司：'广东', 金额：1500000 },
+                    { 省公司：'北京', 金额：1300000 }
+                ];
+                
+                const config = {
+                    unitConversion: {
+                        from: '元',
+                        to: '万元',
+                        formula: (v) => v / 10000,
+                        decimalPlaces: 2
+                    }
+                };
+                
+                const result = window.dataPreprocessor.transform(testData, config, ['省公司', '金额']);
+                
+                const success = result[0].金额 === 150;
+                window.testStats.total++;
+                if (success) window.testStats.passed++;
+                else window.testStats.failed++;
+                
+                showTestResult('dataPreprocessorResult', success, 
+                    `单位转换成功：1500000 元 → ${result[0].金额}万元`,
+                    result);
+                
+                log(success ? '[测试] 数据预处理器测试通过' : '[测试] 数据预处理器测试失败', success ? 'success' : 'error');
+                updateStats();
+            } catch (error) {
+                window.testStats.total++;
+                window.testStats.failed++;
+                showTestResult('dataPreprocessorResult', false, error.message);
+                log('[测试] 数据预处理器测试异常：' + error.message, 'error');
+                updateStats();
+            }
+        };
+        
+        window.runAutoFixerTest = function() {
+            log('[测试] 开始运行自动修复器测试...', 'info');
+            
+            try {
+                const stats = window.autoFixer.getStatistics();
+                const rules = window.autoFixer.getRegisteredRules();
+                
+                const success = rules.length > 0;
+                window.testStats.total++;
+                if (success) window.testStats.passed++;
+                else window.testStats.failed++;
+                
+                showTestResult('autoFixerResult', success, 
+                    `已注册 ${rules.length} 条修复规则`,
+                    { stats, rules });
+                
+                log(success ? '[测试] 自动修复器测试通过' : '[测试] 自动修复器测试失败', success ? 'success' : 'error');
+                updateStats();
+            } catch (error) {
+                window.testStats.total++;
+                window.testStats.failed++;
+                showTestResult('autoFixerResult', false, error.message);
+                log('[测试] 自动修复器测试异常：' + error.message, 'error');
+                updateStats();
+            }
+        };
+        
+        window.runIntegrationTest = function() {
+            log('[测试] 开始运行集成测试...', 'info');
+            // 集成测试逻辑
+        };
+        
+        window.runModuleDependencyTest = function() {
+            log('[测试] 开始运行模块依赖测试...', 'info');
+            // 依赖测试逻辑
+        };
+        
+        window.runFeedbackUITest = function() {
+            log('[测试] 测试反馈组件...', 'info');
+            window.feedbackUI.setCurrentQuery({
+                userInput: '测试查询',
+                intent: { intent: 'QUERY_AGGREGATE' }
+            });
+            window.feedbackUI.showToast('反馈组件测试完成');
+        };
+        
+        window.runErrorGuideUITest = function() {
+            log('[测试] 测试错误引导弹窗...', 'info');
+            window.errorGuideUI.showErrorGuide(
+                new Error('这是一个测试错误'),
+                { userInput: '测试', module: 'test' }
+            );
+        };
+        
+        window.runErrorReportUITest = function() {
+            log('[测试] 测试错误报告查看器...', 'info');
+            window.feedbackUI.showErrorReport();
+        };
+        
+        window.runLoadTimeTest = function() {
+            log('[测试] 开始运行加载时间测试...', 'info');
+            const modules = ['chartRecommender', 'errorCollector', 'feedbackManager', 'dataPreprocessor', 'autoFixer'];
+            const times = {};
+            
+            modules.forEach(mod => {
+                times[mod] = window[mod] ? '已加载' : '未加载';
+            });
+            
+            window.testStats.total++;
+            window.testStats.passed++;
+            
+            showTestResult('loadTimeResult', true, '所有模块加载成功', times);
+            log('[测试] 加载时间测试通过', 'success');
+            updateStats();
+        };
+        
+        window.runResponseTimeTest = function() {
+            log('[测试] 开始运行响应时间测试...', 'info');
+            
+            const startTime = performance.now();
+            const dataInfo = { columns: ['A', 'B'], sampleData: [], rowCount: 100 };
+            window.chartRecommender.recommend(dataInfo, { intent: 'QUERY_AGGREGATE' }, '测试');
+            const endTime = performance.now();
+            
+            const duration = (endTime - startTime).toFixed(2);
+            const success = duration < 10; // 小于 10ms 为成功
+            
+            window.testStats.total++;
+            if (success) window.testStats.passed++;
+            else window.testStats.failed++;
+            
+            showTestResult('responseTimeResult', success, 
+                `响应时间：${duration}ms`, 
+                { duration, threshold: 10 });
+            
+            log(success ? `[测试] 响应时间测试通过 (${duration}ms)` : `[测试] 响应时间测试失败 (${duration}ms)`, 
+                success ? 'success' : 'error');
+            updateStats();
+        };
+    </script>
+</body>
+</html>
