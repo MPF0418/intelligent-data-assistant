@@ -49,15 +49,15 @@
         <header>
             <div class="header-content">
                 <div class="header-left">
-                    <h1>🔍 智能数据分析助手 <span class="version-badge">V5.0</span></h1>
+                    <h1>🔍 智能数据分析助手 <span class="version-badge">V6.0</span></h1>
                     <p>上传您的数据文件，说出您的分析需求</p>
                 </div>
                 <div class="header-right">
-                    <button id="agent-workflow-btn" class="icon-btn" title="Agent工作流 (V5.0新功能)">
+                    <button id="agent-workflow-btn" class="icon-btn" title="Agent工作流 (V6.0新功能)">
                         <span class="icon">🤖</span>
                         <span class="new-badge">NEW</span>
                     </button>
-                    <button id="performance-monitor-btn" class="icon-btn" title="性能监控 (V5.0新功能)">
+                    <button id="performance-monitor-btn" class="icon-btn" title="性能监控 (V6.0新功能)">
                         <span class="icon">📊</span>
                         <span class="new-badge">NEW</span>
                     </button>
@@ -412,7 +412,7 @@
             const { default: agentRouter, AnalysisAgent, ChartAgent, ExplanationAgent, PlanningAgent } = await import('./js/agentSystem.js');
             const { default: executionPlanUI } = await import('./js/executionPlanUI.js');
             
-            console.log('[V5.0] 所有模块导入成功');
+            console.log('[V6.0] 所有模块导入成功');
             
             // 初始化应用
             const app = new App();
@@ -640,8 +640,8 @@
         // 注释掉自动更新，避免频繁的404错误
         // setInterval(updatePerformanceMetrics, 5000);
         
-        console.log('[V5.0] 智能数据分析助手 V5.0 已加载');
-        console.log('[V5.0] 新功能: Agent工作流可视化、性能监控');
+        console.log('[V6.0] 智能数据分析助手 V6.0 已加载');
+        console.log('[V6.0] 新功能: Agent工作流可视化、性能监控');
     </script>
 </body>
 </html>
